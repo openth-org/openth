@@ -1766,6 +1766,12 @@ function MultiplayerLobby:_loadShared(session, step, data, peers, places)
       MultiplayerSession.defaultFingerprint(world)))
 end
 
+  elseif not self.is_referee and world.mp_coop and app.ui and app.ui.hospital and app.ui.scrollMapTo then
+    -- No view of this player's to keep (a place taken in a running game, a
+    -- rejoin, a continued game): their own hospital, not where the referee's
+    -- save looks (Argus, 2026-11-21: taking a bot's place, his camera was
+    -- over another player's hospital).
+    MultiplayerSession.lookAtHospital(app.ui, app.ui.hospital)
 -- Starting and ending the game ------------------------------------------------
 
 --! The level for a room with a hospital each: the original multiplayer map
