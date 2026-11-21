@@ -766,6 +766,28 @@ do
 end
 print("bombs left ok")
 
+-- Evil handymen (and rats) are left to the people of the hospital while one
+-- of them is in the game (Jan, 2026-11-21); once they have left, the bot
+-- throws him out when it notices him.
+do
+  local issued = {}
+  local mates = {1}
+  local m = setmetatable({bot = {hospitalMates = function() return mates end}, noticed = {},
+      rand = function(a) return a end, note = function() end,
+      issue = function(_, cmd) issued[#issued + 1] = cmd return true end}, M)
+  local st = {day = 100, saboteurs = {{mp_id = 5}}, rats = {}, hosp = {}}
+  m:defend(st)
+  st.day = 130
+  m:defend(st)
+  eq(#issued, 0, "a person of the hospital is in the game: the evil handyman is theirs")
+  mates = {}
+  m:defend(st) -- (noticed now, thrown out some days later)
+  st.day = 160
+  m:defend(st)
+  eq(issued[1] and issued[1].kind, "fire_staff", "nobody of the hospital left: the bot throws him out")
+end
+print("tricks left ok")
+
 -- A research room (Jan, 2026-11-14): none with nothing left to research; a
 -- kind of room the person sharing the hospital took away stays away.
 do

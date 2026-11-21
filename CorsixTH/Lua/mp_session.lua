@@ -3547,6 +3547,10 @@ MultiplayerSession.ASSISTANT_JOBS = {
   {name = "faxes", default = false}, -- answers faxes (emergencies, questions, offers)
   {name = "loan", default = true}, -- repays the loan at the end of a month
   {name = "auctions", default = false}, -- bids at land auctions
+  -- (Jan, 2026-11-21: these three, on as before unless switched off.)
+  {name = "plots", default = true}, -- buys plots for rooms it wants (not at auctions)
+  {name = "research", default = true}, -- aims research at the rooms it wants
+  {name = "heating", default = true}, -- turns the heating up or down
 }
 
 --! Did the room's game options say that bots in a person's hospital do not

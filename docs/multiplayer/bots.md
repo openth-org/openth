@@ -31,9 +31,10 @@ referee build cannot run bots (the button is not shown there).
   "+ Add assistant" beside one's own line (the host's: every person's).
 - Its jobs (Argus and Jan, 2026-11-21): MULTIPLAYER > ASSISTANT has a tick
   for each of `MultiplayerSession.ASSISTANT_JOBS` (build, hire, replace,
-  faxes, loan, auctions); a click is the shared command `assistant_job`
-  {job, on}, kept in `hospital.mp_assistant` (saved with the game; a job not
-  in it has its default: build, hire and loan on). The room's "Allied bots
+  faxes, loan, auctions, plots, research, heating); a click is the shared
+  command `assistant_job` {job, on}, kept in `hospital.mp_assistant` (saved
+  with the game; a job not in it has its default: build, hire, loan, plots,
+  research and heating on). The room's "Allied bots
   build" off is everybody's limit (`assistantsBuildOff`: the command refuses
   build on). The bot asks `Bot:mayDo(job)`: the switch while a person of its
   hospital is in the game (here or away), everything when nobody is; a game
@@ -44,7 +45,12 @@ referee build cannot run bots (the button is not shown there).
   `M:assistantLoan`, in a month's last 3 days, once, with more than $10,000
   it repays what leaves $5,000 (the old monthly rule only without a person).
   Auctions: `bidAtAuction`; while the person is here the bot only stops
-  bidding, never passes for them. Lobby check 37 switches building off for
+  bidding, never passes for them. Plots (Jan, 2026-11-21): the `buy:land`
+  projects (also with building off). Research: `M:researchPolicy` (only
+  without the person here) and the monthly `concentrate_research`. Heating:
+  `set_heat` in `M:daily`. Dirty tricks are not a job: `M:defend` (evil
+  handymen, rats, litter bombs) does nothing while a person of the hospital
+  is in the game. Lobby check 37 switches building off for
   yuri's assistant (no room drawn after it) and faxes on for zoe's.
 - Server (`mp_server/corsixth_mp/server.py`): `BOT add=1` / `BOT remove=<peer>`
   from the room owner in the lobby. The server picks a name (`BOT_NAMES`; in

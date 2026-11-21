@@ -722,6 +722,8 @@ function M:projects(s)
     self:note(string.format("day %d: leaves the rooms and corridors to the person (game option)", s.day))
   end
   local function add(key, score, run, cost)
+    -- (Land: as its people let it, building or not. Jan, 2026-11-21.)
+    if key == "buy:land" and not bot:mayDo("plots") then return end
     if not builds and not self.wishes[key] and key ~= "buy:land" and
         (key:find("^room:") or key:find("^buy:") or key:find("^edit:")) then
       return
@@ -1979,7 +1981,9 @@ function M:daily(s)
   local helper = bot:sharesWithPerson()
   local mates = #bot:hospitalMates() > 0
   self:noteRoomUse(s)
-  if not helper then self:researchPolicy(s) end
+  -- (Research shares: not while its person is here, nor with the research
+  -- switch off. Jan, 2026-11-21.)
+  if not helper and bot:mayDo("research") then self:researchPolicy(s) end
   -- Machines half worn: a handyman to each (once in a while per machine).
   -- Repaired early, a machine seldom loses strength (the game takes it
   -- with the share used up) and does not explode while the handyman walks.
@@ -2012,8 +2016,8 @@ function M:daily(s)
       end
     end
   end
-  -- Dirty tricks (in a race), also when a person shares the hospital: they
-  -- have had the time to deal with them first.
+  -- Dirty tricks (in a race): only with no person of the hospital in the
+  -- game (M:defend).
   self:defend(s)
   -- Better staff and the loan, as its people let it, also while they are
   -- here (a bot alone in its hospital does it all).
@@ -2039,7 +2043,7 @@ function M:daily(s)
   end
   -- Heating: warmer when patients are cold, cooler when they are hot.
   -- (Not while the boiler is broken: the heating cannot be set then.)
-  if hosp.opened and s.patients >= 4 and (s.objects.radiator or 0) > 0 and
+  if hosp.opened and s.patients >= 4 and (s.objects.radiator or 0) > 0 and bot:mayDo("heating") and
       not (hosp.heating and hosp.heating.heating_broke) then
     if s.cold > s.patients / 4 and s.heat < 8 then
       self:issue({kind = "set_heat", level = s.heat + 1})
@@ -2149,8 +2153,9 @@ function M:monthly(s)
       self:note(string.format("day %d: repaid $%d of the loan ($%d left)", s.day, amount, s.loan - amount))
     end
   end
-  -- Research: aim it at the disease whose treatment room it lacks most.
-  if s.rooms.research then
+  -- Research: aim it at the disease whose treatment room it lacks most
+  -- (unless its people switched research off).
+  if s.rooms.research and self.bot:mayDo("research") then
     local best, best_v
     for room_id, v in pairs(self.demand) do
       if not self:available(room_id) and (not best_v or v > best_v) then best, best_v = room_id, v end
@@ -2413,8 +2418,13 @@ function M:referTarget(patient, rooms, day)
   return nil
 end
 
---! A race: throw out evil handymen once noticed, shoot attack rats.
+--! A race: throw out evil handymen once noticed, shoot attack rats, pick up
+--! and throw on litter bombs. Not in a hospital it shares with a person who
+--! is in the game, also while they give no orders for a while: the tricks are
+--! theirs to deal with (Jan, 2026-11-21: Argus's assistant threw out two
+--! evil handymen by itself). Once they have left the game it defends again.
 function M:defend(s)
+  if self.bot.hospitalMates and #self.bot:hospitalMates() > 0 then return end
   for _, e in ipairs(s.saboteurs) do
     local id = e.mp_id
     if id then

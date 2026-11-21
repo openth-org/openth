@@ -174,15 +174,20 @@ and handymen above 75% skill only; hire weaker ones yourself if you want
 them), **Replaces staff with better ones** (from the 4th month, when someone
 better is on the list), **Answers faxes** (emergencies, questions, offers
 from other players), **Repays the loan** (in the last days of each month, with
-more than $10,000 in the bank, as much as leaves at least $5,000) and **Bids
+more than $10,000 in the bank, as much as leaves at least $5,000), **Bids
 at auctions** (up to what the plot is worth to your hospital; it never drops
-out for you). A new game starts
-with building, hiring and the loan on, the others off. A click switches a job
+out for you), **Buys plots** (land for the rooms it wants, outside auctions),
+**Sets research priorities** (aims research at the rooms it wants) and
+**Adjusts the heating** (warmer when patients are cold, cooler when they are
+hot). A new game starts with building, hiring, the loan, plots, research and
+heating on, the others off. A click switches a job
 for everybody's game at once; the tick changes a moment later. The ticks
 hold while you are in the game, also while you are not clicking; if you leave
 the game, the assistant runs your hospital fully. With **Allied bots build**
 off in the room's game options, no player's bots build and the tick cannot
-be switched on: everybody plays under the same rules.
+be switched on: everybody plays under the same rules. Dirty tricks are yours
+to deal with while you are in the game: your assistant does not pick up
+litter bombs, throw out evil handymen or shoot rats; once you leave, it does.
 
 A bot builds its
 hospital slowly, as a beginner would (a desk, a GP's office, then one room
