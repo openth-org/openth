@@ -144,9 +144,27 @@ function UIResearch:updateCategories()
   end
 end
 
+--! Multiplayer: how long (steps) a share this player asked for counts as
+--! the share while its command is on the way.
+local PENDING_STEPS = 20
+
 function UIResearch:adjustResearch(area, mode)
   local res = self.research
-  local amount = 1
+  local policy = res.research_policy
+  -- Multiplayer: a click is a command that takes effect a few steps later, so
+  -- each moves 3 points (Jan, 2026-11-21: changing shares took long), and
+  -- clicks made meanwhile go on from what this player asked for, not from the
+  -- share still shown.
+  local session = MultiplayerSession.actionsAreCommands() and TheApp.mp_session
+  local pending = session and self.mp_pending or {}
+  local function share(a)
+    local p = pending[a]
+    if p and session.step - p.step <= PENDING_STEPS and p.frac ~= policy[a].frac then return p.frac end
+    return policy[a].frac
+  end
+  local total = 0
+  for _, category in ipairs(research_categories) do total = total + share(category) end
+  local amount = session and 3 or 1
   if self.ui.app.key_modifiers.ctrl and self.ui.app.key_modifiers.shift then
     amount = amount * 100
   elseif self.ui.app.key_modifiers.ctrl then
@@ -156,22 +174,24 @@ function UIResearch:adjustResearch(area, mode)
   end
   local frac
   if mode == "less" then
-    if res.research_policy[area].frac > 0 then
-      frac = math.max(0, res.research_policy[area].frac - amount)
+    if share(area) > 0 then
+      frac = math.max(0, share(area) - amount)
       self.ui:playSound("selectx.wav")
     else
       self.ui:playSound("Wrong2.wav")
     end
   elseif mode == "more" then
-    if res.research_policy.total < 100 and res.research_policy[area].current then
-      frac = res.research_policy[area].frac + math.min(amount, 100 - res.research_policy.total)
+    if total < 100 and policy[area].current then
+      frac = share(area) + math.min(amount, 100 - total)
       self.ui:playSound("selectx.wav")
     else
       self.ui:playSound("Wrong2.wav")
     end
   end
-  if frac and MultiplayerSession.actionsAreCommands() then
-    TheApp.mp_session:issue({kind = "research_frac", area = area, frac = frac})
+  if frac and session then
+    self.mp_pending = self.mp_pending or {}
+    self.mp_pending[area] = {frac = frac, step = session.step}
+    session:issue({kind = "research_frac", area = area, frac = frac})
     return
   end
   if frac then res.research_policy[area].frac = frac end
