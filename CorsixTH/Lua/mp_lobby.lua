@@ -1559,12 +1559,17 @@ function MultiplayerLobby.showOwnWatches(world, ui)
   for _, kind in ipairs({"initial_opening", "emergency", "epidemic"}) do
     local countdown, window = wanted[kind], shown[kind]
     if countdown then
+      -- (A watch further on than the loaded countdown cannot go back: a new
+      -- one. UIWatch:mpSetCountdown draws the picture up to that point.)
+      if window and not window:mpSetCountdown(countdown) then
+        window:close()
+        window = nil
+      end
       if not window then
         window = UIWatch(ui, kind, mine)
         ui:addWindow(window)
+        window:mpSetCountdown(countdown)
       end
-      window.tick_rate = countdown.tick_rate
-      window.tick_timer, window.open_timer = countdown.tick_timer, countdown.open_timer
     elseif window then
       window:close()
       window = nil
@@ -1761,17 +1766,17 @@ function MultiplayerLobby:_loadShared(session, step, data, peers, places)
       app.ui:setWallsTransparent(view.walls or false)
     end
     if view.warmth and world.map then world.map:setTemperatureDisplayMethod(view.warmth) end
-  end
-  self.log(string.format("multiplayer: loaded the shared save at step %d (%d bytes): %s", step, #data,
-      MultiplayerSession.defaultFingerprint(world)))
-end
-
   elseif not self.is_referee and world.mp_coop and app.ui and app.ui.hospital and app.ui.scrollMapTo then
     -- No view of this player's to keep (a place taken in a running game, a
     -- rejoin, a continued game): their own hospital, not where the referee's
     -- save looks (Argus, 2026-11-21: taking a bot's place, his camera was
     -- over another player's hospital).
     MultiplayerSession.lookAtHospital(app.ui, app.ui.hospital)
+  end
+  self.log(string.format("multiplayer: loaded the shared save at step %d (%d bytes): %s", step, #data,
+      MultiplayerSession.defaultFingerprint(world)))
+end
+
 -- Starting and ending the game ------------------------------------------------
 
 --! The level for a room with a hospital each: the original multiplayer map
