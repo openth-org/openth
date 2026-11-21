@@ -222,7 +222,20 @@ function UIFax:choice(choice_number)
       humanoid:setNextAction(SeekRoomAction("research"))
     end
   end
-  local vip_ignores_refusal = math.random(1, 2)
+  -- (Multiplayer: drawn only for a refused VIP. A fax answered in one game
+  -- only, such as a message there alone whose time ran out, must not move
+  -- that game's random numbers: eu2, 2026-11-21, a fax on hospital 1's
+  -- machines drew here and everybody had to reload. Single player draws on
+  -- every answer as before.)
+  local mp = TheApp and TheApp.mp_session
+  local vip_ignores_refusal
+  if not mp or choice == "refuse_vip" then vip_ignores_refusal = math.random(1, 2) end
+  if mp and not mp.applying then
+    -- (A time-out runs in every game alike; one that shows up in only some
+    -- games' logs is a message those games alone had.)
+    mp.log(string.format("fax answered outside a command: %s, choice %s (message %s)",
+        tostring(self.icon and self.icon.type), tostring(choice), tostring(self.icon and self.icon.mp_id)))
+  end
   if choice == "accept_emergency" then
     self.ui.app.world:newObject("helicopter", "north", nil, nil, nil, hospital)
     if self.ui.app.world.mp_coop then
