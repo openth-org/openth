@@ -80,7 +80,9 @@ function UIMessage:UIMessage(ui, x, stop_x, onClose, type, message, owner, timeo
       local window = panel.window
       local open = window.button and window.button.toggled
       -- (Through _G: a saved game keeps no reference to this file's locals.)
-      _G.UIMessage.drawOfferIcon(canvas, px + panel.x * s, py + panel.y * s, s, open, window.type)
+      local icon_kind = window.type
+      if icon_kind == "mp_vote" and window.mp_vote_slower then icon_kind = "mp_vote_slow" end -- (<<)
+      _G.UIMessage.drawOfferIcon(canvas, px + panel.x * s, py + panel.y * s, s, open, icon_kind)
     end
   end
   -- The emergency has a rotating siren
@@ -95,7 +97,7 @@ function UIMessage:UIMessage(ui, x, stop_x, onClose, type, message, owner, timeo
 end
 
 local OFFER_ICONS = {mp_offer = "fax_transferstuff", mp_research = "fax_shareresearch",
-                     mp_money = "fax_money", mp_vote = "fax_speed"}
+                     mp_money = "fax_money", mp_vote = "fax_speed", mp_vote_slow = "fax_speed_slow"}
 
 --! Draw a multiplayer offer icon (30 x 28, MATROFTT's pixel art, with its
 --! own stand): a person for staff and patient offers, research, money, or a

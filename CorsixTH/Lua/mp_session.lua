@@ -1382,11 +1382,36 @@ end
 local icons -- (mp_icons.lua, loaded when first drawn)
 local icon_colours = setmetatable({}, {__mode = "k"}) -- canvas -> name -> mapped colours
 
+--! A copy of `icon` with the picture between columns x0 and x1 mirrored (the
+--! button's frame and its light stay as they are).
+local function mirror_icon(icon, x0, x1)
+  local runs = {}
+  local src = icon.runs
+  for i = 1, #src, 4 do
+    local x, len = src[i + 1], src[i + 3]
+    if x >= x0 and x + len - 1 <= x1 then x = x0 + x1 - (x + len - 1) end
+    runs[i], runs[i + 1], runs[i + 2], runs[i + 3] = src[i], x, src[i + 2], len
+  end
+  return {w = icon.w, h = icon.h, colours = icon.colours, runs = runs}
+end
+
+--! The icons, with the derived ones: a speed vote for a slower game shows
+--! << (the >> of fax_speed mirrored; Jan, 2026-11-21).
+local function load_icons()
+  local loaded = corsixth.require("mp_icons")
+  if loaded.fax_speed and not loaded.fax_speed_slow then
+    loaded.fax_speed_slow = mirror_icon(loaded.fax_speed, 9, 20)
+    loaded.fax_speed_slow_pressed = mirror_icon(loaded.fax_speed_pressed, 9, 20)
+  end
+  return loaded
+end
+MultiplayerSession.mirrorIcon = mirror_icon
+
 --! Draw one of the multiplayer icons (MATROFTT's pixel art, mp_icons.lua)
 --! with its top left corner at ix, iy, at UI scale s.
 --!param name (string) the icon, e.g. "fax_money" or "transferstuff_pressed"
 function MultiplayerSession.drawIcon(canvas, name, ix, iy, s)
-  icons = icons or corsixth.require("mp_icons")
+  icons = icons or load_icons()
   local icon = icons[name]
   if not icon then return end
   local mapped = icon_colours[canvas]
@@ -2256,6 +2281,17 @@ function MultiplayerSession:syncVote(world)
   }
   local icon = panel:addLocalMessage("mp_vote", message)
   icon.mp_vote = vote.id
+  icon.mp_vote_slower = MultiplayerSession.voteIsSlower(world, vote.speed) or nil
+end
+
+--! Does a vote for `speed` ask for a slower game than it runs at now (when
+--! paused: than it goes on at)? Its icon then shows << instead of >>.
+function MultiplayerSession.voteIsSlower(world, speed)
+  local now = world.mp_speed
+  if not now or now == "Pause" then now = world.mp_resume_speed or "Normal" end
+  local rank = {}
+  for i, name in ipairs(MultiplayerLobby.SPEEDS) do rank[name] = i end
+  return (rank[speed] or 0) < (rank[now] or 0)
 end
 
 --! The player answered the speed vote fax (UIFax:buttonChoice).
