@@ -601,14 +601,14 @@ Cutthroat, has its own, later months (below).
 
 | Trick | L1 | L2 | L3 |
 |---|---|---|---|
-| **Evil handyman**: looks like one of their handymen and strolls their corridors; stays 4, 3 or 2 months (L1, L2, L3), then goes home | $5,000: does no work | $12,500: also drops litter | $20,000: also "repairs" a machine about every three days, and walks away leaving it nearly broken |
-| **Epidemic**: contagious patients of one disease arrive at their hospital | $6,000: 2 patients | $12,000: 4 | $20,000: 7 |
-| **Emergency** they cannot refuse: patients arrive by helicopter | $5,000: 3 patients | $10,000: 6 | $18,000: 10, maybe of a disease they have not discovered |
-| **Rat attack** (only when the host allowed it in the game options): rats come out of new holes in their walls; while they run about they cost them a reputation point a day for every 5 rats, at most 3 a day (for 30 days at most) | $4,000: 5 rats | $9,000: 10 | $15,000: 20 |
-| **Headhunter**: their best member of staff of a kind gets a better offer and asks for a pay rise; if they do not agree within 10 days, that person leaves for the hiring list, kept for you for 2 weeks | $4,000: a junior doctor or nurse, +50% | $9,000: a doctor, +75% | $16,000: a consultant or specialist, double the wage |
-| **Broken boiler**: their heating fails (too cold in winter, too hot in summer) until their handymen repair it; more handymen repair it sooner | $3,000: short | $7,000: about twice as long | $12,000: long |
-| **Smear campaign**: bad press sends some of their new patients to the other hospitals | $5,000: 1 month, 3 in 10 | $10,000: 2 months, 4 in 10 | $18,000: 3 months, half |
-| **Espionage**: copy research results they have and you do not; a list shows what there is, you pick, then press Steal | $6,000: one drug or machine improvement | $12,000: one discovery | $20,000: two of either, and their current research set back by half |
+| **Evil handyman**: looks like one of their handymen and strolls their corridors; stays 4, 3 or 2 months (L1, L2, L3), then goes home | $4,000: does no work | $9,500: also drops litter | $15,000: also "repairs" a machine about every three days, and walks away leaving it nearly broken |
+| **Epidemic**: contagious patients of one disease arrive at their hospital | $4,500: 2 patients | $9,000: 4 | $15,000: 7 |
+| **Emergency** they cannot refuse: patients arrive by helicopter | $4,000: 3 patients | $7,500: 6 | $13,500: 10, maybe of a disease they have not discovered |
+| **Rat attack** (only when the host allowed it in the game options): rats come out of new holes in their walls; while they run about they cost them a reputation point a day for every 5 rats, at most 3 a day (for 30 days at most) | $3,000: 5 rats | $7,000: 10 | $11,500: 20 |
+| **Headhunter**: their best member of staff of a kind gets a better offer and asks for a pay rise; if they do not agree within 10 days, that person leaves for the hiring list, kept for you for 2 weeks | $3,000: a junior doctor or nurse, +50% | $7,000: a doctor, +75% | $12,000: a consultant or specialist, double the wage |
+| **Broken boiler**: their heating fails (too cold in winter, too hot in summer) until their handymen repair it; more handymen repair it sooner | $2,500: short | $5,500: about twice as long | $9,000: long |
+| **Smear campaign**: bad press sends some of their new patients to the other hospitals | $4,000: 1 month, 3 in 10 | $7,500: 2 months, 4 in 10 | $13,500: 3 months, half |
+| **Espionage**: copy research results they have and you do not; a list shows what there is, you pick, then press Steal | $4,500: one drug or machine improvement | $9,000: one discovery | $15,000: two of either, and their current research set back by half |
 | **Litter bomb** (from the original game's network play): placed like an object, its blueprint on the tile under the mouse (blue floor where it can go, red where not); click a corridor in a rival's hospital to plant it there (right-click puts it away, unpaid). Its fuse burns for 16 days (about 45 seconds at Normal speed), then it throws litter about | $1,000: 15 pieces | $2,000: 25, further | $3,000: 40, all over the place |
 
 **Found a handyman who is not on your staff list?** Click him and press the

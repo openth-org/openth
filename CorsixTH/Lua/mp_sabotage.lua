@@ -58,16 +58,18 @@ SOFTWARE. --]]
 
 local sabotage = {}
 
---! Prices by kind and level.
+--! Prices by kind and level: a quarter off the first prices, to the nearest
+--! $500 (Jan, 2026-11-21: an L3 handyman at $20,000 was a lot, the litter
+--! bombs cheap).
 sabotage.PRICES = {
-  handyman = {5000, 12500, 20000},
-  epidemic = {6000, 12000, 20000},
-  emergency = {5000, 10000, 18000},
-  rats = {4000, 9000, 15000},
-  headhunter = {4000, 9000, 16000},
-  boiler = {3000, 7000, 12000},
-  smear = {5000, 10000, 18000},
-  espionage = {6000, 12000, 20000},
+  handyman = {4000, 9500, 15000},
+  epidemic = {4500, 9000, 15000},
+  emergency = {4000, 7500, 13500},
+  rats = {3000, 7000, 11500},
+  headhunter = {3000, 7000, 12000},
+  boiler = {2500, 5500, 9000},
+  smear = {4000, 7500, 13500},
+  espionage = {4500, 9000, 15000},
   litter_bomb = {1000, 2000, 3000}, -- (cheap, it is only a mess: Jan, 2026-11-14)
 }
 sabotage.KINDS = {"handyman", "epidemic", "emergency", "rats", "headhunter", "boiler", "smear", "espionage",
