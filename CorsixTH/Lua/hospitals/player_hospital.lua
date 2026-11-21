@@ -665,11 +665,22 @@ function PlayerHospital:makeNoTreatmentRoomFax(patient)
 end
 
 --! Multiplayer co-op: a fax about a patient this hospital cannot help gets
---! the answer "refer to another hospital" (UIFax:buttonChoice).
+--! the answer "refer to another hospital" (UIFax:buttonChoice), greyed out
+--! when no other hospital is an ally (Jan, 2026-11-21: offered in a game
+--! without allies, where it could do nothing).
 function PlayerHospital:_addReferChoice(message)
   local world = self.world
   if world.mp_coop and world.mp_coop.players > 1 then
-    message.choices[#message.choices + 1] = {text = _S.multiplayer_window.refer_fax_choice, choice = "mp_refer"}
+    local ally = false
+    for i = 1, world.mp_coop.players do
+      local other = world.hospitals[i]
+      if other and other ~= self and world:mpMayTrade(self, other) then
+        ally = true
+        break
+      end
+    end
+    message.choices[#message.choices + 1] = {text = _S.multiplayer_window.refer_fax_choice,
+        choice = "mp_refer", enabled = ally}
   end
 end
 
