@@ -152,7 +152,7 @@ function UIResearch:adjustResearch(area, mode)
   local res = self.research
   local policy = res.research_policy
   -- Multiplayer: a click is a command that takes effect a few steps later, so
-  -- each moves 3 points (Jan, 2026-11-21: changing shares took long), and
+  -- each moves 5 points (Jan, 2026-11-21: changing shares took long), and
   -- clicks made meanwhile go on from what this player asked for, not from the
   -- share still shown.
   local session = MultiplayerSession.actionsAreCommands() and TheApp.mp_session
@@ -164,7 +164,7 @@ function UIResearch:adjustResearch(area, mode)
   end
   local total = 0
   for _, category in ipairs(research_categories) do total = total + share(category) end
-  local amount = session and 3 or 1
+  local amount = session and 5 or 1
   if self.ui.app.key_modifiers.ctrl and self.ui.app.key_modifiers.shift then
     amount = amount * 100
   elseif self.ui.app.key_modifiers.ctrl then
