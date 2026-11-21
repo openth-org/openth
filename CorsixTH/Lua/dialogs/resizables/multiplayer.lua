@@ -684,7 +684,8 @@ function UIMultiplayer:_buildRoom()
         :makeButton(0, 0, colour_w, 25, nil, function() self:clickColour(i) end)
         :setTooltip(T.colour)
     self.team_buttons[i] = self:addBevelPanel(WIDTH - 20 - team_w, y, team_w, 25, col.button)
-        :setLabel(""):makeButton(0, 0, team_w, 25, nil, function() self:clickTeam(i) end)
+        :setLabel(""):makeButton(0, 0, team_w, 25, nil, function() self:clickTeam(i) end, nil,
+            function() self:clickTeam(i, -1) end)
         :setTooltip(T.team)
   end
   -- The assistants' column: beside each person their assistant, or (for
@@ -1158,13 +1159,16 @@ function UIMultiplayer:clickColour(i)
   end
 end
 
---! A player's team button: the next team (for everybody of their colour);
---! the host may change anybody's.
-function UIMultiplayer:clickTeam(i)
+--! A player's team button: the next team (for everybody of their colour),
+--! with a right click the one before (Jan, 2026-11-21); the host may change
+--! anybody's.
+--!param step (number) optional: -1 for the team before
+function UIMultiplayer:clickTeam(i, step)
   local lobby = self.lobby
   local p = self:rowPlayer(i)
   if not (p and lobby:isFreeRoom()) then return end
-  local team = (tonumber(p.team) or 1) % MultiplayerLobby.TEAMS + 1
+  local n = MultiplayerLobby.TEAMS
+  local team = ((tonumber(p.team) or 1) - 1 + (step or 1)) % n + 1
   if p.peer == lobby.room.peer then
     lobby:setSeat(nil, team)
   elseif lobby:isOwner() then

@@ -3172,5 +3172,5 @@ tooltip.multiplayer_window.server_eu2 = "eu2.openth.org: 최신 테스트 빌드
 tooltip.multiplayer_window.share_research = "가진 연구를 다른 플레이어의 병원에 무료 또는 유료로 제안합니다. 상대가 수락해야 합니다."
 tooltip.multiplayer_window.sharing = "방장이 정합니다: 플레이어끼리 연구를 공유하거나 팔 수 있는지 (원작에서는 불가능)"
 tooltip.multiplayer_window.start = "방에 있는 모두를 위해 게임을 시작합니다"
-tooltip.multiplayer_window.team = "당신의 팀: 같은 팀은 함께 승리하고, 다른 팀은 목표를 두고 겨루며 서로에게 비열한 수법을 쓸 수 있습니다. 클릭하면 바꿉니다 (방장은 누구의 팀이든, 봇의 팀도 바꿀 수 있습니다)"
+tooltip.multiplayer_window.team = "당신의 팀: 같은 팀은 함께 승리하고, 다른 팀은 목표를 두고 겨루며 서로에게 비열한 수법을 쓸 수 있습니다. 클릭하면 바꿉니다 (방장은 누구의 팀이든, 봇의 팀도 바꿀 수 있습니다). 오른쪽 클릭: 이전 팀."
 tooltip.multiplayer_window.tricks = "방장이 정합니다: 경쟁에서 플레이어가 라이벌에게 쓸 비열한 수법을 살 수 있는지 (원작에서는 불가능)"

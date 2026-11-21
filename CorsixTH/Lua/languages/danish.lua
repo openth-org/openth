@@ -3381,7 +3381,7 @@ tooltip.multiplayer_window.share_research = "Tilbyd forskning, du har, til en an
 tooltip.multiplayer_window.sharing = "Værten bestemmer: spillere må dele eller sælge forskning til hinanden, eller ej (som i det originale spil)"
 tooltip.multiplayer_window.start = "Start spillet for alle i rummet"
 tooltip.multiplayer_window.switch_version = "Genstart spillet med denne servers version, som du allerede har"
-tooltip.multiplayer_window.team = "Dit hold: samme hold vinder sammen, forskellige hold löber om målene og må spille beskidte tricks mod hinanden. Klik for at ændre det (værten kan ændre alles, også botters)"
+tooltip.multiplayer_window.team = "Dit hold: samme hold vinder sammen, forskellige hold löber om målene og må spille beskidte tricks mod hinanden. Klik for at ændre det (værten kan ændre alles, også botters). Højreklik for holdet før."
 tooltip.multiplayer_window.tricks = "Værten bestemmer: i et löb må spillere köbe beskidte tricks mod rivaler, eller ej (som i det originale spil)"
 
 -- What the server's computer players (bots) say in the chat (see english.lua).

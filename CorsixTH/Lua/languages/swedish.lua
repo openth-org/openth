@@ -1396,5 +1396,5 @@ tooltip.multiplayer_window.server_eu2 = "eu2.openth.org: den senaste testversion
 tooltip.multiplayer_window.share_research = "Erbjud forskning du har till en annan spelares sjukhus, gratis eller mot betalning. Spelaren måste acceptera."
 tooltip.multiplayer_window.sharing = "Värden bestämmer: spelare får dela eller sälja forskning till varandra, eller inte (som i originalspelet)"
 tooltip.multiplayer_window.start = "Starta spelet för alla i rummet"
-tooltip.multiplayer_window.team = "Ditt lag: samma lag vinner tillsammans, olika lag tävlar om målen och kan spela fula tricks mot varandra. Klicka för att ändra (värden kan ändra allas, även bottars)"
+tooltip.multiplayer_window.team = "Ditt lag: samma lag vinner tillsammans, olika lag tävlar om målen och kan spela fula tricks mot varandra. Klicka för att ändra (värden kan ändra allas, även bottars). Högerklick för laget före."
 tooltip.multiplayer_window.tricks = "Värden bestämmer: i en tävling får spelare köpa fula tricks mot rivaler, eller inte (som i originalspelet)"

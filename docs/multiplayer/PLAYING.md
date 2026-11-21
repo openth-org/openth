@@ -77,10 +77,12 @@ Linux package or the macOS app workflow on `master`, Artifacts; this needs a Git
    two buttons. The **colour** is your hospital: players with the same
    colour build one hospital together. The **team** is who you win with:
    the same team wins together, different teams race each other (and may
-   play dirty tricks on each other). Click yours to change it; the host can
-   change anybody's, bots' too. A newcomer gets a colour of their own on the
-   host's team, so a new room starts as co-op. The line under the players
-   says what the colours and teams make:
+   play dirty tricks on each other). Click yours for the next team, right
+   click for the one before; the host can change anybody's, bots' too. A
+   newcomer gets a colour of their own and the team after the player above,
+   so everybody starts on a team of their own (a race): put players on one
+   team to play co-op. The line under the players says what the colours and
+   teams make:
 
    | Colours and teams | The game |
    |---|---|

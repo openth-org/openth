@@ -1679,7 +1679,7 @@ tooltip.multiplayer_window.share_research = "Offri la ricerca che hai all'ospeda
 tooltip.multiplayer_window.sharing = "Decide l'host: i giocatori possono condividere o vendersi la ricerca, oppure no (come nel gioco originale)"
 tooltip.multiplayer_window.start = "Inizia la partita per tutti nella stanza"
 tooltip.multiplayer_window.switch_version = "Riavvia il gioco con la versione di questo server, che hai già"
-tooltip.multiplayer_window.team = "La tua squadra: la stessa squadra vince insieme, squadre diverse gareggiano verso gli obiettivi e possono farsi colpi bassi. Clicca per cambiarla (l'host può cambiare quella di tutti, anche dei bot)"
+tooltip.multiplayer_window.team = "La tua squadra: la stessa squadra vince insieme, squadre diverse gareggiano verso gli obiettivi e possono farsi colpi bassi. Clicca per cambiarla (l'host può cambiare quella di tutti, anche dei bot). Clic destro: la squadra precedente."
 tooltip.multiplayer_window.tricks = "Decide l'host: in una gara i giocatori possono comprare colpi bassi contro i rivali, oppure no (come nel gioco originale)"
 
 -- What the server's computer players (bots) say in the chat (see english.lua).

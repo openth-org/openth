@@ -4526,7 +4526,7 @@ tooltip.multiplayer_window.share_research = "Nabídněte výzkum, který máte, 
 tooltip.multiplayer_window.sharing = "Rozhoduje hostitel: hráči mohou nebo nemohou mezi sebou sdílet či prodávat výzkum (jako v původní hře)"
 tooltip.multiplayer_window.start = "Spustit hru pro všechny v místnosti"
 tooltip.multiplayer_window.switch_version = "Spustit hru znovu ve verzi tohoto serveru, kterou už máte"
-tooltip.multiplayer_window.team = "Váš tým: stejný tým vyhrává společně, různé týmy závodí o cíle a mohou si hrát špinavé triky. Kliknutím ho změníte (hostitel může změnit tým komukoli, i botům)"
+tooltip.multiplayer_window.team = "Váš tým: stejný tým vyhrává společně, různé týmy závodí o cíle a mohou si hrát špinavé triky. Kliknutím ho změníte (hostitel může změnit tým komukoli, i botům). Pravým tlačítkem předchozí tým."
 tooltip.multiplayer_window.tricks = "Rozhoduje hostitel: v závodě mohou hráči proti soupeřům kupovat špinavé triky, nebo ne (jako v původní hře)"
 
 -- What the server's computer players (bots) say in the chat (see english.lua).

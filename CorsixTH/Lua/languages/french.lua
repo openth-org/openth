@@ -2455,7 +2455,7 @@ tooltip.multiplayer_window.share_research = "Proposez la recherche que vous avez
 tooltip.multiplayer_window.sharing = "L'hôte décide : les joueurs peuvent se partager ou se vendre la recherche, ou non (comme dans le jeu d'origine)"
 tooltip.multiplayer_window.start = "Lancer la partie pour tout le monde dans le salon"
 tooltip.multiplayer_window.switch_version = "Redémarrer le jeu avec la version de ce serveur, que vous avez déjà"
-tooltip.multiplayer_window.team = "Votre équipe : la même équipe gagne ensemble, des équipes différentes courent vers les objectifs et peuvent se jouer des coups bas. Cliquez pour la changer (l'hôte peut changer celle de tout le monde, bots compris)"
+tooltip.multiplayer_window.team = "Votre équipe : la même équipe gagne ensemble, des équipes différentes courent vers les objectifs et peuvent se jouer des coups bas. Cliquez pour la changer (l'hôte peut changer celle de tout le monde, bots compris). Clic droit : l'équipe précédente."
 tooltip.multiplayer_window.tricks = "L'hôte décide : en course, les joueurs peuvent acheter des coups bas contre leurs rivaux, ou non (comme dans le jeu d'origine)"
 
 -- What the server's computer players (bots) say in the chat (see english.lua).

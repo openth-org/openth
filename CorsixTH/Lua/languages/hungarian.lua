@@ -2579,7 +2579,7 @@ tooltip.multiplayer_window.share_research = "Ajánld fel a meglévő kutatásoda
 tooltip.multiplayer_window.sharing = "A házigazda dönt: a játékosok megoszthatják vagy eladhatják egymásnak a kutatást, vagy nem (mint az eredeti játékban)"
 tooltip.multiplayer_window.start = "A játék elindítása mindenkinek a szobában"
 tooltip.multiplayer_window.switch_version = "A játék újraindítása ennek a szervernek a verziójával, amely már megvan neked"
-tooltip.multiplayer_window.team = "A csapatod: az azonos csapat együtt nyer, a különböző csapatok versenyeznek a célokért, és piszkos trükköket játszhatnak egymással. Kattints a módosításához (a házigazda bárkiét módosíthatja, a botokét is)"
+tooltip.multiplayer_window.team = "A csapatod: az azonos csapat együtt nyer, a különböző csapatok versenyeznek a célokért, és piszkos trükköket játszhatnak egymással. Kattints a módosításához (a házigazda bárkiét módosíthatja, a botokét is). Jobb kattintás: az előző csapat."
 tooltip.multiplayer_window.tricks = "A házigazda dönt: versenyben a játékosok vehetnek piszkos trükköket a riválisok ellen, vagy nem (mint az eredeti játékban)"
 
 -- What the server's computer players (bots) say in the chat (see english.lua).

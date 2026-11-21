@@ -1751,7 +1751,7 @@ tooltip.multiplayer_window.share_research = "Forschung, die Sie haben, dem Krank
 tooltip.multiplayer_window.sharing = "Der Host entscheidet: Spieler dürfen Forschung untereinander teilen oder verkaufen, oder nicht (wie im Originalspiel)"
 tooltip.multiplayer_window.start = "Das Spiel für alle im Raum starten"
 tooltip.multiplayer_window.switch_version = "Das Spiel mit der Version dieses Servers neu starten, die Sie schon haben"
-tooltip.multiplayer_window.team = "Ihr Team: Dasselbe Team gewinnt gemeinsam, verschiedene Teams rennen zu den Zielen und dürfen sich fiese Tricks spielen. Zum Ändern klicken (der Host kann das Team aller ändern, auch von Bots)"
+tooltip.multiplayer_window.team = "Ihr Team: Dasselbe Team gewinnt gemeinsam, verschiedene Teams rennen zu den Zielen und dürfen sich fiese Tricks spielen. Zum Ändern klicken (der Host kann das Team aller ändern, auch von Bots). Rechtsklick: das Team davor."
 tooltip.multiplayer_window.tricks = "Der Host entscheidet: In einem Rennen dürfen Spieler fiese Tricks gegen Rivalen kaufen, oder nicht (wie im Originalspiel)"
 
 -- What the server's computer players (bots) say in the chat (see english.lua).

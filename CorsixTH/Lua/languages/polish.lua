@@ -3902,5 +3902,5 @@ tooltip.multiplayer_window.server_eu2 = "eu2.openth.org: najnowsza wersja testow
 tooltip.multiplayer_window.share_research = "Zaproponuj swoje badania szpitalowi innego gracza, za darmo lub za pieniądze. Musi się zgodzić."
 tooltip.multiplayer_window.sharing = "Decyduje gospodarz: gracze mogą dzielić się badaniami lub sprzedawać je sobie nawzajem, albo nie (jak w oryginalnej grze)"
 tooltip.multiplayer_window.start = "Rozpocznij grę dla wszystkich w pokoju"
-tooltip.multiplayer_window.team = "Twoja drużyna: ta sama drużyna wygrywa razem, różne drużyny ścigają się do celów i mogą robić sobie brudne sztuczki. Kliknij, aby zmienić (gospodarz może zmienić każdemu, także botom)"
+tooltip.multiplayer_window.team = "Twoja drużyna: ta sama drużyna wygrywa razem, różne drużyny ścigają się do celów i mogą robić sobie brudne sztuczki. Kliknij, aby zmienić (gospodarz może zmienić każdemu, także botom). Prawy przycisk: poprzednia drużyna."
 tooltip.multiplayer_window.tricks = "Decyduje gospodarz: w wyścigu gracze mogą kupować brudne sztuczki przeciw rywalom, albo nie (jak w oryginalnej grze)"

@@ -2641,7 +2641,7 @@ tooltip.multiplayer_window.share_research = "Ofrece la investigación que tienes
 tooltip.multiplayer_window.sharing = "Lo decide el anfitrión: los jugadores pueden compartirse o venderse investigación, o no (como en el juego original)"
 tooltip.multiplayer_window.start = "Empieza la partida para todos los de la sala"
 tooltip.multiplayer_window.switch_version = "Reiniciar el juego con la versión de este servidor, que ya tienes"
-tooltip.multiplayer_window.team = "Tu equipo: el mismo equipo gana junto, equipos distintos compiten por los objetivos y pueden hacerse golpes bajos. Haz clic para cambiarlo (el anfitrión puede cambiar el de cualquiera, también el de los bots)"
+tooltip.multiplayer_window.team = "Tu equipo: el mismo equipo gana junto, equipos distintos compiten por los objetivos y pueden hacerse golpes bajos. Haz clic para cambiarlo (el anfitrión puede cambiar el de cualquiera, también el de los bots). Clic derecho: el equipo anterior."
 tooltip.multiplayer_window.tricks = "Lo decide el anfitrión: en una carrera los jugadores pueden comprar golpes bajos contra sus rivales, o no (como en el juego original)"
 
 -- What the server's computer players (bots) say in the chat (see english.lua).

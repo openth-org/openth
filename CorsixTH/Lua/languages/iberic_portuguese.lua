@@ -1441,5 +1441,5 @@ tooltip.multiplayer_window.server_eu2 = "eu2.openth.org: a versäo de teste mais
 tooltip.multiplayer_window.share_research = "Oferece pesquisa que tens ao hospital de outro jogador, de graça ou por um preço. Ele tem de aceitar."
 tooltip.multiplayer_window.sharing = "O anfitriäo decide: os jogadores podem partilhar ou vender pesquisa entre si, ou näo (como no jogo original)"
 tooltip.multiplayer_window.start = "Iniciar o jogo para todos na sala"
-tooltip.multiplayer_window.team = "A tua equipa: a mesma equipa ganha junta, equipas diferentes disputam os objectivos e podem pregar partidas sujas umas às outras. Clica para mudar (o anfitriäo pode mudar a de qualquer um, incluindo a dos bots)"
+tooltip.multiplayer_window.team = "A tua equipa: a mesma equipa ganha junta, equipas diferentes disputam os objectivos e podem pregar partidas sujas umas às outras. Clica para mudar (o anfitriäo pode mudar a de qualquer um, incluindo a dos bots). Botão direito: a equipa anterior."
 tooltip.multiplayer_window.tricks = "O anfitriäo decide: numa corrida, os jogadores podem comprar truques sujos contra rivais, ou näo (como no jogo original)"

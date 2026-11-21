@@ -984,11 +984,15 @@ def test_colours_and_teams(run):
         b = await Client.connect(port, "Ben")
         b.send(encode("JOIN", room="free", password=""))
         await b.expect("JOINED")
-        # A newcomer gets the next colour, on the host's team: co-op.
+        # A newcomer gets the next colour and the team after the player above
+        # (Argus and Jan, 2026-11-21: not everybody on team 1): a race.
         ben = await b.expect("PLAYER", peer="2")
-        assert (ben["colour"], ben["team"]) == ("2", "1")
+        assert (ben["colour"], ben["team"]) == ("2", "2")
+        assert (await b.expect("LOBBY"))["mode"] == "competitive"
+        # Ben joins Ann's team: co-op; back on his own: a race again.
+        b.send(encode("SEAT", team=1))
+        await b.expect("PLAYER", peer="2", team="1")
         assert (await b.expect("LOBBY"))["mode"] == "coop"
-        # Ben races Ann.
         b.send(encode("SEAT", team=2))
         await b.expect("PLAYER", peer="2", team="2")
         assert (await b.expect("LOBBY"))["mode"] == "competitive"
@@ -996,8 +1000,8 @@ def test_colours_and_teams(run):
         c.send(encode("JOIN", room="free", password=""))
         await c.expect("JOINED")
         cleo = await c.expect("PLAYER", peer="3")
-        assert (cleo["colour"], cleo["team"]) == ("3", "1")
-        assert (await c.expect("LOBBY"))["mode"] == "teams"
+        assert (cleo["colour"], cleo["team"]) == ("3", "3")
+        assert (await c.expect("LOBBY"))["mode"] == "competitive"
         # Ben's colour brings his team: Cleo shares his hospital.
         c.send(encode("SEAT", colour=2))
         await c.expect("PLAYER", peer="3", colour="2", team="2")
@@ -1031,6 +1035,14 @@ def test_colours_and_teams(run):
         e.send(encode("JOIN", room="race", password=""))
         eve = await e.expect("PLAYER", peer="2")
         assert (eve["colour"], eve["team"]) == ("2", "2")
+        # A room asked for as co-op keeps newcomers on the owner's team.
+        f = await Client.connect(port, "Fay")
+        f.send(encode("CREATE", room="together", password="", max=2, mode="coop", level=1))
+        assert (await f.expect("JOINED"))["mode"] == "coop"
+        g = await Client.connect(port, "Gus")
+        g.send(encode("JOIN", room="together", password=""))
+        gus = await g.expect("PLAYER", peer="2")
+        assert (gus["colour"], gus["team"]) == ("2", "1")
     run(body)
 
 
