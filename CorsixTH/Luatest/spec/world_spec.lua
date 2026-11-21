@@ -615,6 +615,24 @@ describe("world.lua co-op patients: ", function()
     assert.are.equal(world.hospitals[2], world:_coopPatientHospital())
     assert.is_nil(makeWorld({false, false}):_coopPatientHospital())
   end)
+
+  it("a winner who stays on the level keeps getting patients, one out of the race does not", function()
+    -- (Jan, 2026-11-21: Argus won, stayed, and no patient came any more.)
+    local world = makeWorld({true, true})
+    local winner, other = world.hospitals[1], world.hospitals[2]
+    winner.mp_place, winner.mp_place_how = 1, "won"
+    -- Won, not staying (yet): its turn goes to the next hospital.
+    assert.are.equal(other, world:_coopPatientHospital())
+    winner.win_declined = true
+    assert.are.equal(winner, world:_coopPatientHospital())
+    -- The other one out of the race: its turn comes to the winner who stays.
+    other.mp_place, other.mp_place_how = 2, "out"
+    winner.spawn_attempts = 1 -- turn of hospital 2
+    assert.are.equal(winner, world:_coopPatientHospital())
+    assert.is_true(world:_patientsCanArrive())
+    winner.win_declined = nil
+    assert.is_false(world:_patientsCanArrive())
+  end)
 end)
 
 -- Multiplayer: people come to a hospital by an edge point near it (Argus:

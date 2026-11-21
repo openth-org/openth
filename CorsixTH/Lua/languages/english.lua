@@ -788,7 +788,7 @@ multiplayer_window = {
   race_won = {
     "Congratulations!",
     "Your hospital has reached this level's goals: %s place.",
-    "The others race on for the next places. No new patients come to your hospital now. Go back to the lobby, or watch?",
+    "The others race on for the next places. Go back to the lobby, or play on? Patients keep coming to your hospital.",
   },
   -- The same on the winning video's letter, answered with its tick (back to
   -- the lobby) or cross (watch).
@@ -819,6 +819,7 @@ multiplayer_window = {
   race_standing_out = " (out)",
   race_out_short = "out",
   race_watch = "Watch",
+  race_play_on = "Play on",
   race_placed_other = "%s has reached this level's goals: %s place. The race goes on.",
   race_out_other = "%s failed the goals two years running and is out of the race (%s place).",
   race_failing = "Your hospital has failed this level's goals. Recover by the end of next year, or you are out of the race.",

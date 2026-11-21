@@ -560,6 +560,15 @@ function World:spawnPointFor(hospital)
   return spawns[math.random(1, #spawns)]
 end
 
+--! Multiplayer co-op: does `hospital` get new patients? It must be open; in
+--! a race, one out of it gets none, but a winner who stays on the level does
+--! (Jan, 2026-11-21: Argus won, stayed, and no patient came any more).
+function World:mpTakesPatients(hospital)
+  if not (hospital and hospital.opened) then return false end
+  if not hospital.mp_place then return true end
+  return hospital.mp_place_how == "won" and hospital.win_declined == true
+end
+
 --! Multiplayer co-op: the hospital a new patient goes to. Patients are
 --! shared out in turn; one whose turn falls on a hospital that is not open
 --! yet goes to the next open one instead of being lost (a player who opened
@@ -567,7 +576,7 @@ end
 --!return a hospital, or nil if none is open
 function World:_coopPatientHospital()
   local chosen = self:chooseHospitalForPatient(nil)
-  if chosen and chosen.opened and not chosen.mp_place then
+  if chosen and self:mpTakesPatients(chosen) then
     -- (Competitive: a rival's smear campaign sends some elsewhere.)
     return MultiplayerSession.sabotage.smearRedirect(self, chosen) or chosen
   end
@@ -577,7 +586,7 @@ function World:_coopPatientHospital()
   for step = 1, players do
     local hospital = self.hospitals[(start - 1 + step) % players + 1]
     -- (Competitive: a hospital out of the race gets no more patients.)
-    if hospital and hospital.opened and not hospital.mp_place then return hospital end
+    if self:mpTakesPatients(hospital) then return hospital end
   end
   return nil
 end
@@ -1420,7 +1429,7 @@ end
 function World:_patientsCanArrive()
   if not self.mp_coop then return self.hospitals[1].opened end
   for _, hospital in ipairs(self.hospitals) do
-    if hospital.opened and not hospital.mp_place then return true end
+    if self:mpTakesPatients(hospital) then return true end
   end
   return false
 end
@@ -2152,9 +2161,11 @@ function World:_mpPlaceFax(hosp, how, place)
   else
     message = {{text = S.race_out[1]}, {text = S.race_out[2]:format(place)}, {text = S.race_out[3]}}
   end
+  -- (A winner who stays plays on and still gets patients, World:mpTakesPatients;
+  -- a hospital out of the race only watches.)
   message.choices = {
     {text = S.back_to_lobby, choice = "mp_leave_game"},
-    {text = S.race_watch, choice = "stay_on_level"},
+    {text = how == "won" and S.race_play_on or S.race_watch, choice = "stay_on_level"},
   }
   -- Only this hospital's player sees it (and answers it: fax_choice).
   self.ui.bottom_panel:queueMessage("information", message, nil, nil, 2, nil, hosp)

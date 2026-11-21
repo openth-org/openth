@@ -534,9 +534,10 @@ they are switched on).
 - **Competitive race:** a hospital each, but every player for themselves.
   The first hospital to reach the level's goals takes 1st place, the next
   one 2nd, and so on. A placed player gets a fax: **Back to the lobby**
-  (only that player leaves; the others play on) or **Watch**. A placed
-  hospital gets no more patients. A hospital that fails the goals at two
-  year ends in a row is out, at the bottom of the standings. When only one
+  (only that player leaves; the others play on) or **Play on**: patients
+  keep coming to a winner who stays. A hospital that fails the goals at two
+  year ends in a row is out, at the bottom of the standings, and gets no
+  more patients (its player may **Watch**). When only one
   hospital is still racing, it takes the place left and everybody gets the
   final standings. MULTIPLAYER > PLAYERS shows each place. In the Progress
   Report, click another player's name to see how their hospital is doing.
