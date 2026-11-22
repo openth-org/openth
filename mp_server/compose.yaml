@@ -1,4 +1,4 @@
-# CorsixTH multiplayer server. On the VPS:
+# OpenTH multiplayer server. On the VPS:
 #   docker compose up -d          start (pulls the published image)
 #   docker compose logs -f        follow the log
 #   docker compose pull && docker compose up -d   update

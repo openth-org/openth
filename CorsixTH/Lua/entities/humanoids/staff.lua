@@ -18,7 +18,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-corsixth.require("announcer")
+cth_require("announcer")
 
 local AnnouncementPriority = _G["AnnouncementPriority"] --[[@as AnnouncementPriority]]
 local Humanoid = _G['Humanoid'] ---@type Humanoid
@@ -267,7 +267,6 @@ function Staff:fire()
   self:setDynamicInfoText(_S.dynamic_info.staff.actions.fired)
   self.fired = true
   self.going_home = true
-  self.hospital:changeReputation("kicked")
   self:despawn()
   self.hover_cursor = nil
   self.hospital:announceStaffLeave(self)

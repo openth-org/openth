@@ -16,7 +16,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 SOURCE = os.path.join(ROOT, "scripts", "multiplayer", "icons")
 TARGET = os.path.join(ROOT, "CorsixTH", "Lua", "mp_icons.lua")
 
-HEADER = """--[[ Copyright (c) 2026 CorsixTH-Multiplayer contributors
+HEADER = """--[[ Copyright (c) 2026 OpenTH contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in

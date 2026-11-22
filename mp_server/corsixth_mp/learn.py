@@ -8,7 +8,10 @@ every game year and when the game ends, into CORSIXTH_MP_LEARN_DIR/saves
 the experts' hospitals that no bot ever played (the .json beside each save),
 and writes what the bots learn from all of them so far, each game once, as
 its latest save has it (learned.lua, scripts/multiplayer/layout_learn.py:
-games). Bots started from then on read it
+games). A hospital an expert shares with an assistant bot or with other
+people ("ARGUS + BOT EDNA") is learnt as the expert's, with only what the
+expert built there (own_records: the referee notes who built each room and
+object). Bots started from then on read it
 (scripts/multiplayer/bot.lua): they build their rooms the size the experts
 do, put things where the experts put them, and on a map and place an expert
 played they follow that expert's hospital.
@@ -126,6 +129,87 @@ def _bot_ever(save: pathlib.Path) -> set[int]:
     return {int(h["index"]) for h in info.get("hospitals", []) if h.get("bot_ever")}
 
 
+def _hospital_info(save: pathlib.Path | None, index) -> dict:
+    """The referee's note on one hospital of a save (the .json beside it)."""
+    if save is None:
+        return {}
+    for h in _read_json(save.with_suffix(".json"), {}).get("hospitals", []):
+        if h.get("index") == index:
+            return h
+    return {}
+
+
+def _name_parts(name: str) -> list[str]:
+    """The players a hospital is named after ("ARGUS + BOT EDNA")."""
+    return [p.strip() for p in str(name).split(" + ") if p.strip()]
+
+
+def own_records(rec: dict, info: dict, want: set[str]) -> list[dict]:
+    """A hospital an expert shares ("ARGUS + BOT EDNA", "ARGUS + JAN"), as the
+    expert's own: one record per expert in it, named after them, with only
+    what they built. info is the referee's note on the hospital: built =
+    {rooms: [{kind, x, y, by, expert}], objects: [{id, x, y, by, expert}]},
+    who built each room (build_room) and put down each object (place_object,
+    move_object, room_object) in this game, by player name.
+
+    With only bots beside the expert (assistants), everything stays but what
+    a bot was seen to build (a room from before this game, in a continued
+    one, counts as the expert's). With other people (or a second expert) in
+    the hospital, only what the expert was seen to build stays. Without the
+    referee's note (an older referee) a shared hospital is not learnt from;
+    any other record comes back as it is."""
+    parts = _name_parts(rec.get("name", ""))
+    if len(parts) <= 1:
+        return [rec]
+    names = [p.upper() for p in parts if p.upper() in want]
+    built = info.get("built") if isinstance(info, dict) else None
+    if not names or not isinstance(built, dict):
+        return [rec]
+    people = [p for p in parts if p.upper() not in want and not p.upper().startswith("BOT ")]
+    strict = bool(people) or len(names) > 1
+    rooms_seen = [r for r in built.get("rooms", []) if isinstance(r, dict)]
+    objects_seen = [o for o in built.get("objects", []) if isinstance(o, dict)]
+
+    def builder(entries, x, y, what_key, what):
+        """Who last built or put down the thing at x, y (None: not seen)."""
+        by = None
+        for e in entries:
+            if e.get("x") == x and e.get("y") == y and (e.get(what_key) in (None, what)):
+                by = str(e.get("by") or "").upper()
+        return by
+
+    def object_by(o):
+        return builder(objects_seen, o.get("x"), o.get("y"), "id", o.get("id"))
+
+    out = []
+    for name in names:
+        def mine(by, unseen_ok):
+            """Built by this expert (or, beside bots only, by any expert);
+            unseen: as unseen_ok says."""
+            if by is None:
+                return unseen_ok
+            return by == name or (not strict and by in want)
+
+        own = dict(rec)
+        own["name"] = name
+        own["shared"] = rec.get("name", "")
+        rooms = []
+        for room in rec.get("rooms", []):
+            by = builder(rooms_seen, room.get("x"), room.get("y"), "kind", room.get("kind"))
+            if not mine(by, not strict):
+                continue
+            room = dict(room)
+            # (The objects of a room go with it, unless someone else put one there.)
+            room["objects"] = [o for o in room.get("objects", []) if mine(object_by(o), True)]
+            rooms.append(room)
+        own["rooms"] = rooms
+        # (The map's own entrance doors stand in every hospital.)
+        own["corridor"] = [o for o in rec.get("corridor", [])
+                           if mine(object_by(o), not strict) or str(o.get("id", "")).startswith("entrance_")]
+        out.append(own)
+    return out
+
+
 def _learnt(records: list[dict], env: dict[str, str]) -> list[dict]:
     """What the night learnt from, for the report: each game once, its latest
     save, with how many of its saves came that night (layout_learn.games;
@@ -190,10 +274,12 @@ def run(env: dict[str, str] | None = None, now: float | None = None, dry_run: bo
             save = by_path.get(rec.get("save", ""))
             if save is not None and rec.get("index") in _bot_ever(save):
                 rec["standin"] = True  # (a bot played it at some time: not learnt from)
-            new_records.append(rec)
-            if (rec.get("name", "").upper() in want and not rec.get("bot") and not rec.get("standin")
-                    and not rec.get("ai")):
-                experts_own.append(rec)
+            # (A hospital an expert shares: each expert's own part of it.)
+            for own in own_records(rec, _hospital_info(save, rec.get("index")), want):
+                new_records.append(own)
+                if (own.get("name", "").upper() in want and not own.get("bot") and not own.get("standin")
+                        and not own.get("ai")):
+                    experts_own.append(own)
         summary["learnt"] = _learnt(experts_own, env)
     if dry_run:
         return summary

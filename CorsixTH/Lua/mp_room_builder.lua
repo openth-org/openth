@@ -1,4 +1,4 @@
---[[ Copyright (c) 2026 CorsixTH-Multiplayer contributors
+--[[ Copyright (c) 2026 OpenTH contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -906,6 +906,28 @@ function builder.delete(world, entry)
     reset_to_walls(dlg)
     dlg:abortRoom()
     return true
+  end)
+end
+
+--! Sell a room whose plot is handed to another player (MultiplayerSession.
+--! finishPlotHandover): as single player's editor does when its player takes
+--! the walls down and then deletes the room (half the build cost back). The
+--! room is closed and empty (Room:tryToEdit). Nobody sees the editor.
+--!return true when the room is gone
+function builder.sellRoom(world, room)
+  return with_editor(world, room.hospital, function()
+    local dlg = UIEditRoom(world.ui, room)
+    quiet(world, dlg)
+    if dlg.phase == "objects" then
+      dlg:stopPickupItems()
+      dlg:returnToDoorPhase()
+      world:resetSideObjects()
+      dlg:returnToWallPhase()
+    end
+    reset_to_walls(dlg)
+    dlg:abortRoom()
+    builder.releaseUI(world.ui, dlg)
+    return world.rooms[room.id] ~= room
   end)
 end
 

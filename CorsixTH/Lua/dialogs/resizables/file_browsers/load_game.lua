@@ -18,7 +18,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-local UIFileBrowser = _G['UIFileBrowser'] ---@type UIFileBrowser
+local UIInformation = cth_require("dialogs.information")
+local UIFileBrowser = cth_require("dialogs.resizables.file_browser")
+local UIResizable = cth_require("dialogs.resizable")
+local FilteredFileTreeNode = UIFileBrowser.FilteredFileTreeNode
 
 --! Load Game Window
 class "UILoadGame" (UIFileBrowser)
@@ -42,11 +45,13 @@ function UILoadGame:choiceMade(name)
   -- Make sure there is no blue filter active.
   app.video:setBlueFilterActive(false)
 
-  local status, err = pcall(app.load, app, name)
-  if not status then
-    err = _S.errors.load_prefix .. err
-    self:loadError(err)
-  end
+  self.ui:leaveMainMenu(function()
+    local status, err = pcall(app.load, app, name)
+    if not status then
+      err = _S.errors.load_prefix .. err
+      self:loadError(err)
+    end
+  end)
 end
 
 --! Output the error when trying to load a game
@@ -60,10 +65,12 @@ end
 function UILoadGame:close()
   UIResizable.close(self)
   if self.mode == "menu" then
-    self.ui:addWindow(UIMainMenu(self.ui))
+    self.ui:openMainMenu()
   end
 end
 
 function UILoadGame:afterLoad()
   self:close()
 end
+
+return UILoadGame

@@ -64,7 +64,7 @@ if [[ "${MP_REFEREE:-0}" == 1 ]]; then
   # Bots act twenty times sooner than a person would, and answer at once.
   export MP_BOT_PACE=20 MP_BOT_FAST=1 MP_BOT_SEED=7 MP_BOT_AWAY_SECONDS=100000 # (ivy stays its helper)
 fi
-PYTHONPATH="$source_dir/mp_server" python3 -m corsixth_mp --host 127.0.0.1 --port "$port" \
+CORSIXTH_MP_START_SPEED="${CORSIXTH_MP_START_SPEED:-Normal}" PYTHONPATH="$source_dir/mp_server" python3 -m corsixth_mp --host 127.0.0.1 --port "$port" \
   --log-level INFO --max-per-address 64 > "$out/server.log" 2>&1 &
 server_pid=$!
 trap 'kill $server_pid 2>/dev/null || true' EXIT

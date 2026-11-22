@@ -1,4 +1,4 @@
---[[ Copyright (c) 2026 CorsixTH-Multiplayer contributors
+--[[ Copyright (c) 2026 OpenTH contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -502,14 +502,26 @@ function MultiplayerSession.saveTogether(name)
 end
 
 --! File > Save (or its key) in a multiplayer game: a box for the save's name,
---! the level's name to start with, then MultiplayerSession.saveTogether.
---! False outside multiplayer.
+--! the level's name and the game date to start with ("MOUNT EVEREST
+--! y1-m07-d16", Jan), then MultiplayerSession.saveTogether. False outside
+--! multiplayer.
 function MultiplayerSession.openSave(ui)
   if not (TheApp and TheApp.mp_session) then return false end
   local world = TheApp.world
   local level = world and world.map and world.map.level_name
-  ui:addWindow(UIMultiplayerSave(ui, level and tostring(level) or ""))
+  ui:addWindow(UIMultiplayerSave(ui, MultiplayerSession.saveStartName(level and tostring(level) or "",
+      world and world.game_date)))
   return true
+end
+
+--! The name the save box starts with: the level's name and the game date,
+--! the name shortened so that both fit the box (30 characters).
+function MultiplayerSession.saveStartName(level, date)
+  if not date then return level end
+  local when = MultiplayerLobby.saveDate(date:year(), date:monthOfYear(), date:dayOfMonth())
+  level = level:sub(1, 30 - #when - 1):gsub("%s+$", "")
+  if level == "" then return when end
+  return level .. " " .. when
 end
 
 --! Is a player action now to be sent as a command (rather than done here)?
@@ -686,12 +698,16 @@ MultiplayerSession.rejection_texts = {
                      ["their reputation is full"] = "Their reputation cannot go any higher.",
                      ["monthly limit"] = "You have given as much reputation as you may this month."},
   sell_plot = {["not your plot"] = "That plot is not yours.",
+               ["being handed over"] = "That plot is being handed over to another player.",
                ["starting plot"] = "Your starting plot cannot be sold.",
                ["plot not empty"] = "You can only sell this plot when it is emptied of any items.",
                ["people on the plot"] = "You can only sell this plot when nobody is on it. Try again in a moment.",
                ["joins your land"] = "You cannot sell this plot: the rest of your land is joined to your hospital through it.",
                ["an auction is on"] = "Wait until the auction is over."},
   offer_plot = {["not your plot"] = "That plot is not yours.",
+                ["being handed over"] = "That plot is being handed over already.",
+                ["a room being built"] = "Finish the room being built or changed on that plot first.",
+                ["a destroyed room"] = "Clear away the destroyed room on that plot first.",
                 ["starting plot"] = "Your starting plot cannot be handed over.",
                 ["plot not empty"] = "You can only hand over this plot when it is emptied of any items.",
                 ["people on the plot"] = "You can only hand over this plot when nobody is on it. Try again in a moment.",
@@ -1366,11 +1382,36 @@ end
 local icons -- (mp_icons.lua, loaded when first drawn)
 local icon_colours = setmetatable({}, {__mode = "k"}) -- canvas -> name -> mapped colours
 
+--! A copy of `icon` with the picture between columns x0 and x1 mirrored (the
+--! button's frame and its light stay as they are).
+local function mirror_icon(icon, x0, x1)
+  local runs = {}
+  local src = icon.runs
+  for i = 1, #src, 4 do
+    local x, len = src[i + 1], src[i + 3]
+    if x >= x0 and x + len - 1 <= x1 then x = x0 + x1 - (x + len - 1) end
+    runs[i], runs[i + 1], runs[i + 2], runs[i + 3] = src[i], x, src[i + 2], len
+  end
+  return {w = icon.w, h = icon.h, colours = icon.colours, runs = runs}
+end
+
+--! The icons, with the derived ones: a speed vote for a slower game shows
+--! << (the >> of fax_speed mirrored; Jan, 2026-11-21).
+local function load_icons()
+  local loaded = corsixth.require("mp_icons")
+  if loaded.fax_speed and not loaded.fax_speed_slow then
+    loaded.fax_speed_slow = mirror_icon(loaded.fax_speed, 9, 20)
+    loaded.fax_speed_slow_pressed = mirror_icon(loaded.fax_speed_pressed, 9, 20)
+  end
+  return loaded
+end
+MultiplayerSession.mirrorIcon = mirror_icon
+
 --! Draw one of the multiplayer icons (MATROFTT's pixel art, mp_icons.lua)
 --! with its top left corner at ix, iy, at UI scale s.
 --!param name (string) the icon, e.g. "fax_money" or "transferstuff_pressed"
 function MultiplayerSession.drawIcon(canvas, name, ix, iy, s)
-  icons = icons or corsixth.require("mp_icons")
+  icons = icons or load_icons()
   local icon = icons[name]
   if not icon then return end
   local mapped = icon_colours[canvas]
@@ -2240,6 +2281,17 @@ function MultiplayerSession:syncVote(world)
   }
   local icon = panel:addLocalMessage("mp_vote", message)
   icon.mp_vote = vote.id
+  icon.mp_vote_slower = MultiplayerSession.voteIsSlower(world, vote.speed) or nil
+end
+
+--! Does a vote for `speed` ask for a slower game than it runs at now (when
+--! paused: than it goes on at)? Its icon then shows << instead of >>.
+function MultiplayerSession.voteIsSlower(world, speed)
+  local now = world.mp_speed
+  if not now or now == "Pause" then now = world.mp_resume_speed or "Normal" end
+  local rank = {}
+  for i, name in ipairs(MultiplayerLobby.SPEEDS) do rank[name] = i end
+  return (rank[speed] or 0) < (rank[now] or 0)
 end
 
 --! The player answered the speed vote fax (UIFax:buttonChoice).
@@ -2376,6 +2428,17 @@ function handlers.build_room(world, cmd)
   local builder = corsixth.require("mp_room_builder")
   local hospital = world.hospitals[cmd.hospital or 1]
   if not hospital then return false, "no such hospital" end
+  -- (Not on a plot whose rooms are being sold to hand it over.)
+  if world.mp_plot_handovers and next(world.mp_plot_handovers) then
+    local th, flags = world.map.th, {}
+    local x0, y0 = tonumber(cmd.x) or 1, tonumber(cmd.y) or 1
+    for ty = y0, y0 + (tonumber(cmd.h) or 0) - 1 do
+      for tx = x0, x0 + (tonumber(cmd.w) or 0) - 1 do
+        local plot = th:getCellFlags(tx, ty, flags).parcelId
+        if plot and world.mp_plot_handovers[plot] then return false, "plot being handed over" end
+      end
+    end
+  end
   local room, why, dlg = builder.build(world, hospital, cmd)
   if why == "people in the area" then
     builder.clearArea(world, cmd.x, cmd.y, cmd.w, cmd.h, cmd)
@@ -2462,6 +2525,7 @@ function handlers.room_edit(world, cmd)
     return false, "room is already being edited"
   end
   if not room.built or room.crashed or not room.is_active then return false, "room cannot be edited now" end
+  if room.mp_handover then return false, "room is being sold" end
   room.mp_edit = {peer = cmd.peer}
   room:tryToEdit() -- opens the editor at once if nobody is inside
   return true
@@ -2653,6 +2717,21 @@ function MultiplayerSession.reputationLeft(world, from)
   return math.max(0, MultiplayerSession.REP_MONTH_LIMIT - used)
 end
 
+--! Moves a hospital's reputation by `points` rating points (multiplayer
+--! rewards, dirty tricks, gifts between allies). The reputation is a credit
+--! over a weight (ReputationAccount); a point is worth weight / 500 credit.
+--! Hospital:changeReputationByPoints moves whole credits only, which early
+--! in a game (weight 20: a credit is 25 points) loses a rat attack's 14
+--! points entirely. These multiplayer events were made in points, so they
+--! move the credit by exactly that much, fractions included.
+function MultiplayerSession.changeReputation(hospital, points)
+  local account = hospital.reputation_account
+  if not account or points == 0 then return end
+  local ReputationAccount = cth_require("reputation")
+  account:applyDelta(points * account.weight / ReputationAccount.rating_neutral, 0)
+  hospital:updateReputation()
+end
+
 --! How many points `from` can give `to` now (0 to REP_MAX_GIVE), and why not
 --! more: "reputation too low" (the giver's floor), "their reputation is
 --! full" (the receiver's top) or "monthly limit".
@@ -2682,8 +2761,8 @@ function handlers.give_reputation(world, cmd)
   local month = world:date():monthOfGame()
   local given = from.mp_rep_given
   local used = given and given.month == month and given.points or 0
-  from:unconditionalChangeReputation(-amount)
-  to:unconditionalChangeReputation(amount)
+  MultiplayerSession.changeReputation(from, -amount)
+  MultiplayerSession.changeReputation(to, amount)
   from.mp_rep_given = {month = month, points = used + amount}
   cmd.resolved = amount .. " points"
   MultiplayerSession.tellPlayer(world, from, S.rep_given_note:format(to.name, amount))
@@ -3082,8 +3161,8 @@ function MultiplayerSession.referralCured(world, hospital, patient)
   patient.mp_referred_by = nil
   if not by or by == hospital then return end
   local S = _S.multiplayer_window
-  by:changeReputation(nil, nil, MultiplayerSession.REFERRAL_REPUTATION)
-  hospital:changeReputation(nil, nil, MultiplayerSession.REFERRAL_EXTRA)
+  MultiplayerSession.changeReputation(by, MultiplayerSession.REFERRAL_REPUTATION)
+  MultiplayerSession.changeReputation(hospital, MultiplayerSession.REFERRAL_EXTRA)
   MultiplayerSession.tellPlayer(world, by, S.referral_cured_note:format(hospital.name,
       MultiplayerSession.REFERRAL_REPUTATION))
   MultiplayerSession.tellPlayer(world, hospital, S.referral_cured_here_note:format(by.name,
@@ -3459,6 +3538,67 @@ function handlers.loan(world, cmd)
     hospital.loan = hospital.loan - amount
     hospital:spendMoney(amount, _S.transactions.loan_repayment)
   end
+  return true
+end
+
+--------------------------------------------------------------------------------
+-- What the bots in a person's hospital do (Argus and Jan, 2026-11-21): an
+-- assistant, or a bot of a team's shared hospital. The hospital's people
+-- switch each job on or off during the game (MULTIPLAYER menu, ASSISTANT);
+-- it is a shared command, so every game knows what each hospital's bots may
+-- do (the same switches for everybody), and the save keeps it in
+-- hospital.mp_assistant (job -> true or false; a job not in it has its
+-- default). The room's game option "Allied bots build" off is the limit for
+-- everybody: building cannot be switched on then. The switches hold while a
+-- person of the hospital is in the game; a hospital nobody plays any more
+-- is the bots' own.
+--------------------------------------------------------------------------------
+
+--! The jobs, in the menu's order, and whether each is on in a new game.
+MultiplayerSession.ASSISTANT_JOBS = {
+  {name = "build", default = true}, -- builds departments, furnishes the corridors
+  {name = "hire", default = true}, -- hires doctors, nurses and handymen above 75% skill
+  {name = "replace", default = false}, -- replaces staff with better ones from the list
+  {name = "faxes", default = false}, -- answers faxes (emergencies, questions, offers)
+  {name = "loan", default = true}, -- repays the loan at the end of a month
+  {name = "auctions", default = false}, -- bids at land auctions
+  -- (Jan, 2026-11-21: these three, on as before unless switched off.)
+  {name = "plots", default = true}, -- buys plots for rooms it wants (not at auctions)
+  {name = "research", default = true}, -- aims research at the rooms it wants
+  {name = "heating", default = true}, -- turns the heating up or down
+}
+
+--! Did the room's game options say that bots in a person's hospital do not
+--! build ("Allied bots build" off)?
+function MultiplayerSession.assistantsBuildOff(world)
+  return world ~= nil and world.mp_coop ~= nil and world.mp_coop.helpers_off == true
+end
+
+--! May the bots in `hospital` do `job` (a name in ASSISTANT_JOBS)?
+function MultiplayerSession.assistantMay(world, hospital, job)
+  if job == "build" and MultiplayerSession.assistantsBuildOff(world) then return false end
+  local set = hospital and hospital.mp_assistant
+  if set and set[job] ~= nil then return set[job] end
+  for _, j in ipairs(MultiplayerSession.ASSISTANT_JOBS) do
+    if j.name == job then return j.default end
+  end
+  return false
+end
+
+--! Switch a job of the bots in the sender's hospital on or off: {job, on (1 or 0)}.
+function handlers.assistant_job(world, cmd)
+  local hospital = hospital_of(world, cmd)
+  if not hospital then return false, "no such hospital" end
+  local known = false
+  for _, j in ipairs(MultiplayerSession.ASSISTANT_JOBS) do known = known or j.name == cmd.job end
+  if not known then return false, "no such job" end
+  local on = tonumber(cmd.on) == 1
+  if on and cmd.job == "build" and MultiplayerSession.assistantsBuildOff(world) then
+    return false, "bots do not build in this game"
+  end
+  hospital.mp_assistant = hospital.mp_assistant or {}
+  hospital.mp_assistant[cmd.job] = on
+  cmd.resolved = cmd.job .. (on and " on" or " off")
   return true
 end
 
@@ -4315,8 +4455,65 @@ function MultiplayerSession.plotRefusal(world, hospital, plot, answering, giving
   if th:getPlotOwner(plot) ~= hospital:getPlayerIndex() then return "not your plot" end
   if MultiplayerSession.isStartingPlot(world, plot) then return "starting plot" end
   if world.mp_auction and not answering then return "an auction is on" end
+  if world.mp_plot_handovers and world.mp_plot_handovers[plot] then return "being handed over" end
   local why = MultiplayerSession.plotNotEmpty(world, plot, giving)
   if why then return why end
+  if not land_stays_whole(world, hospital, plot) then return "joins your land" end
+  return nil
+end
+
+--! The rooms on `plot` (any of their tiles), in a fixed order (room id).
+function MultiplayerSession.plotRooms(world, plot)
+  local th, flags, list = world.map.th, {}, {}
+  for _, room in pairs(world.rooms) do
+    local on = false
+    for ry = room.y, room.y + room.height - 1 do
+      for rx = room.x, room.x + room.width - 1 do
+        on = on or th:getCellFlags(rx, ry, flags).parcelId == plot
+      end
+    end
+    if on then list[#list + 1] = room end
+  end
+  table.sort(list, function(a, b) return a.id < b.id end)
+  return list
+end
+
+--! The corridor objects on `plot` (benches, plants, machines: what a player
+--! can pick up and sell), each once, in a fixed order (entity id).
+function MultiplayerSession.plotCorridorObjects(world, plot)
+  local tiles = MultiplayerSession.plotTiles(world.map.th, plot)
+  local seen, list = {}, {}
+  for i = 1, #tiles, 2 do
+    for _, obj in ipairs(world:getObjects(tiles[i], tiles[i + 1]) or {}) do
+      if not seen[obj] and obj.object_type.corridor_object and not obj.object_type.supports_creation_for_map and
+          obj.tile_x and not obj:getRoom() then
+        seen[obj] = true
+        list[#list + 1] = obj
+      end
+    end
+  end
+  table.sort(list, function(a, b) return (a.mp_id or 0) < (b.mp_id or 0) end)
+  return list
+end
+
+--! Why `hospital` may not hand `plot` to another player now, or nil. As
+--! plotRefusal, but rooms and corridor objects on it are fine (Argus,
+--! 2026-11-21: they are sold when the plot changes hands), unless a room
+--! there is being built or edited, or is destroyed.
+--!param answering (bool) optional; as plotRefusal's
+function MultiplayerSession.plotGiveRefusal(world, hospital, plot, answering)
+  local th = world.map.th
+  if not plot or plot < 1 or plot > th:getPlotCount() then return "no such plot" end
+  if th:getPlotOwner(plot) ~= hospital:getPlayerIndex() then return "not your plot" end
+  if MultiplayerSession.isStartingPlot(world, plot) then return "starting plot" end
+  if world.mp_auction and not answering then return "an auction is on" end
+  if world.mp_plot_handovers and world.mp_plot_handovers[plot] then return "being handed over" end
+  for _, room in ipairs(MultiplayerSession.plotRooms(world, plot)) do
+    if room.crashed then return "a destroyed room" end
+    if not room.built or room.mp_edit or (world.mp_furnishing and world.mp_furnishing[room.id]) then
+      return "a room being built"
+    end
+  end
   if not land_stays_whole(world, hospital, plot) then return "joins your land" end
   return nil
 end
@@ -4452,7 +4649,7 @@ function handlers.offer_plot(world, cmd)
   local price = math.floor(tonumber(cmd.price) or 0)
   if price < 0 or price > MultiplayerSession.PLOT_MAX_PRICE then return false, "invalid price" end
   local plot = math.floor(tonumber(cmd.plot) or 0)
-  local why = MultiplayerSession.plotRefusal(world, from, plot, nil, true)
+  local why = MultiplayerSession.plotGiveRefusal(world, from, plot)
   if not why then why = MultiplayerSession.plotHandoverRefusal(world, to, plot) end
   if not why and plot_offer_pending(world, plot) then why = "already offered" end
   if why then return false, why end
@@ -4469,6 +4666,10 @@ function handlers.offer_plot(world, cmd)
     mp_offer = {kind = "plot", from = world:getHospitalIndex(from), to = world:getHospitalIndex(to),
         plot = plot, price = price > 0 and price or nil, name = "plot " .. plot},
   }
+  -- (Its rooms and corridor objects are sold first: the plot comes empty.)
+  if #MultiplayerSession.plotRooms(world, plot) + #MultiplayerSession.plotCorridorObjects(world, plot) > 0 then
+    table.insert(message, 3, {text = S.plot_offer_rooms_line})
+  end
   panel:queueMessage("mp_money", message, nil, Date.hoursPerDay() * MultiplayerSession.OFFER_DAYS, 2, nil, to)
   world.mp_plot_offers = world.mp_plot_offers or {}
   world.mp_plot_offers[plot] = world.next_message_id
@@ -4495,7 +4696,7 @@ function MultiplayerSession.resolvePlotOffer(world, offer, from, to, accept)
     MultiplayerSession.tellPlayer(world, from, S.plot_offer_declined_note:format(to.name, plot))
     return
   end
-  local why = MultiplayerSession.plotRefusal(world, from, plot, true, true)
+  local why = MultiplayerSession.plotGiveRefusal(world, from, plot, true)
   if not why then why = MultiplayerSession.plotHandoverRefusal(world, to, plot) end
   if why then
     log("void: " .. why)
@@ -4513,6 +4714,61 @@ function MultiplayerSession.resolvePlotOffer(world, offer, from, to, accept)
     MultiplayerSession.tellPlayer(world, from, S.plot_offer_no_money_sender_note:format(to.name, plot))
     return
   end
+  if price > 0 then
+    to:spendMoney(price, S.plot_bought_transaction:format(from.name, plot))
+    from:receiveMoney(price, S.plot_given_transaction:format(to.name, plot))
+  end
+  -- Its rooms close now (the people in them leave, as for an edit); the plot
+  -- changes hands once they are empty (MultiplayerSession.finishPlotHandover,
+  -- also at each day's end).
+  local rooms = MultiplayerSession.plotRooms(world, plot)
+  world.mp_plot_handovers = world.mp_plot_handovers or {}
+  world.mp_plot_handovers[plot] = {from = world:getHospitalIndex(from), to = offer.to, price = price}
+  for _, room in ipairs(rooms) do
+    room.mp_handover = plot
+    if room.is_active then room:tryToEdit() end
+  end
+  if MultiplayerSession.finishPlotHandover(world, plot) then
+    log(price > 0 and ("handed over for $" .. price) or "handed over")
+  else
+    log("accepted; its rooms are closing")
+    MultiplayerSession.tellPlayer(world, from, S.plot_handover_closing_note:format(plot))
+    MultiplayerSession.tellPlayer(world, to, S.plot_handover_closing_note:format(plot))
+  end
+end
+
+--! Hand `plot` over (an accepted offer, world.mp_plot_handovers) once nobody
+--! is in its rooms any more: the rooms are sold as a player deleting them
+--! would (mp_room_builder.sellRoom: half the build cost back), the corridor
+--! objects as a player selling them, both to the giver; then the plot and
+--! its worth change hands. The same on every peer.
+--!return true when it is done (or there was nothing to do)
+function MultiplayerSession.finishPlotHandover(world, plot)
+  local S = _S.multiplayer_window
+  local h = world.mp_plot_handovers and world.mp_plot_handovers[plot]
+  if not h then return true end
+  local rooms = MultiplayerSession.plotRooms(world, plot)
+  for _, room in ipairs(rooms) do
+    if next(room.humanoids) or (room.door and room.door.user) then return false end
+  end
+  local from, to = world.hospitals[h.from], world.hospitals[h.to]
+  local before = from.balance
+  local builder = corsixth.require("mp_room_builder")
+  local sold_rooms = 0
+  for _, room in ipairs(rooms) do
+    if world.rooms[room.id] == room and builder.sellRoom(world, room) then sold_rooms = sold_rooms + 1 end
+  end
+  local objects = MultiplayerSession.plotCorridorObjects(world, plot)
+  for _, obj in ipairs(objects) do
+    local cost = from:getObjectBuildCost(obj.object_type.id)
+    from:receiveMoney(cost, _S.transactions.sell_object .. ": " .. obj.object_type.name, cost)
+    pick_up(obj)
+    local desk = obj.object_type.id == "reception_desk"
+    world:destroyEntity(obj)
+    if desk then from:buildReceptionDesksCache() end
+  end
+  if sold_rooms + #objects > 0 then world:resetSideObjects() end
+  world.mp_plot_handovers[plot] = nil
   local paid = MultiplayerSession.plotPaid(world, plot)
   release_plot(world, from, plot, to:getPlayerIndex())
   table.insert(to.ownedPlots, plot)
@@ -4521,14 +4777,28 @@ function MultiplayerSession.resolvePlotOffer(world, offer, from, to, accept)
     from.value = from.value - paid
     to.value = to.value + paid
   end
-  if price > 0 then
-    to:spendMoney(price, S.plot_bought_transaction:format(from.name, plot))
-    from:receiveMoney(price, S.plot_given_transaction:format(to.name, plot))
+  local session = world.app and world.app.mp_session
+  if session then
+    session.log(string.format("plot %d handed to hospital %d: %d rooms and %d objects sold for $%d", plot, h.to,
+        sold_rooms, #objects, math.floor(from.balance - before)))
   end
-  log(price > 0 and ("handed over for $" .. price) or "handed over")
+  if sold_rooms + #objects > 0 then
+    MultiplayerSession.tellPlayer(world, from, S.plot_handover_sold_note:format(plot, sold_rooms, #objects,
+        math.floor(from.balance - before)))
+  end
   MultiplayerSession.tellPlayer(world, to, S.plot_received_note:format(plot, from.name))
-  MultiplayerSession.tellPlayer(world, from, price > 0 and S.plot_offer_accepted_price_note:format(to.name, plot, price)
-      or S.plot_offer_accepted_note:format(to.name, plot))
+  MultiplayerSession.tellPlayer(world, from, h.price > 0 and
+      S.plot_offer_accepted_price_note:format(to.name, plot, h.price) or S.plot_offer_accepted_note:format(to.name, plot))
+  return true
+end
+
+--! Every plot waiting to be handed over whose rooms are empty now changes
+--! hands (World:onEndDay).
+function MultiplayerSession.finishPlotHandovers(world)
+  local plots = {}
+  for plot in pairs(world.mp_plot_handovers or {}) do plots[#plots + 1] = plot end
+  table.sort(plots)
+  for _, plot in ipairs(plots) do MultiplayerSession.finishPlotHandover(world, plot) end
 end
 
 --! A bot hospital that must pay `cost` and would be left with less than its

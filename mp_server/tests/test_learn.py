@@ -229,3 +229,86 @@ def test_the_night_reports_each_game_once():
     learnt = learn._learnt(records, {"CORSIXTH_MP_REFEREE_SOURCE": str(REPO)})
     assert learnt == [{"player": "ARGUS", "save": "2 a y3", "level": "TEST TOWN", "date": "3-01-01T00",
                        "rooms": 2, "saves": 2}]
+
+
+def _built(rooms=(), objects=()):
+    """The referee's note on who built what: rooms (kind, x, y, by) and
+    objects (id, x, y, by)."""
+    experts = {"ARGUS", "MATROFTT"}
+    return {"rooms": [{"kind": k, "x": x, "y": y, "by": by, "expert": by in experts} for k, x, y, by in rooms],
+            "objects": [{"id": i, "x": x, "y": y, "by": by, "expert": by in experts} for i, x, y, by in objects]}
+
+
+def test_an_expert_with_an_assistant_is_learnt_without_the_bots_work():
+    """Argus, 2026-11-21: his games with an assistant ("ARGUS + BOT EDNA")
+    were never learnt from. Now they are, as his, without what the bot built."""
+    gp = _room("gp", 10, 10, [("desk", 12, 12, "south"), ("extinguisher", 10, 11, "east")])
+    bots_gp = _room("gp", 20, 10, [("desk", 22, 12, "south")])
+    old_ward = _room("ward", 30, 10, [("bed", 31, 12, "south")])  # (from before this game)
+    rec = _record("s.sav", 5, "ARGUS + BOT EDNA", [gp, bots_gp, old_ward])
+    rec["corridor"] = [{"id": "bench", "x": 9, "y": 9, "dir": "north", "tiles": [[9, 9]]},
+                       {"id": "plant", "x": 8, "y": 9, "dir": "north", "tiles": [[8, 9]]},
+                       {"id": "entrance_left_door", "x": 5, "y": 5, "dir": "west", "tiles": [[5, 5]]}]
+    info = {"index": 5, "experts": ["ARGUS"], "built": _built(
+        rooms=[("gp", 10, 10, "ARGUS"), ("gp", 20, 10, "BOT EDNA")],
+        objects=[("desk", 12, 12, "ARGUS"), ("extinguisher", 10, 11, "BOT EDNA"), ("plant", 8, 9, "BOT EDNA"),
+                 ("bench", 9, 9, "ARGUS")])}
+    [own] = learn.own_records(rec, info, {"ARGUS"})
+    assert own["name"] == "ARGUS" and own["shared"] == "ARGUS + BOT EDNA"
+    # His gp (without the bot's extinguisher) and the ward nobody was seen
+    # to build; not the bot's gp, not its plant; the map's entrance stays.
+    assert [(r["kind"], r["x"]) for r in own["rooms"]] == [("gp", 10), ("ward", 30)]
+    assert [o["id"] for o in own["rooms"][0]["objects"]] == ["desk"]
+    assert [o["id"] for o in own["corridor"]] == ["bench", "entrance_left_door"]
+    assert rec["name"] == "ARGUS + BOT EDNA" and len(rec["rooms"]) == 3  # (the record itself is left as it was)
+
+
+def test_a_hospital_shared_with_people_keeps_only_each_experts_own_work():
+    gp = _room("gp", 10, 10, [("desk", 12, 12, "south")])
+    jans_ward = _room("ward", 20, 10, [("bed", 21, 12, "south")])
+    pharmacy = _room("pharmacy", 30, 10, [("pharmacy_cabinet", 31, 12, "west")])
+    unseen = _room("toilets", 40, 10, [])
+    rec = _record("s.sav", 1, "ARGUS + JAN + MATROFTT", [gp, jans_ward, pharmacy, unseen])
+    info = {"built": _built(rooms=[("gp", 10, 10, "ARGUS"), ("ward", 20, 10, "JAN"),
+                                   ("pharmacy", 30, 10, "MATROFTT")],
+                            objects=[("bench", 9, 9, "JAN")])}
+    own = learn.own_records(rec, info, {"ARGUS", "MATROFTT"})
+    # One record per expert, each with only what they were seen to build
+    # (a room nobody was seen to build may be anyone's: left out).
+    assert [(o["name"], [r["kind"] for r in o["rooms"]], o["corridor"]) for o in own] == [
+        ("ARGUS", ["gp"], []), ("MATROFTT", ["pharmacy"], [])]
+
+
+def test_without_the_referees_note_a_shared_hospital_is_not_learnt():
+    rec = _record("s.sav", 1, "ARGUS + BOT EDNA", [_room("gp", 10, 10, [])])
+    assert learn.own_records(rec, {}, {"ARGUS"}) == [rec]
+    assert learn.own_records(_record("s.sav", 1, "ARGUS", []), {}, {"ARGUS"})[0]["name"] == "ARGUS"
+    assert learn.own_records(_record("s.sav", 2, "JAN + BOT CLIVE", []), {"built": _built()}, {"ARGUS"})[0][
+        "name"] == "JAN + BOT CLIVE"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the stand-in game is a shell script")
+def test_a_night_learns_an_expert_who_played_with_an_assistant(tmp_path):
+    folder = tmp_path / "learn"
+    (folder / "saves").mkdir(parents=True)
+    save = folder / "saves" / "20261121-195427 Jan's room y2-12-06.sav"
+    save.write_bytes(b"save")
+    save.with_suffix(".json").write_text(json.dumps({"hospitals": [
+        {"index": 1, "name": "JAN + BOT CLIVE", "expert": False, "bot_ever": False},
+        {"index": 5, "name": "ARGUS + BOT EDNA", "expert": True, "bot_ever": False, "experts": ["ARGUS"],
+         "built": _built(rooms=[("gp", 10, 10, "BOT EDNA"), ("ward", 20, 10, "ARGUS")])}]}), encoding="utf-8")
+    records = [_record(str(save), 1, "JAN + BOT CLIVE", [_room("gp", 50, 10, [])]),
+               _record(str(save), 5, "ARGUS + BOT EDNA", [_room("gp", 10, 10, [("desk", 12, 12, "south")]),
+                                                          _room("ward", 20, 10, [("bed", 21, 12, "south")])])]
+    dump_out = tmp_path / "dump-lines.jsonl"
+    dump_out.write_text("".join(json.dumps(r) + "\n" for r in records), encoding="utf-8")
+    game = tmp_path / "corsix-th"
+    game.write_text("#!/bin/sh\ncp '%s' \"$MP_LAYOUT_OUT\"\necho \"dumped $MP_LAYOUT_SAVES\"\n" % dump_out)
+    game.chmod(game.stat().st_mode | stat.S_IEXEC)
+    env = {"CORSIXTH_MP_LEARN_DIR": str(folder), "CORSIXTH_MP_EXPERTS": "Argus",
+           "CORSIXTH_MP_REFEREE_BINARY": str(game), "CORSIXTH_MP_REFEREE_SOURCE": str(REPO),
+           "CORSIXTH_MP_REFEREE_DATA": str(tmp_path), "PATH": os.environ.get("PATH", "")}
+    summary = learn.run(env, now=1795330000.0)
+    assert [(e["player"], e["rooms"]) for e in summary["learnt"]] == [("ARGUS", 1)]
+    text = (folder / "learned.lua").read_text(encoding="utf-8")
+    assert "ward = {" in text and "gp = {" not in text

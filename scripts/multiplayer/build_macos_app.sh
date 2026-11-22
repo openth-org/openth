@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Build a self-contained macOS app of CorsixTH multiplayer for Apple Silicon
+# Build a self-contained macOS app of OpenTH (CorsixTH with network
+# multiplayer) for Apple Silicon
 # (arm64), macOS 26 Tahoe or newer (MACOSX_DEPLOYMENT_TARGET, default 26.0; CI
 # builds on a macOS 27 Mac with 27.0, whose Homebrew libraries need 27, or on
-# GitHub's macOS 26 or 15): CorsixTH.app, and a zip of it.
+# GitHub's macOS 26 or 15): OpenTH.app, and a zip of it.
 #
 # Players need the same Lua runtime as the Windows and Linux builds (Lua 5.5:
 # it is part of the multiplayer build id), so Lua 5.5 and the Lua modules the
@@ -22,8 +23,8 @@
 # Needs Xcode command line tools and the Homebrew packages listed in
 # .github/workflows/macOS.yml.
 # Usage: bash scripts/multiplayer/build_macos_app.sh [VERSION_LABEL]
-# Result: dist/CorsixTH-Multiplayer/CorsixTH.app and
-#         dist/CorsixTH-Multiplayer-<label>-macos-<arch>.zip (ARCH, default this
+# Result: dist/OpenTH/OpenTH.app and
+#         dist/OpenTH-<label>-macos-<arch>.zip (ARCH, default this
 #         Mac's: arm64, or x86_64 on an Intel Mac, which Apple Silicon runs
 #         through Rosetta)
 set -euo pipefail
@@ -139,20 +140,29 @@ rm -rf "$work/stage"
 cmake --install "$work/build"
 
 # 4. The app: libraries in Contents/Frameworks, Lua modules next to
-# CorsixTH.lua, everything signed ad hoc.
-pkg=$dist/CorsixTH-Multiplayer
-app=$pkg/CorsixTH.app
+# CorsixTH.lua, everything signed ad hoc. CMake installs CorsixTH.app; the
+# players' app is OpenTH.app, its program and the name macOS shows OpenTH.
+pkg=$dist/OpenTH
+app=$pkg/OpenTH.app
 rm -rf "$pkg"
 mkdir -p "$pkg"
 cp -R "$work/stage/CorsixTH.app" "$app"
+mv "$app/Contents/MacOS/CorsixTH" "$app/Contents/MacOS/OpenTH"
+plist=$app/Contents/Info.plist
+/usr/libexec/PlistBuddy -c "Set :CFBundleExecutable OpenTH" "$plist"
+for key in CFBundleName CFBundleDisplayName; do
+  /usr/libexec/PlistBuddy -c "Set :$key OpenTH" "$plist" 2>/dev/null ||
+    /usr/libexec/PlistBuddy -c "Add :$key string OpenTH" "$plist"
+done
+exe=$app/Contents/MacOS/OpenTH
 res=$app/Contents/Resources
 cp -R "$mods/." "$res/"
 cp -R "$lmods/." "$res/"
-dylibbundler -cd -of -b -x "$app/Contents/MacOS/CorsixTH" -d "$app/Contents/Frameworks/" \
+dylibbundler -cd -of -b -x "$exe" -d "$app/Contents/Frameworks/" \
   -p @executable_path/../Frameworks/ -s "$P/lib" -s "$brew_prefix/lib" < /dev/null
 # Only the app's own library folder stays on the search path.
-for rp in $(otool -l "$app/Contents/MacOS/CorsixTH" | awk '/LC_RPATH/ {getline; getline; print $2}'); do
-  case "$rp" in @*) ;; *) install_name_tool -delete_rpath "$rp" "$app/Contents/MacOS/CorsixTH" ;; esac
+for rp in $(otool -l "$exe" | awk '/LC_RPATH/ {getline; getline; print $2}'); do
+  case "$rp" in @*) ;; *) install_name_tool -delete_rpath "$rp" "$exe" ;; esac
 done
 # Nothing may point outside the app (except the system's own libraries).
 leaks=$(find "$app" -type f \( -perm -u+x -o -name '*.dylib' -o -name '*.so' \) -print0 |
@@ -166,31 +176,31 @@ codesign --force --sign - --timestamp=none "$app"
 codesign --verify --strict --verbose=2 "$app"
 
 cat > "$pkg/README-MULTIPLAYER.txt" <<EOF
-CorsixTH-Multiplayer test build (macOS $MACOSX_DEPLOYMENT_TARGET or newer, $([[ $arch == arm64 ]] && echo "Apple Silicon" || echo "Intel; Apple Silicon runs it through Rosetta"))
+OpenTH (CorsixTH with network multiplayer) for macOS $MACOSX_DEPLOYMENT_TARGET or newer ($([[ $arch == arm64 ]] && echo "Apple Silicon" || echo "Intel; Apple Silicon runs it through Rosetta"))
 Commit $label of https://github.com/openth-org/openth
 
-Move CorsixTH.app to Applications (or anywhere) and open it. The app is not
+Move OpenTH.app to Applications (or anywhere) and open it. The app is not
 notarized by Apple: the first time macOS refuses to open it. Then open
 System Settings > Privacy & Security, scroll down to the note about
-CorsixTH and click Open Anyway (once). Alternatively, in Terminal:
-  xattr -dr com.apple.quarantine /Applications/CorsixTH.app
+OpenTH and click Open Anyway (once). Alternatively, in Terminal:
+  xattr -dr com.apple.quarantine /Applications/OpenTH.app
 
 The first start asks for your Theme Hospital folder (the game data is not
 included). Settings and saves are in the hidden folder ~/.config/CorsixTH.
 
-Everybody in a game must use a build of the same commit, on Windows, Linux
-or macOS. Main menu > Multiplayer, server address (host:port) and your name.
-Keep the game language English.
+Everybody in a game needs the same build (Windows, Linux and macOS play
+together); a server gives you its build in the game. Main menu >
+Multiplayer, click a server and enter your name.
 
 Full guide: docs/multiplayer/PLAYING.md in the repository.
-CorsixTH is MIT licensed (LICENSE.txt). Theme Hospital is a trademark of
+OpenTH and CorsixTH are MIT licensed (LICENSE.txt). Theme Hospital is a trademark of
 Electronic Arts; this build contains none of its data.
 EOF
 cp "$src/LICENSE.txt" "$pkg/" 2>/dev/null || true
 
-zip=$dist/CorsixTH-Multiplayer-$label-macos-$arch.zip
+zip=$dist/OpenTH-$label-macos-$arch.zip
 rm -f "$zip"
-(cd "$dist" && ditto -c -k --keepParent CorsixTH-Multiplayer "$zip")
+(cd "$dist" && ditto -c -k --keepParent OpenTH "$zip")
 echo "Bundled libraries:"; ls "$app/Contents/Frameworks" 2>/dev/null || true
 echo "App: $app"
 echo "Archive: $zip"

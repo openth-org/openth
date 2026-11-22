@@ -749,20 +749,44 @@ do
   m:defendBombs({day = 22, hosp = hosp})
   eq(issued[1] and issued[1].kind, "litter_bomb_pick", "one with 300 hours is picked up once noticed")
   -- Sharing a person's hospital, it leaves the bomb to them while they are
-  -- there; when they are away it picks it up.
+  -- in the game, also while they give no orders (Jan, 2026-11-21); once they
+  -- have left the game it picks it up.
   issued = {}
-  local here = true
-  m.bot.sharesWithPerson = function() return here end
+  local mates = {1}
+  m.bot.hospitalMates = function() return mates end
+  m.bot.sharesWithPerson = function() return false end -- (away: no orders for days)
   bomb.mp_bomb = {fuse = 300, throws = 3}
   m:defendBombs({day = 30, hosp = hosp})
   m:defendBombs({day = 32, hosp = hosp})
-  eq(#issued, 0, "the person there picks it up, not the bot")
-  here = false
+  eq(#issued, 0, "the person in the game picks it up, not the bot, even while away")
+  mates = {}
   m:defendBombs({day = 34, hosp = hosp}) -- (it notices the bomb a day or more later)
   m:defendBombs({day = 36, hosp = hosp})
-  eq(issued[1] and issued[1].kind, "litter_bomb_pick", "the person away: the bot picks it up")
+  eq(issued[1] and issued[1].kind, "litter_bomb_pick", "the person gone: the bot picks it up")
 end
 print("bombs left ok")
+
+-- Evil handymen (and rats) are left to the people of the hospital while one
+-- of them is in the game (Jan, 2026-11-21); once they have left, the bot
+-- throws him out when it notices him.
+do
+  local issued = {}
+  local mates = {1}
+  local m = setmetatable({bot = {hospitalMates = function() return mates end}, noticed = {},
+      rand = function(a) return a end, note = function() end,
+      issue = function(_, cmd) issued[#issued + 1] = cmd return true end}, M)
+  local st = {day = 100, saboteurs = {{mp_id = 5}}, rats = {}, hosp = {}}
+  m:defend(st)
+  st.day = 130
+  m:defend(st)
+  eq(#issued, 0, "a person of the hospital is in the game: the evil handyman is theirs")
+  mates = {}
+  m:defend(st) -- (noticed now, thrown out some days later)
+  st.day = 160
+  m:defend(st)
+  eq(issued[1] and issued[1].kind, "fire_staff", "nobody of the hospital left: the bot throws him out")
+end
+print("tricks left ok")
 
 -- A research room (Jan, 2026-11-14): none with nothing left to research; a
 -- kind of room the person sharing the hospital took away stays away.
@@ -853,3 +877,47 @@ do
   eq(M.nurseSlack(8), 2, "8 nurse places, 2 spare")
 end
 print("spare doctors ok")
+
+-- An assistant's loan (Argus and Jan, 2026-11-21): in a month's last days,
+-- once a month, with more than $10,000 in the bank it repays what leaves at
+-- least $5,000.
+do
+  local today, month = {day = 25, last = 30}, 7
+  local date = {dayOfMonth = function() return today.day end, lastDayOfMonth = function() return today.last end,
+      monthOfGame = function() return month end}
+  local issued = {}
+  local m = setmetatable({bot = {world = {date = function() return date end}}, log = function() end, history = {},
+      note = function() end, noteSpent = function() end,
+      issue = function(_, cmd) issued[#issued + 1] = cmd return true end}, M)
+  m:assistantLoan({loan = 20000, balance = 30000, day = 200})
+  eq(#issued, 0, "not before the month's last days")
+  today.day = 28
+  m:assistantLoan({loan = 20000, balance = 30000, day = 203})
+  eq(issued[1] and issued[1].amount, -20000, "the whole loan, $10,000 left")
+  today.day = 29
+  m:assistantLoan({loan = 5000, balance = 30000, day = 204})
+  eq(#issued, 1, "once a month")
+  month, today.day = 8, 31
+  today.last = 31
+  m:assistantLoan({loan = 8000, balance = 10000, day = 235})
+  eq(#issued, 1, "not with $10,000 or less")
+  m:assistantLoan({loan = 8000, balance = 12345, day = 235})
+  eq(issued[2] and issued[2].amount, -7000, "what leaves at least $5,000")
+end
+print("assistant loan ok")
+
+-- A staff room beside the research department (Argus, 2026-11-22): a
+-- hospital with research but its staff rooms far away wants another one.
+do
+  local hosp = {}
+  local function room(id, x, y)
+    return {hospital = hosp, is_active = true, door = {tile_x = x}, room_info = {id = id},
+        getEntranceXY = function() return x, y end}
+  end
+  local w = {rooms = {room("research", 50, 50), room("staff_room", 20, 20), room("gp", 52, 50)}}
+  eq(M.staffFarFromResearch(w, hosp), true, "staff room far from research")
+  w.rooms[#w.rooms + 1] = room("staff_room", 58, 55)
+  eq(M.staffFarFromResearch(w, hosp), false, "a staff room beside research")
+  eq(M.staffFarFromResearch({rooms = {room("staff_room", 20, 20)}}, hosp), false, "no research: nothing to say")
+end
+print("staff room by research ok")

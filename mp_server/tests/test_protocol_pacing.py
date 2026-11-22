@@ -67,3 +67,10 @@ def test_pacing_slow_link_caps_speed():
 
 def test_effective_rtt_includes_jitter():
     assert pacing.effective_rtt([10, 10, 30]) == 10 + 5
+
+
+def test_start_speed_slower_capped_by_the_room():
+    assert pacing.start_speed("Max speed") == "Slower"
+    assert pacing.start_speed("Slowest") == "Slowest"
+    assert pacing.start_speed("Max speed", "Normal") == "Normal"
+    assert pacing.start_speed("Max speed", "nonsense") == "Slower"

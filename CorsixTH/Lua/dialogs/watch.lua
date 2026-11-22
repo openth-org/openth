@@ -18,7 +18,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-local Window = _G['Window'] ---@type Window
+local Window = cth_require("window")
 
 --! Timer / clock / watch / countdown dialog for emergencies / level start
 --! The timer lasts approximately 100 days, split into 13 segments
@@ -182,6 +182,41 @@ end
 --! watch that lost track of it.
 UIWatch.MP_MAX_RED_HOURS = 48
 
+--! The watch's picture for the open_timer just counted down to: it is built
+--! step by step (the red segments from 11 on, the white face gone at 5).
+function UIWatch:_showOpenTimer()
+  if self.open_timer == 11 then
+    self:addPanel(2, 2, 47, nil, nil, true, DrawFlags.Nearest)
+  elseif self.open_timer == 0 then
+    self.panels[#self.panels].sprite_index = 0
+  elseif self.open_timer < 11 and self.open_timer > 0 then
+    self.panels[#self.panels].sprite_index = 13 - self.open_timer
+    if self.open_timer == 5 then
+      table.remove(self.panels, #self.panels - 1)
+    end
+  end
+end
+
+--! Multiplayer: show the simulation's countdown {tick_rate, tick_timer,
+--! open_timer} (a watch made or kept through a load: a repair, a rejoin).
+--! Its picture goes through every step down to that point, as if it had
+--! counted down here. (Argus and Jan, 2026-11-21: the open_timer set
+--! straight away left the red segments out, an almost empty face with only
+--! the two hands.) Returns false if this watch is already further on than
+--! the countdown (make a new one then).
+function UIWatch:mpSetCountdown(countdown)
+  local target = countdown.open_timer
+  if target > self.open_timer then return false end
+  self.tick_rate = countdown.tick_rate
+  while self.open_timer > math.max(target, 0) do
+    self.open_timer = self.open_timer - 1
+    self:_showOpenTimer()
+  end
+  self.open_timer = target
+  self.tick_timer = countdown.tick_timer
+  return true
+end
+
 function UIWatch:onWorldTick()
   if self:_mpCountdownGone() then
     self:close()
@@ -202,16 +237,7 @@ function UIWatch:onWorldTick()
   if self.tick_timer == 0 and self.open_timer >= 0 then -- Used for making a smooth animation
     self.tick_timer = self.tick_rate
     self.open_timer = self.open_timer - 1
-    if self.open_timer == 11 then
-      self:addPanel(2, 2, 47, nil, nil, true, DrawFlags.Nearest)
-    elseif self.open_timer == 0 then
-      self.panels[#self.panels].sprite_index = 0
-    elseif self.open_timer < 11 and self.open_timer > 0 then
-      self.panels[#self.panels].sprite_index = 13 - self.open_timer
-      if self.open_timer == 5 then
-        table.remove(self.panels, #self.panels - 1)
-      end
-    end
+    self:_showOpenTimer()
   elseif self.open_timer == -1 then -- the timer is at 0 when it is completely red.
     self:onCountdownEnd() -- Countdown terminated, so we open the hospital or ends the epidemic panic
   else
@@ -319,3 +345,5 @@ function UIWatch:afterLoad(old, new)
     end
   end
 end
+
+return UIWatch

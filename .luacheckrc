@@ -22,7 +22,7 @@ self = false
 
 globals = { -- Globals
             "_A", "_S",
-            "corsixth",
+            "corsixth", "cth_require",
             "class", "Colours", "compare_tables", "DrawFlags",
             "DrawingLayers", "destrict", "flag_clear", "flag_isset",
             "flag_set", "flag_toggle", "lfs", "list_to_set",
@@ -63,7 +63,7 @@ globals = { -- Globals
             "UILoadMap", "UILuaConsole", "UIMachine", "UIMakeDebugPatient",
             "UIMainMenu", "UIMapEditor", "UIMenu", "UIMenuBar", "UIMenuList", "UIMultiplayer", "UIMultiplayerChooseHospital", "UIMultiplayerDownload", "UIMultiplayerSave", "UIMultiplayerOffer", "UIMultiplayerAskMoney", "UIMultiplayerChat", "UIMultiplayerChatInput", "UIMultiplayerGivePlot", "UIMultiplayerPlayers", "UIMultiplayerResearch", "UIMultiplayerSabotage", "UIMultiplayerSpy", "UIMultiplayerLitterBomb", "UIMultiplayerTrade",
             "UIMessage", "UINewGame", "UIOptions", "UIPatient", "UIMachineMenu",
-            "UIPlaceObjects", "UIPlaceStaff", "UIPolicy", "UIProgressReport",
+            "UIPlaceObjects", "UIPlaceStaff", "UIPolicy", "UIProfessorMenu", "UIProgressReport",
             "UIQueue", "UIQueuePopup", "UIResizable", "UIResearch",
             "UISaveGame", "UISaveMap", "UIScrollSpeed",
             "UIShiftScrollSpeed", "UISoundSettings", "UIStaff",
@@ -121,8 +121,8 @@ end
 for _, lng in ipairs({"brazilian_portuguese", "czech", "danish", "developer",
     "dutch", "english", "finnish", "french", "german", "greek", "hungarian",
     "iberic_portuguese", "italian", "japanese", "korean", "norwegian", "original_strings",
-    "polish", "russian", "simplified_chinese", "spanish", "swedish", "ukrainian",
-    "traditional_chinese"}) do
+    "polish", "russian", "simplified_chinese", "spanish", "swedish", "traditional_chinese",
+    "turkish", "ukrainian"}) do
   local filename = "CorsixTH/Lua/languages/" .. lng .. ".lua"
   add_ignore(filename, "111")
   add_ignore(filename, "112")

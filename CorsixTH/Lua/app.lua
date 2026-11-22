@@ -32,7 +32,8 @@ local SDL = require("sdl")
 -- and add compatibility code in afterLoad functions
 -- Recommended: Also replace/Update the summary comment
 
-local SAVEGAME_VERSION = 270 -- Adjust random announcement delay
+-- Reputation is calculated from credit and weight
+local SAVEGAME_VERSION = 271
 
 --- Controls the main CorsixTH application
 class "App"
@@ -131,7 +132,7 @@ function App:init()
 
   -- Prereq 1: C++ and lua sides are compatible
   local compile_opts = TH.GetCompileOptions()
-  local api_version = corsixth.require("api_version")
+  local api_version = cth_require("api_version")
   if api_version ~= compile_opts.api_version then
     api_version = api_version or 0
     compile_opts.api_version = compile_opts.api_version or 0
@@ -154,7 +155,7 @@ function App:init()
       "For reference, the error loading the config file was: " .. conf_err)
   end
   self:fixConfig()
-  corsixth.require("filesystem")
+  cth_require("filesystem")
   local good_install_folder, error_message, charset = self:checkInstallFolder()
   self.good_install_folder = good_install_folder
   self.level_dir = self:getFullPath("Levels", true)
@@ -184,7 +185,9 @@ function App:init()
   self.video:setBlueFilterActive(false)
   SDL.wm.setIconWin32()
 
-  self.caption = "CorsixTH"
+  -- (The engine names the window CorsixTH when it makes it.)
+  self.caption = "OpenTH"
+  self.video:setCaption(self.caption)
   if self.config.track_fps then
     SDL.trackFPS(true)
     SDL.limitFPS(false)
@@ -194,9 +197,8 @@ function App:init()
   self:initGamelogFile()
 
   -- Prereq 2: Load and initialise the graphics subsystem
-  corsixth.require("persistance")
-  corsixth.require("graphics")
-  local Graphics = _G["Graphics"] ---@type Graphics
+  cth_require("persistance")
+  local Graphics = cth_require("graphics")
 
   local gfx_set = good_install_folder and (self.using_demo_files and "demo" or "full") or "base"
   self.gfx = Graphics(self, gfx_set, charset)
@@ -231,11 +233,13 @@ function App:init()
 
   math.randomseed(os.time() + SDL.getTicks())
 
-  -- Separate stream for cosmetic choices (screen shake, sound variants,
-  -- tips...), so that rendering and audio never consume gameplay randomness.
-  -- See cosmetic_random.lua.
+  -- Choices that only change what the player sees or hears (screen shake,
+  -- sounds, tips, ...) draw from their own stream, so that drawing and audio
+  -- leave the game's random numbers alone. See cosmetic_random.lua.
   strict_declare_global "math.cosmetic_random"
-  math.cosmetic_random = corsixth.require("cosmetic_random")(os.time() + SDL.getTicks())
+  local newCosmeticRandom = cth_require("cosmetic_random")
+  math.cosmetic_random = newCosmeticRandom(os.time() + SDL.getTicks())
+
   -- The following psuedo-random number generators are based on different
   -- disritubtion algorithms. For explanations and how to use them see the Wiki
 
@@ -305,8 +309,7 @@ function App:init()
   end
 
   -- Load audio
-  corsixth.require("audio")
-  local Audio = _G["Audio"] ---@type Audio
+  local Audio = cth_require("audio")
   self.audio = Audio(self)
   if not self:verifyPlayerMusicDir() then
     self.config.audio_music = nil
@@ -315,17 +318,15 @@ function App:init()
   self.audio:init()
 
   -- Load movie player
-  corsixth.require("movie_player")
-  local MoviePlayer = _G["MoviePlayer"] ---@type MoviePlayer
+  local MoviePlayer = cth_require("movie_player")
   self.moviePlayer = MoviePlayer(self, self.audio, self.video)
   if good_install_folder then
     self.moviePlayer:init()
   end
 
   -- Load strings before UI and before additional Lua
-  corsixth.require("strings")
-  corsixth.require("string_extensions")
-  local Strings = _G["Strings"] ---@type Strings
+  local Strings = cth_require("strings")
+  cth_require("string_extensions")
   self.strings = Strings(self)
   self.strings:init()
   local language_load_success, language_error = self:initLanguage()
@@ -344,7 +345,7 @@ function App:init()
   self:fixHotkeys()
 
   -- Load map before world
-  corsixth.require("map")
+  cth_require("map")
 
   -- Load additional Lua before world
   if good_install_folder then
@@ -353,10 +354,10 @@ function App:init()
     self.anims = self.gfx:loadAnimations("Data", "V")
     self.animation_manager = AnimationManager(self.anims)
     self.walls = self:loadLuaFolder("walls")
-    corsixth.require("entity")
-    corsixth.require("entities.humanoid")
-    corsixth.require("entities.object")
-    corsixth.require("entities.machine")
+    cth_require("entity")
+    cth_require("entities.humanoid")
+    cth_require("entities.object")
+    cth_require("entities.machine")
 
     local Object = _G["Object"] ---@type Object
 
@@ -373,23 +374,23 @@ function App:init()
       Object.processTypeDefinition(v)
     end
 
-    corsixth.require("room")
+    cth_require("room")
     self.rooms = self:loadLuaFolder("rooms")
 
-    corsixth.require("humanoid_action")
+    cth_require("humanoid_action")
     self.humanoid_actions = self:loadLuaFolder("humanoid_actions")
 
     local diseases = self:loadLuaFolder("diseases")
     self.diseases = self:loadLuaFolder("diagnosis", nil, diseases)
 
     -- Load world before UI
-    corsixth.require("world")
+    cth_require("world")
   end
 
   -- Load UI
-  corsixth.require("ui")
+  cth_require("ui")
   if good_install_folder then
-    corsixth.require("game_ui")
+    cth_require("game_ui")
     self.ui = UI(self, true)
   else
     self.ui = UI(self, true)
@@ -457,11 +458,25 @@ function App:init()
   TheApp:saveConfig()
   TheApp:saveHotkeys()
 
-  -- (Not when the game restarted to join a server as another build.)
-  if self.config.play_intro and not corsixth.require("mp_pack").rejoinPending(self) then
-    self.moviePlayer:playIntro(callback_after_movie)
-  else
+  -- The professor comes to his chart (the original's movie, MMENU1) when his
+  -- is the main menu, after the intro when that is on (Jan: with the intro
+  -- off, he came no more), unless a game is loading at once.
+  local function after_intro()
+    if self.config.professor_menu and not self.command_line.load and
+        not self.command_line.continue then
+      self.moviePlayer:playMenuMovie(false, callback_after_movie)
+    else
+      callback_after_movie()
+    end
+  end
+
+  -- (Neither when the game restarted to join a server as another build.)
+  if corsixth.require("mp_pack").rejoinPending(self) then
     callback_after_movie()
+  elseif self.config.play_intro then
+    self.moviePlayer:playIntro(after_intro)
+  else
+    after_intro()
   end
   return true
 end
@@ -627,7 +642,8 @@ function App:verifyPlayerMusicDir(path)
 end
 
 --- Initialises the application's language based on the player's choice.
---- @return boolean, string? # Whether successful and possibly an error message
+--- @return boolean # Whether successful and possibly an error message
+--- @return string? # Possibly an error message
 function App:initLanguage()
   -- Make sure that we can actually show the desired language.
   -- If we can't, work out the most common issue and reset to a revert to a
@@ -731,14 +747,16 @@ function App:loadMainMenu(message)
   self.map = nil
 
   local UI = _G["UI"] ---@type UI
-  local UIMainMenu = _G["UIMainMenu"] ---@type UIMainMenu
   local UITipOfTheDay = _G["UITipOfTheDay"] ---@type UITipOfTheDay
   local UIInformation = _G["UIInformation"] ---@type UIInformation
 
   self.ui = UI(self, false)
   self.ui:setMenuBackground()
-  self.ui:addWindow(UIMainMenu(self.ui))
-  self.ui:addWindow(UITipOfTheDay(self.ui))
+  local menu = self.ui:openMainMenu()
+  -- (The professor's menu opens the tips when they are asked for.)
+  if not menu.tips_when_asked then
+    self.ui:addWindow(UITipOfTheDay(self.ui))
+  end
 
   -- Show update window if there's an update
   self:checkForUpdates()
@@ -813,7 +831,8 @@ end
 --- Reads the given file name as a Lua chunk from the Campaign folders
 --- A correct campaign definition contains "name", "description", "levels", and "winning_text".
 --- @param campaign_file (string) Full path of the file to read.
---- @return (table?, string?) file_content, error_message
+--- @return (table?) file_content
+--- @return (string?) error_message
 function App:readCampaignFile(campaign_file)
   local chunk, err = loadfile_envcall(campaign_file)
   if not chunk then
@@ -829,7 +848,8 @@ end
 --- Values in the returned table: "path", "level_file", "name", "map_file", "briefing", and "end_praise".
 --- @param level (string) Full path or name of the file to read.
 --- @param campaign_dir (string) Folder of the parent campaign file
---- @return (table?, string?) level_info, error_message
+--- @return (table?) level_info
+--- @return (string?) error_message
 function App:readLevelFile(level, campaign_dir)
   local filename = self:_checkOrFind(level, campaign_dir)
   local file, err = io.open(filename and filename or "")
@@ -1209,10 +1229,11 @@ function App:saveConfig()
 end
 
 --- Tries to open the given file or a file in OS's temp dir.
--- Returns the file handler, and true if it was written to the intended file.
+--- Returns the file handler, and true if it was written to the intended file.
 --- @param file (string) The full path of the intended file
 --- @param mode (string) The mode in which the file is opened, defaults to write
---- @return any, boolean # File handle and whether the handle is valid.
+--- @return any # File handle if data was written.
+--- @return boolean handle_is_valid
 function App:writeToFileOrTmp(file, mode)
   local f, err = io.open(file, mode or "w")
   if err then
@@ -1546,7 +1567,7 @@ function App:checkInstallFolder()
     local user_dir = os.getenv("HOME") or os.getenv("USERPROFILE")
     local win_home_dir = nil;
     local config_path =
-        corsixth.require("config_finder").config_filename:match("(.*[/\\])")
+        cth_require("config_finder").config_filename:match("(.*[/\\])")
     if os.getenv("HOMEDRIVE") and os.getenv("HOMEPATH") then
       win_home_dir = os.getenv("HOMEDRIVE") .. os.getenv("HOMEPATH")
       if win_home_dir == user_dir then win_home_dir = nil; end
@@ -1669,6 +1690,7 @@ function App:checkInstallFolder()
   return true, #corrupt ~= 0 and corrupt or nil, charset
 end
 
+---@return string?
 function App:findSoundFont()
   local data_dir = self:getInstalledPath()
 
@@ -1733,8 +1755,8 @@ end
 
 --- Get a level file.
 --- @param path (string) Full path of the level file, or a Theme Hospital level filename
---- @return If the file could be found, the data of the file, else a
---        tuple 'nil', and an error description
+--- @return string? # If the file could be found, the data of the file, else `nil`.
+--- @return string? # An error description in case the file could not be found.
 function App:readMapDataFile(path)
   local data
   if path:match(pathsep) then
@@ -1767,7 +1789,7 @@ function App:loadLuaFolder(dir, no_results, append_to)
 
   for file in lfs.dir(path) do
     if file:match("%.lua$") then
-      local status, result = pcall(corsixth.require, dir .. file:sub(1, -5))
+      local status, result = pcall(cth_require, dir .. file:sub(1, -5))
       if not status then
         print("Error loading " .. dir .. file .. ":\n" .. tostring(result))
       else
@@ -1844,6 +1866,7 @@ local release_table = {
   {major = 0, minor = 70, revision = 0, patch = "", version = 253},
   {major = 0, minor = 70, revision = 1, patch = "", version = 254},
   {major = 0, minor = 70, revision = 2, patch = "", version = 255},
+  {major = 0, minor = 70, revision = 3, patch = "", version = 256},
 }
 
 --- Retrieve the current savegame version as defined in the application.
@@ -2140,14 +2163,14 @@ function App:afterLoad()
 
   local Object = _G["Object"] ---@type Object
   if old < 87 then
-    local new_object = corsixth.require("objects.gates_to_hell")
+    local new_object = cth_require("objects.gates_to_hell")
     Object.processTypeDefinition(new_object)
     self.objects[new_object.id] = new_object
     self.world:newObjectType(new_object)
   end
 
   if old < 114 then
-    local rathole_type = corsixth.require("objects.rathole")
+    local rathole_type = cth_require("objects.rathole")
     Object.processTypeDefinition(rathole_type)
     self.objects[rathole_type.id] = rathole_type
     self.world:newObjectType(rathole_type)
@@ -2309,7 +2332,7 @@ function App:gamelogHeader()
   local compiled = string.format("Compiled with %s\nSDL renderer: %s\n",
       table.concat(comp_details, ", "), self.video:getRendererDetails())
   local running = string.format("%s run with api version: %s, game version: %s, savegame version: %s\n",
-      compile_opts.jit or _VERSION, tostring(corsixth.require("api_version")),
+      compile_opts.jit or _VERSION, tostring(cth_require("api_version")),
       self:getReleaseString(), tostring(SAVEGAME_VERSION))
   return (compiled .. running)
 end
@@ -2317,3 +2340,5 @@ end
 -- Do not remove, for savegame compatibility < r1891
 local app_confirm_quit_stub = --[[persistable:app_confirm_quit]] function()
 end
+
+return App

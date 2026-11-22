@@ -20,29 +20,29 @@ SOFTWARE. --]]
 
 local TH = require("TH")
 
-corsixth.require("entities.humanoids.patient")
-corsixth.require("entities.humanoids.staff.doctor")
-corsixth.require("entities.humanoids.staff.nurse")
-corsixth.require("entities.humanoids.staff.handyman")
-corsixth.require("entities.humanoids.staff.receptionist")
-corsixth.require("entities.humanoids.vip")
-corsixth.require("entities.humanoids.grim_reaper")
-corsixth.require("entities.humanoids.inspector")
-corsixth.require("entities.rat")
-corsixth.require("staff_profile")
-corsixth.require("hospital")
-corsixth.require("hospitals.player_hospital")
-corsixth.require("hospitals.ai_hospital")
-corsixth.require("cheats")
-corsixth.require("epidemic")
-corsixth.require("calls_dispatcher")
-corsixth.require("mp_session")
-corsixth.require("research_department")
-corsixth.require("entity_map")
-corsixth.require("date")
-corsixth.require("announcer")
-corsixth.require("endconditions")
-corsixth.require("earthquake")
+cth_require("entities.humanoids.patient")
+cth_require("entities.humanoids.staff.doctor")
+cth_require("entities.humanoids.staff.nurse")
+cth_require("entities.humanoids.staff.handyman")
+cth_require("entities.humanoids.staff.receptionist")
+cth_require("entities.humanoids.vip")
+cth_require("entities.humanoids.grim_reaper")
+cth_require("entities.humanoids.inspector")
+cth_require("entities.rat")
+cth_require("staff_profile")
+cth_require("hospital")
+cth_require("hospitals.player_hospital")
+cth_require("hospitals.ai_hospital")
+cth_require("cheats")
+cth_require("epidemic")
+cth_require("calls_dispatcher")
+cth_require("mp_session")
+cth_require("research_department")
+cth_require("entity_map")
+local Date = cth_require("date")
+cth_require("announcer")
+cth_require("endconditions")
+cth_require("earthquake")
 
 --- Manages entities, rooms, and the date.
 class "World"
@@ -56,7 +56,6 @@ local World = _G["World"] ---@type World
 function World:World(app, free_build_mode)
   local CallsDispatcher = _G["CallsDispatcher"] ---@type CallsDispatcher
   local EntityMap = _G["EntityMap"] ---@type EntityMap
-  local Date = _G["Date"] ---@type Date
   local PlayerHospital = _G["PlayerHospital"] ---@type PlayerHospital
   local AIHospital = _G["AIHospital"] ---@type AIHospital
   local Earthquake = _G["Earthquake"] ---@type Earthquake
@@ -77,9 +76,10 @@ function World:World(app, free_build_mode)
   self.rooms = {} -- List that can have gaps when a room is deleted, so use pairs to iterate.
   self.entity_map = EntityMap(self.map)
 
-  -- Time
+  -- Time. A new game starts at "Slower" (tick_rates; Argus: Normal is too
+  -- quick for a start); a multiplayer game takes the server's speed.
   self.hours_per_tick = 1
-  self.tick_rate = 3
+  self.tick_rate = 12
   self.tick_timer = 0
   self.game_date = Date() -- Current date in the game.
 
@@ -560,6 +560,15 @@ function World:spawnPointFor(hospital)
   return spawns[math.random(1, #spawns)]
 end
 
+--! Multiplayer co-op: does `hospital` get new patients? It must be open; in
+--! a race, one out of it gets none, but a winner who stays on the level does
+--! (Jan, 2026-11-21: Argus won, stayed, and no patient came any more).
+function World:mpTakesPatients(hospital)
+  if not (hospital and hospital.opened) then return false end
+  if not hospital.mp_place then return true end
+  return hospital.mp_place_how == "won" and hospital.win_declined == true
+end
+
 --! Multiplayer co-op: the hospital a new patient goes to. Patients are
 --! shared out in turn; one whose turn falls on a hospital that is not open
 --! yet goes to the next open one instead of being lost (a player who opened
@@ -567,7 +576,7 @@ end
 --!return a hospital, or nil if none is open
 function World:_coopPatientHospital()
   local chosen = self:chooseHospitalForPatient(nil)
-  if chosen and chosen.opened and not chosen.mp_place then
+  if chosen and self:mpTakesPatients(chosen) then
     -- (Competitive: a rival's smear campaign sends some elsewhere.)
     return MultiplayerSession.sabotage.smearRedirect(self, chosen) or chosen
   end
@@ -577,7 +586,7 @@ function World:_coopPatientHospital()
   for step = 1, players do
     local hospital = self.hospitals[(start - 1 + step) % players + 1]
     -- (Competitive: a hospital out of the race gets no more patients.)
-    if hospital and hospital.opened and not hospital.mp_place then return hospital end
+    if self:mpTakesPatients(hospital) then return hospital end
   end
   return nil
 end
@@ -1172,7 +1181,6 @@ local outside_temperatures = {
    4.75 / 50, -- December
 }
 
-local Date = _G["Date"] ---@type Date
 local start_date = Date()
 
 --- World ticks (every 18ms) are translated to game ticks (or hours) depending
@@ -1420,7 +1428,7 @@ end
 function World:_patientsCanArrive()
   if not self.mp_coop then return self.hospitals[1].opened end
   for _, hospital in ipairs(self.hospitals) do
-    if hospital.opened and not hospital.mp_place then return true end
+    if self:mpTakesPatients(hospital) then return true end
   end
   return false
 end
@@ -1646,6 +1654,8 @@ function World:onEndDay()
   if self.map.level_config.mp_events then corsixth.require("mp_levels").onEndDay(self) end
   -- Competitive: poached doctors kept on the hiring list, smear campaigns.
   if self.mp_coop and self.mp_coop.competitive then MultiplayerSession.sabotage.daily(self) end
+  -- Plots handed to another player once their rooms are empty.
+  if self.mp_plot_handovers then MultiplayerSession.finishPlotHandovers(self) end
 
   -- Maybe it's time for an emergency?
   if self.game_date:monthOfGame() == self.next_emergency_month and
@@ -1851,8 +1861,7 @@ function World:onEndMonth()
     if hospital and (money > 0 or level == "hard") then
       hospital.balance = hospital.balance + money
       if level == "hard" then
-        hospital.reputation = math.min(hospital.reputation + World.MP_BOT_HARD_REPUTATION,
-            hospital.reputation_max or 1000)
+        MultiplayerSession.changeReputation(hospital, World.MP_BOT_HARD_REPUTATION)
       end
       paid[#paid + 1] = bot_index
     end
@@ -2150,9 +2159,11 @@ function World:_mpPlaceFax(hosp, how, place)
   else
     message = {{text = S.race_out[1]}, {text = S.race_out[2]:format(place)}, {text = S.race_out[3]}}
   end
+  -- (A winner who stays plays on and still gets patients, World:mpTakesPatients;
+  -- a hospital out of the race only watches.)
   message.choices = {
     {text = S.back_to_lobby, choice = "mp_leave_game"},
-    {text = S.race_watch, choice = "stay_on_level"},
+    {text = how == "won" and S.race_play_on or S.race_watch, choice = "stay_on_level"},
   }
   -- Only this hospital's player sees it (and answers it: fax_choice).
   self.ui.bottom_panel:queueMessage("information", message, nil, nil, 2, nil, hosp)
@@ -2526,8 +2537,30 @@ function World:winGame(player_no)
     end
     self.hospitals[player_no].game_won = true
     self:previousSpeed()
-    self.ui.bottom_panel:queueMessage("information", message, nil, 0, 2, callback)
-    self.ui.bottom_panel:openLastMessage()
+    local bottom_panel = self.ui.bottom_panel
+    bottom_panel:queueMessage("information", message, nil, 0, 2, callback)
+    local queued = bottom_panel.message_queue[#bottom_panel.message_queue]
+    local icon = queued and queued.message == message and queued.drawer_icon
+    -- As in the original game, the level won movie comes first, ending with
+    -- the letter typed out on its paper and answered there: the tick for the
+    -- first choice, the cross to stay on the level. If the movie is skipped,
+    -- or cannot be played, the letter is the fax.
+    local chosen
+    local function after_movie()
+      -- This fax (others may have come since), unless another game was
+      -- loaded meanwhile.
+      if not icon or self.ui.app.world ~= self or
+          not bottom_panel:showMessageIcon(icon) then
+        return
+      end
+      if chosen then
+        icon:removeMessage(chosen)
+      else
+        icon:openMessage()
+      end
+    end
+    self.ui.app.moviePlayer:playWinLevelMovie(after_movie,
+        {text[1], text[2], text[3]}, function(answer) chosen = answer end)
   end
 end
 
@@ -2537,7 +2570,9 @@ end
 --- Text to show in the fax, text that accompanies the "continue"-choice the player
 --- has, and whether it is the "return_to_main_menu" choice or the "accept_new_level" choice.
 --- @param player_no (integer) Which player that will see the message.
---- @return string, string, string # The texts.
+--- @return string[] choices The strings of the three choices.
+--- @return string next_text The string what to do next.
+--- @return string next_name The name of what to do next.
 function World:getCampaignWinningText(player_no)
   local text = {}
   local choice_text, choice
@@ -2734,7 +2769,7 @@ end
 --- @param y1 (integer) Y-cordinate of first tile's Lua tile coordinates.
 --- @param x2 (integer) X-cordinate of second tile's Lua tile coordinates.
 --- @param y2 (integer) Y-cordinate of second tile's Lua tile coordinates.
---- @return integer, boolean # The distance of the shortest path, or false if there is no path.
+--- @return (integer | boolean) # The distance of the shortest path, or false if there is no path.
 function World:getPathDistance(x1, y1, x2, y2)
   return self.pathfinder:findDistance(x1, y1, x2, y2)
 end
@@ -2834,6 +2869,7 @@ function World:getFreeBench(x, y, distance)
         return true
       end
     end
+    return false
   end)
   return bench, rx, ry, bench_distance
 end
@@ -3915,8 +3951,8 @@ function World:afterLoad(old, new)
   if old < 17 then
     -- Added another object
     local pathsep = package.config:sub(1, 1)
-    local _, shield = pcall(corsixth.require, "objects" .. pathsep .. "radiation_shield")
-    local _, shield_b = pcall(corsixth.require, "objects" .. pathsep .. "radiation_shield_b")
+    local _, shield = pcall(cth_require, "objects" .. pathsep .. "radiation_shield")
+    local _, shield_b = pcall(cth_require, "objects" .. pathsep .. "radiation_shield_b")
     shield.slave_type = shield_b
     shield.slave_type.master_type = shield
 

@@ -68,7 +68,7 @@ realtime=${MP_YEAR_REALTIME:-0}
 bot_fast=1 watch="MP_FAST=1" first=""
 if [[ "$realtime" == 1 ]]; then bot_fast=0 watch="MP_FAST=0 MP_REALTIME=1" first="5:speed:Normal;"; fi
 CORSIXTH_MP_TEST_EXTRA_PLACES=1 MP_BOT_WATCHER="${MP_BOT_WATCHER:-}" MP_BOT_RESEARCH="${MP_BOT_RESEARCH:-}"   MP_BOT_DIAG="${MP_BOT_DIAG:-}" MP_BOT_BRAIN="${brains#;}" MP_BOT_FAST=$bot_fast MP_BOT_SEED="${MP_BOT_SEED:-7}" CORSIXTH_MP_AI_STATE="$out/ai-spend.json" \
-  PYTHONPATH="$source_dir/mp_server" "$python" -m corsixth_mp --host 127.0.0.1 --port "$port" \
+  CORSIXTH_MP_START_SPEED="${CORSIXTH_MP_START_SPEED:-Normal}" PYTHONPATH="$source_dir/mp_server" "$python" -m corsixth_mp --host 127.0.0.1 --port "$port" \
   --log-level INFO --max-per-address 64 > "$out/server.log" 2>&1 &
 server_pid=$!
 trap 'kill $server_pid 2>/dev/null || true' EXIT
@@ -77,7 +77,9 @@ export MP_SERVER="127.0.0.1:$port"
 
 script=""
 for s in $(seq 3000 3000 "$steps"); do script="$script;$((s - 10)):hospitals"; done
-script="$script;$((steps - 5)):map:2${MP_YEAR_SCRIPT:+;$MP_YEAR_SCRIPT}"
+# (At the end: each hospital's floor plan, and how well patients get from room
+# to room, flow_metrics.lua.)
+script="$script;$((steps - 6)):flow;$((steps - 5)):map:2${MP_YEAR_SCRIPT:+;$MP_YEAR_SCRIPT}"
 run_watcher() { # name room
   local name=$1 room=$2 dir="$out/$1"
   local mode=coop players=2 bots=1

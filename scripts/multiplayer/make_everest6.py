@@ -6,7 +6,8 @@ The town is symmetric about the middle (tile 127) both ways: three
 districts north of the square and three south of it, the southern ones
 mirrored. A district is a start hospital (main entrance facing the square)
 with five smaller buildings round it, in 8 plots for sale, and a helipad on
-the edge road behind it. Four big buildings beside the square (4 plots
+the street in front of its main entrance (Jan: behind the district, the
+emergency patients walked about 150 tiles round it to the door). Four big buildings beside the square (4 plots
 each) and the square's four houses are for sale too: 68 plots of 144 to 299
 floor tiles, each with a door of its own (Matroftt: split the bigger
 plots). Everything else of the input map (roads, the unfinished buildings
@@ -258,21 +259,20 @@ def main(src, dst):
         for annex in annexes:
             next_plot += place(annex, g, next_plot)
         cameras[player] = g(*camera_local)
-        # The helipad: on the grass beyond the edge road behind the district.
-        helipads[player] = (x0 + 29, MY(14) if south else 14)
+        # The helipad: on the street in front of the start hospital's main
+        # entrance (its door at local x 28-30), its middle on the road's
+        # first row, four tiles from the door.
+        helipads[player] = g(29, 69)
 
-    # Helipads: a 5 x 5 pad (an H on it) with its border, open to the road.
+    # Helipads: a 5 x 5 pad (an H on it), on the road and the two rows of
+    # the entrance's front garden before it.
     for player, (cx, cy) in helipads.items():
         for y in range(cy - 2, cy + 3):
             for x in range(cx - 2, cx + 3):
+                if (x, y) in building:
+                    sys.exit('the helipad of player %d runs into a building at %d,%d' % (player, x, y))
                 hx, hy = abs(x - cx), abs(y - cy)
                 pave(x, y, H_MARK if (hx == 1 and hy <= 1) or (hx == 0 and hy == 0) else CENTRE)
-        # (one tile wide, to the road)
-        step = 1 if cy < MID else -1
-        y = cy + 3 * step
-        while not road_centre(tiles, cx, y):
-            pave(cx, y)
-            y += step
 
     # --- foliage: shrubs in the gardens, trees in the countryside ------------
     rnd = random.Random(1953)   # (the first ascent)

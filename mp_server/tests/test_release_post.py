@@ -4,7 +4,7 @@ from corsixth_mp import release_post
 
 BODY = """Test build of CorsixTH with network multiplayer for **Windows 64-bit, Linux and macOS**, from the branch `mp/team-hospitals` at 03fbbe02: a pixel font for other alphabets.
 
-**Windows:** download `CorsixTH-Multiplayer-test-03fbbe02-win64.zip`, unzip it. SHA-256: `3ecc`
+**Windows:** download `OpenTH-test-03fbbe02-win64.zip`, unzip it. SHA-256: `3ecc`
 
 **Play:** main menu, Multiplayer, **EU2: test builds** (`eu2.openth.org:47800` runs this build) and your name. Full guide: [PLAYING.md](https://example.org/PLAYING.md).
 
@@ -24,9 +24,9 @@ def release(**changes):
         "body": BODY,
         "prerelease": True,
         "published_at": "2026-11-18T11:45:00Z",
-        "assets": [{"name": "CorsixTH-Multiplayer-test-03fbbe02-win64.zip"},
-                   {"name": "CorsixTH-Multiplayer-03fbbe02-linux-x86_64.tar.gz"},
-                   {"name": "CorsixTH-Multiplayer-03fbbe02-macos-arm64.zip"}],
+        "assets": [{"name": "OpenTH-test-03fbbe02-win64.zip"},
+                   {"name": "OpenTH-03fbbe02-linux-x86_64.tar.gz"},
+                   {"name": "OpenTH-03fbbe02-macos-arm64.zip"}],
     }
     r.update(changes)
     return r
@@ -51,8 +51,8 @@ def test_post_has_whats_new_and_where_to_play():
 
 
 def test_missing_platform_is_named():
-    assets = [{"name": "CorsixTH-Multiplayer-test-03fbbe02-win64.zip"},
-              {"name": "CorsixTH-Multiplayer-03fbbe02-linux-x86_64.tar.gz"}]
+    assets = [{"name": "OpenTH-test-03fbbe02-win64.zip"},
+              {"name": "OpenTH-03fbbe02-linux-x86_64.tar.gz"}]
     assert release_post.platforms(assets) == "Windows, Linux (macOS still being built)"
     assert release_post.platforms([]) == "none yet"
 

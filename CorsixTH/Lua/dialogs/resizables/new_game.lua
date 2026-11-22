@@ -18,7 +18,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-local UIResizable = _G['UIResizable'] ---@type UIResizable
+local UIDropdown = cth_require("dialogs.resizables.dropdown")
+local UIResizable = cth_require("dialogs.resizable")
 
 --! Class for the difficulty choice window.
 class "UINewGame" (UIResizable)
@@ -154,19 +155,21 @@ function UINewGame:buttonStart()
 end
 
 function UINewGame:startGame(difficulty)
-  if self.ui.app:loadLevel(1, difficulty, nil, nil, nil, nil,
-      _S.errors.load_level_prefix, nil) and self.ui.app.world then
-    self.ui.app.moviePlayer:playAdvanceMovie(1)
+  self.ui:leaveMainMenu(function()
+    if self.ui.app:loadLevel(1, difficulty, nil, nil, nil, nil,
+        _S.errors.load_level_prefix, nil) and self.ui.app.world then
+      self.ui.app.moviePlayer:playAdvanceMovie(1)
 
-    -- Initiate campaign progression. The UI above may now have changed.
-    if not TheApp.using_demo_files then
-      TheApp.world.campaign_info = "TH.campaign"
+      -- Initiate campaign progression. The UI above may now have changed.
+      if not TheApp.using_demo_files then
+        TheApp.world.campaign_info = "TH.campaign"
+      end
+      if self.start_tutorial then
+        TheApp.ui.start_tutorial = true
+        TheApp.ui:startTutorial()
+      end
     end
-    if self.start_tutorial then
-      TheApp.ui.start_tutorial = true
-      TheApp.ui:startTutorial()
-    end
-  end
+  end)
 end
 
 function UINewGame:buttonCancel()
@@ -176,5 +179,7 @@ end
 
 function UINewGame:close()
   UIResizable.close(self)
-  self.ui:addWindow(UIMainMenu(self.ui))
+  self.ui:openMainMenu()
 end
+
+return UINewGame

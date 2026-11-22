@@ -18,7 +18,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-local UIFullscreen = _G['UIFullscreen'] ---@type UIFullscreen
+local UIInformation = cth_require("dialogs.information")
+local UIFullscreen = cth_require("dialogs.fullscreen")
 
 --! Progress Report fullscreen window (check level goals, competitors and alerts).
 class "UIProgressReport" (UIFullscreen)
@@ -183,6 +184,7 @@ end
 
 function UIProgressReport:close()
   UIFullscreen.close(self)
+  local UIBottomPanel = cth_require("dialogs.bottom_panel")
   self.ui:getWindow(UIBottomPanel):updateButtonStates()
 end
 
@@ -197,6 +199,7 @@ function UIProgressReport:drawMarkers(canvas, x, y)
   local happiness = hospital:getAveragePatientAttribute("happiness", 0.5)
   local thirst = 1 - hospital:getAveragePatientAttribute("thirst", 0.5)
   local warmth = hospital:getAveragePatientAttribute("warmth", nil)
+  local UIPatient = cth_require("dialogs.patient")
   warmth = UIPatient.normaliseWarmth(warmth)
 
   self.panel_sprites:draw(canvas, 5, math.floor(x + x_min + width * happiness), y + 193 * s, { scaleFactor = s })
@@ -362,3 +365,5 @@ function UIProgressReport:afterLoad(old, new)
 
   UIFullscreen.afterLoad(self, old, new)
 end
+
+return UIProgressReport

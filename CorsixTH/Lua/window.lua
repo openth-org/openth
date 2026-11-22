@@ -18,12 +18,17 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-corsixth.require("persistance")
+cth_require("persistance")
 
 --! Base class for user-interface dialogs.
 class "Window"
 
 ---@class Window
+---@field Panel Panel
+---@field Button Button
+---@field Scrollbar Scrollbar
+---@field Textbox Textbox
+---@field HotkeyBox HotkeyBox
 ---@operator call: Window
 local Window = _G["Window"] ---@type Window
 
@@ -2244,3 +2249,11 @@ function Window:afterLoad(old, new)
     end
   end
 end
+
+Window.Panel = Panel
+Window.Button = Button
+Window.Scrollbar = Scrollbar
+Window.Textbox = Textbox
+Window.HotkeyBox = HotkeyBox
+
+return Window

@@ -70,6 +70,9 @@ local COPIES = {gp = 6, pharmacy = 2, general_diag = 3, psych = 2, ward = 2, toi
     jelly_vat = 1, decontamination = 1, operating_theatre = 2, research = 1}
 -- Queue per room above which another room of the type helps.
 local BUSY_QUEUE = 5
+-- What each patient waiting above that line is worth to another room (a
+-- queue of 10 for one room: 18, above a bench's 15).
+local BUSY_ROOM_SCORE = 3
 -- The model's plan names a room the hospital has: another one only while at
 -- least this many patients per room wait for those (M.planRoomWanted).
 local PLAN_COPY_QUEUE = 2
@@ -396,6 +399,32 @@ end
 
 local function avg(sum, n) return n > 0 and sum / n or 0 end
 
+-- A staff room this near a research department (tiles between the doors,
+-- along x and y) counts as beside it (Argus, 2026-11-22).
+M.STAFF_NEAR_RESEARCH = 14
+
+--! Has the hospital a research department but no staff room near it?
+function M.staffFarFromResearch(world, hosp)
+  local research, staff = {}, {}
+  for _, r in pairs(world.rooms) do
+    if r.hospital == hosp and r.is_active and r.door and r.door.tile_x and r.getEntranceXY and not r.crashed then
+      local id = r.room_info.id
+      if id == "research" or id == "staff_room" then
+        local x, y = r:getEntranceXY(false)
+        local list = id == "research" and research or staff
+        list[#list + 1] = {x, y}
+      end
+    end
+  end
+  if #research == 0 or #staff == 0 then return false end
+  for _, a in ipairs(research) do
+    for _, b in ipairs(staff) do
+      if math.abs(a[1] - b[1]) + math.abs(a[2] - b[2]) <= M.STAFF_NEAR_RESEARCH then return false end
+    end
+  end
+  return true
+end
+
 --! What a player would see on the screen and in the reports, as numbers.
 function M:assess()
   local bot, world = self.bot, self.bot.world
@@ -478,6 +507,10 @@ function M:assess()
   for room, v in pairs(self.demand) do self.demand[room] = v * 0.9 end
   for room, v in pairs(need) do self.demand[room] = (self.demand[room] or 0) + v end
   for room in pairs(s.rooms) do self.demand[room] = nil end
+
+  -- A research department with no staff room near it (M.STAFF_NEAR_RESEARCH
+  -- tiles from door to door): its researchers walk far for a rest.
+  s.staff_far_from_research = M.staffFarFromResearch(world, hosp)
 
   -- Staff.
   s.staff, s.fatigue, s.staff_happy = {}, 0, 0
@@ -719,6 +752,8 @@ function M:projects(s)
     self:note(string.format("day %d: leaves the rooms and corridors to the person (game option)", s.day))
   end
   local function add(key, score, run, cost)
+    -- (Land: as its people let it, building or not. Jan, 2026-11-21.)
+    if key == "buy:land" and not bot:mayDo("plots") then return end
     if not builds and not self.wishes[key] and key ~= "buy:land" and
         (key:find("^room:") or key:find("^buy:") or key:find("^edit:")) then
       return
@@ -775,9 +810,12 @@ function M:projects(s)
   end
   -- (From the 3rd year a doctor hired for a need is a junior hired into a
   -- free chair of the training room, trained before he works: M:training.)
-  local trainee_chair = self:traineeChair(s)
+  -- (An assistant hires only when its people let it, and only staff above
+  -- its floor: Bot:mayDo, Bot:hireFloor. No juniors to train for it.)
+  local may_hire = bot:mayDo("hire")
+  local trainee_chair = not bot:hireFloor("Doctor") and self:traineeChair(s)
   local function hire(cat, score)
-    if not bot:canHire(cat) then return end
+    if not may_hire or not bot:canHire(cat, nil, bot:hireFloor(cat)) then return end
     add("hire:" .. cat, score, function()
       if cat == "Doctor" and trainee_chair and bot:hireStudent(true) then
         self:note(string.format("day %d: a junior for a need, trained first", s.day))
@@ -833,6 +871,13 @@ function M:projects(s)
   if not s.rooms.toilets and s.patients >= 6 then room("toilets", 2 + s.toilet * 8) end
   if s.rooms.staff_room and s.fatigue > 0.6 and (s.rooms.staff_room or 0) < COPIES.staff_room then
     room("staff_room", (s.fatigue - 0.5) * 12)
+  end
+  -- A small second staff room beside the research department when the first
+  -- is far from it (Argus, 2026-11-22; Bot:drawRoom puts a staff room beside
+  -- research when it can).
+  if s.staff_far_from_research and (s.rooms.staff_room or 0) < COPIES.staff_room
+      and not (s.building and s.building.staff_room) then
+    room("staff_room", 4 + s.fatigue * 6)
   end
   -- A research room once the basics stand, if diseases wait for rooms it
   -- has not discovered.
@@ -900,11 +945,14 @@ function M:projects(s)
   end
   -- Busy rooms: another one of the type. (A room without its doctor at
   -- this moment is no reason not to: the doctor may be on a break.)
+  -- (Worth BUSY_ROOM_SCORE a waiting patient above the line: Jan,
+  -- 2026-11-21, his assistant bought benches (score 15-16) for weeks while
+  -- a dozen waited for its one cardiogram, which scored 7 at 1.2 a patient.)
   for id, n in pairs(s.rooms) do
     local per = s.queue[id] / n
     -- (GP's offices: at most COPIES.gp (6), rich or not, and only for a queue.)
     if per > busy_q and n < (COPIES[id] or 1) + (COPIES[id] and id ~= "gp" and more or 0) then
-      room(id, (per - busy_q + 1) * 1.2)
+      room(id, (per - busy_q + 1) * BUSY_ROOM_SCORE)
     end
   end
   -- A second operating theatre once the first works and somebody waits for
@@ -1939,7 +1987,9 @@ function M:doProject(s)
         -- worn machines that then exploded; 2026-11-14.)
         self.failed[p.key] = s.day + math.min(30, 5 * self.no_space_tries[p.key])
       else
-        self.failed[p.key] = s.day + (why == "money" and 3 or 10)
+        -- (A spot being cleared for it: corridor objects sold, Bot:clearSpot;
+        -- the room goes there in two days.)
+        self.failed[p.key] = s.day + (why == "money" and 3 or why == "clearing" and 2 or 10)
         self:note(string.format("day %d: %s failed (%s)", s.day, p.key, tostring(why or "?")))
       end
     elseif self.wishes[p.key] and not self.wishes[p.key].told_money then
@@ -1962,13 +2012,17 @@ end
 
 --! Small things a player does every day: handymen to worn machines, the
 --! heating, a loan when money runs out, faxes, rats and evil handymen. A
---! helper (a person runs the hospital too) only sends the handymen.
+--! helper (a person runs the hospital too) sends the handymen, and does
+--! what its people let it (Bot:mayDo): better staff, faxes, the loan.
 function M:daily(s)
   local bot = self.bot
   local hosp = s.hosp
   local helper = bot:sharesWithPerson()
+  local mates = #bot:hospitalMates() > 0
   self:noteRoomUse(s)
-  if not helper then self:researchPolicy(s) end
+  -- (Research shares: not while its person is here, nor with the research
+  -- switch off. Jan, 2026-11-21.)
+  if not helper and bot:mayDo("research") then self:researchPolicy(s) end
   -- Machines half worn: a handyman to each (once in a while per machine).
   -- Repaired early, a machine seldom loses strength (the game takes it
   -- with the share used up) and does not explode while the handyman walks.
@@ -2001,14 +2055,23 @@ function M:daily(s)
       end
     end
   end
-  -- Dirty tricks (in a race), also when a person shares the hospital: they
-  -- have had the time to deal with them first.
+  -- Dirty tricks (in a race): only with no person of the hospital in the
+  -- game (M:defend).
   self:defend(s)
-  if helper then return end
-  self:juniors(s)
-  self:skilledStaff(s)
+  -- Better staff and the loan, as its people let it, also while they are
+  -- here (a bot alone in its hospital does it all).
+  if bot:mayDo("replace") then
+    self:juniors(s)
+    self:skilledStaff(s)
+  end
+  if mates and bot:mayDo("loan") then self:assistantLoan(s) end
+  if helper then
+    if bot:mayDo("faxes") then self:answerFaxes(s) end
+    return
+  end
   self:surplusDoctors(s)
-  self:training(s)
+  -- (The training room's students are juniors: none for an assistant.)
+  if not mates then self:training(s) end
   -- Its floor in pieces (Bot:repairFloor): looked at once a game week, every
   -- 2 days while it is being mended. (Not when it leaves the building to the
   -- person it shares with: those are their things.)
@@ -2019,7 +2082,7 @@ function M:daily(s)
   end
   -- Heating: warmer when patients are cold, cooler when they are hot.
   -- (Not while the boiler is broken: the heating cannot be set then.)
-  if hosp.opened and s.patients >= 4 and (s.objects.radiator or 0) > 0 and
+  if hosp.opened and s.patients >= 4 and (s.objects.radiator or 0) > 0 and bot:mayDo("heating") and
       not (hosp.heating and hosp.heating.heating_broke) then
     if s.cold > s.patients / 4 and s.heat < 8 then
       self:issue({kind = "set_heat", level = s.heat + 1})
@@ -2031,7 +2094,29 @@ function M:daily(s)
   if s.balance < 1500 and s.loan + 5000 <= s.max_loan and hosp.opened then
     if self:issue({kind = "loan", amount = 5000}) then self:note(string.format("day %d: loan of $5,000", s.day)) end
   end
-  self:answerFaxes(s)
+  if bot:mayDo("faxes") then self:answerFaxes(s) end
+end
+
+-- The loan in a hospital a person plays too (Argus and Jan, 2026-11-21): in
+-- a month's last days, once, with more than ASSIST_LOAN_ABOVE in the bank,
+-- what leaves at least ASSIST_LOAN_KEEP is paid back.
+local ASSIST_LOAN_ABOVE, ASSIST_LOAN_KEEP, ASSIST_LOAN_DAYS = 10000, 5000, 3
+
+--! An assistant repays the loan at the end of a month (M:daily, when its
+--! people let it: Bot:mayDo "loan").
+function M:assistantLoan(s)
+  if s.loan <= 0 or s.balance <= ASSIST_LOAN_ABOVE then return end
+  local date = self.bot.world:date()
+  if date:dayOfMonth() <= date:lastDayOfMonth() - ASSIST_LOAN_DAYS then return end
+  local month = date:monthOfGame()
+  if self.loan_repaid_month == month then return end
+  local amount = math.min(s.loan, math.floor((s.balance - ASSIST_LOAN_KEEP) / 1000) * 1000)
+  if amount > 0 and self:issue({kind = "loan", amount = -amount}) then
+    self.loan_repaid_month = month
+    self:noteSpent("loan", amount)
+    self:note(string.format("day %d: repaid $%d of the loan ($%d left), the month's end", s.day, amount,
+        s.loan - amount))
+  end
 end
 
 --! The month in one line for the log: why patients left, which diseases
@@ -2098,7 +2183,8 @@ function M:monthly(s)
   -- month ago), keeping $12,000; or what it can spare above $25,000.
   local flowing = self.last_balance and s.balance > self.last_balance
   self.last_balance = s.balance
-  if s.loan > 0 and (s.balance > 25000 or (flowing and s.balance > 17000)) then
+  -- (Not in a hospital a person plays too: M:assistantLoan.)
+  if s.loan > 0 and (s.balance > 25000 or (flowing and s.balance > 17000)) and #self.bot:hospitalMates() == 0 then
     local keep = s.balance > 25000 and 20000 or 12000
     local amount = math.min(s.loan, math.floor((s.balance - keep) / 1000) * 1000)
     if amount > 0 and self:issue({kind = "loan", amount = -amount}) then
@@ -2106,8 +2192,9 @@ function M:monthly(s)
       self:note(string.format("day %d: repaid $%d of the loan ($%d left)", s.day, amount, s.loan - amount))
     end
   end
-  -- Research: aim it at the disease whose treatment room it lacks most.
-  if s.rooms.research then
+  -- Research: aim it at the disease whose treatment room it lacks most
+  -- (unless its people switched research off).
+  if s.rooms.research and self.bot:mayDo("research") then
     local best, best_v
     for room_id, v in pairs(self.demand) do
       if not self:available(room_id) and (not best_v or v > best_v) then best, best_v = room_id, v end
@@ -2370,8 +2457,13 @@ function M:referTarget(patient, rooms, day)
   return nil
 end
 
---! A race: throw out evil handymen once noticed, shoot attack rats.
+--! A race: throw out evil handymen once noticed, shoot attack rats, pick up
+--! and throw on litter bombs. Not in a hospital it shares with a person who
+--! is in the game, also while they give no orders for a while: the tricks are
+--! theirs to deal with (Jan, 2026-11-21: Argus's assistant threw out two
+--! evil handymen by itself). Once they have left the game it defends again.
 function M:defend(s)
+  if self.bot.hospitalMates and #self.bot:hospitalMates() > 0 then return end
   for _, e in ipairs(s.saboteurs) do
     local id = e.mp_id
     if id then
@@ -2415,10 +2507,12 @@ end
 function M:defendBombs(s)
   local sab = self.sabotage
   if not (sab and sab.heldBomb) then return end
-  -- (A bot sharing a person's hospital leaves the bombs to the person, while
-  -- they are there: Jan, 2026-11-14, the bomb window flashed up on his screen
-  -- each time the bot picked one up to throw it on.)
-  if self.bot.sharesWithPerson and self.bot:sharesWithPerson() then return end
+  -- (A bot sharing a person's hospital leaves the bombs to the person while
+  -- they are in the game, also while they give no orders for a while: Jan,
+  -- 2026-11-14, the bomb window flashed up on his screen each time the bot
+  -- picked one up to throw it on; 2026-11-21, it still did once he counted
+  -- as away. Once the person has left the game it defends as before.)
+  if self.bot.hospitalMates and #self.bot:hospitalMates() > 0 then return end
   local world = self.bot.world
   local held = sab.heldBomb(world, s.hosp)
   if held then

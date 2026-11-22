@@ -1,4 +1,4 @@
---[[ Copyright (c) 2026 CorsixTH-Multiplayer contributors
+--[[ Copyright (c) 2026 OpenTH contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -579,15 +579,24 @@ function MultiplayerLobby.fileSafe(text, limit)
   return s
 end
 
+--! The game date as save names write it: "y3-m12-d21".
+function MultiplayerLobby.saveDate(year, month, day)
+  return string.format("y%d-m%02d-d%02d", year, month, day)
+end
+
 --! A multiplayer save's file name (without .sav): the name the saving
---! player gave it (the level's name unless changed), the player and the
---! game date, e.g. "TEAM TOWN Jan y3-m12-d21".
+--! player gave it (the level's name and the date unless changed), the
+--! player and the game date, e.g. "TEAM TOWN Jan y3-m12-d21". The date the
+--! save box starts with is not written twice.
 function MultiplayerLobby.saveLabel(name, by, year, month, day)
+  local date = MultiplayerLobby.saveDate(year, month, day)
+  local own = tostring(name or ""):match("^%s*(.-)%s*$")
+  if own:sub(-#date) == date then own = own:sub(1, -#date - 1) end
   local parts = {}
-  for _, part in ipairs({MultiplayerLobby.fileSafe(name, 40), MultiplayerLobby.fileSafe(by, 20)}) do
+  for _, part in ipairs({MultiplayerLobby.fileSafe(own, 40), MultiplayerLobby.fileSafe(by, 20)}) do
     if part ~= "" then parts[#parts + 1] = part end
   end
-  parts[#parts + 1] = string.format("y%d-m%02d-d%02d", year, month, day)
+  parts[#parts + 1] = date
   return table.concat(parts, " ")
 end
 
@@ -1550,12 +1559,17 @@ function MultiplayerLobby.showOwnWatches(world, ui)
   for _, kind in ipairs({"initial_opening", "emergency", "epidemic"}) do
     local countdown, window = wanted[kind], shown[kind]
     if countdown then
+      -- (A watch further on than the loaded countdown cannot go back: a new
+      -- one. UIWatch:mpSetCountdown draws the picture up to that point.)
+      if window and not window:mpSetCountdown(countdown) then
+        window:close()
+        window = nil
+      end
       if not window then
         window = UIWatch(ui, kind, mine)
         ui:addWindow(window)
+        window:mpSetCountdown(countdown)
       end
-      window.tick_rate = countdown.tick_rate
-      window.tick_timer, window.open_timer = countdown.tick_timer, countdown.open_timer
     elseif window then
       window:close()
       window = nil
@@ -1752,6 +1766,12 @@ function MultiplayerLobby:_loadShared(session, step, data, peers, places)
       app.ui:setWallsTransparent(view.walls or false)
     end
     if view.warmth and world.map then world.map:setTemperatureDisplayMethod(view.warmth) end
+  elseif not self.is_referee and world.mp_coop and app.ui and app.ui.hospital and app.ui.scrollMapTo then
+    -- No view of this player's to keep (a place taken in a running game, a
+    -- rejoin, a continued game): their own hospital, not where the referee's
+    -- save looks (Argus, 2026-11-21: taking a bot's place, his camera was
+    -- over another player's hospital).
+    MultiplayerSession.lookAtHospital(app.ui, app.ui.hospital)
   end
   self.log(string.format("multiplayer: loaded the shared save at step %d (%d bytes): %s", step, #data,
       MultiplayerSession.defaultFingerprint(world)))
@@ -1795,6 +1815,41 @@ function MultiplayerLobby.useCanonicalOrder(app)
       for i, v in ipairs(original) do list[i] = v end
     end
   end
+end
+
+--! The ASSISTANT menu: what the bots in this player's hospital do, a tick for
+--! each job (MultiplayerSession.ASSISTANT_JOBS). A click sends the switch to
+--! everybody; the tick shows the game's state, so it changes once the command
+--! has run. Building stays off when the room's game options say so.
+function MultiplayerLobby:_assistantMenu()
+  local lobby = self
+  local function build_off()
+    -- (One shared hospital has no world.mp_coop: the room's option then.)
+    return MultiplayerSession.assistantsBuildOff(TheApp.world) or lobby:optionValue("helpers") == "0"
+  end
+  local jobs = UIMenu()
+  for _, job in ipairs(MultiplayerSession.ASSISTANT_JOBS) do
+    local name = job.name
+    local function now()
+      local world, ui = TheApp.world, TheApp.ui
+      if not (world and ui and ui.hospital) then return job.default end
+      if name == "build" and build_off() then return false end
+      return MultiplayerSession.assistantMay(world, ui.hospital, name)
+    end
+    jobs:appendCheckItem(_S.multiplayer_window["menu_assistant_" .. name], now(), function(item)
+      local ui, session = TheApp.ui, TheApp.mp_session
+      if name == "build" and build_off() then
+        item.checked = false
+        ui:playSound("wrong2.wav")
+        if ui.adviser then
+          ui.adviser:say({text = _S.multiplayer_window.assistant_no_building, priority = 10})
+        end
+        return
+      end
+      if session then session:issue({kind = "assistant_job", job = name, on = item.checked and 1 or 0}) end
+    end, nil, now)
+  end
+  return jobs
 end
 
 --! The MULTIPLAYER menu, once per menu bar: the player list; with a hospital
@@ -1846,6 +1901,7 @@ function MultiplayerLobby:_addMultiplayerMenu(ui, mode)
     end
     menu:appendMenu(_S.multiplayer_window.menu_colours, colours)
   end
+  menu:appendMenu(_S.multiplayer_window.menu_assistant, self:_assistantMenu())
   -- What the bots say, on this computer only (saved in the config).
   local bot_chat = UIMenu()
   local labels = {auto = "menu_bot_chat_auto", every = "menu_bot_chat_all", useful = "menu_bot_chat_useful",

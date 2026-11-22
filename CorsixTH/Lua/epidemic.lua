@@ -18,9 +18,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-corsixth.require("announcer")
-
+cth_require("announcer")
 local AnnouncementPriority = _G["AnnouncementPriority"] --[[@as AnnouncementPriority]]
+local ReputationAccount = cth_require("reputation")
 
 class "Epidemic"
 
@@ -28,8 +28,11 @@ class "Epidemic"
 ---@operator call: Epidemic
 local Epidemic = _G["Epidemic"] ---@type Epidemic
 
---[[Manages the epidemics that occur in hospitals. Generally, any epidemic
-logic that happens outside this class will call functions contained here.]]
+--- Manages the epidemics that occur in hospitals. Generally, any epidemic
+--- logic that happens outside this class will call functions contained here.
+--- @param hospital Hospital
+--- @param contagious_patient Patient
+--- @return Epidemic
 function Epidemic:Epidemic(hospital, contagious_patient)
   self.hospital = hospital
   self.world = self.hospital.world
@@ -48,12 +51,15 @@ function Epidemic:Epidemic(hospital, contagious_patient)
 
   -- Various values for the different outcomes - used when result fax is sent
   self.declare_fine = 0
-  self.reputation_hit = 0
   self.coverup_fine = 0
   self.compensation = 0
 
   -- Is the epidemic bad enough to deserve the whole hospital to be evacuated
   self.will_be_evacuated = false
+
+  -- Did the inspector's verdict land on one of the two severities the original
+  -- penalises, rather than on a minor failure or being cleared?
+  self.serious_coverup_failure = false
 
   -- Fax sent when the result of the cover up is revealed to the player
   self.cover_up_result_fax = {}
@@ -96,8 +102,8 @@ function Epidemic:Epidemic(hospital, contagious_patient)
   self:markPatientsAsPassedReception()
 end
 
---[[ The epidemic tick - currently the same rate as the hospital's tick but
-not necessary dependent on it - could potentially be reduced for performance.]]
+--- The epidemic tick - currently the same rate as the hospital's tick but
+--- not necessary dependent on it - could potentially be reduced for performance.
 function Epidemic:tick()
   self:infectOtherPatients()
   self:checkIfReadyToReveal()
@@ -109,8 +115,9 @@ function Epidemic:tick()
   self:checkPatientsForRemoval()
 end
 
---[[ Adds a new patient to the epidemic who is actively contagious: infected but
-  not vaccinated or cured]]
+--- Adds a new patient to the epidemic who is actively contagious: infected but
+--- not vaccinated or cured
+--- @param patient Patient
 function Epidemic:addContagiousPatient(patient)
   patient.infected = true
   patient:updateDynamicInfo()
@@ -120,16 +127,16 @@ function Epidemic:addContagiousPatient(patient)
   end
 end
 
---[[ Goes through all infected patients checking if there are any other patients
- in adjacent squares that can be infected, and if so infects them turning
- them into an infected patient too. ]]
+--- Goes through all infected patients checking if there are any other patients
+--- in adjacent squares that can be infected, and if so infects them turning
+--- them into an infected patient too.
 function Epidemic:infectOtherPatients()
-  --[[ Can an infected patient infect another patient - taking into account
-  spread factor as defined in the configuration. Patients must be both in the
-  corridors or in the same room - don't infect through walls.
-  @param infector (Patient) already infected patient who want to infect
-  @param victim (Patient) target to possibly infect
-  @return true if patient can infect other, false otherwise (boolean) ]]
+  --- Can an infected patient infect another patient - taking into account
+  --- spread factor as defined in the configuration. Patients must be both in the
+  --- corridors or in the same room - don't infect through walls.
+  --- @param infector (Patient) already infected patient who want to infect
+  --- @param victim (Patient) target to possibly infect
+  --- @return (boolean) # True if patient can infect other, false otherwise (boolean)
   local function canInfectOther(infector, victim)
     -- Check is patient-Infector is not infectious.
     if infector.cured or infector.vaccinated then return false end
@@ -201,11 +208,11 @@ function Epidemic:infectOtherPatients()
 
 end
 
---[[ The epidemic is ready to be revealed to the player if any infected patient
- is fully diagnosed. N.B. because multiple epidemics are queued to become
- the "active" one, being ready to reveal does NOT guarantee an epidemic
- WILL be revealed to the player and may even terminate before they are even
- aware it existed. ]]
+--- The epidemic is ready to be revealed to the player if any infected patient
+--- is fully diagnosed. N.B. because multiple epidemics are queued to become
+--- the "active" one, being ready to reveal does NOT guarantee an epidemic
+--- WILL be revealed to the player and may even terminate before they are even
+--- aware it existed.
 function Epidemic:checkIfReadyToReveal()
   if self.ready_to_reveal then return end
 
@@ -217,9 +224,9 @@ function Epidemic:checkIfReadyToReveal()
   end
 end
 
---[[ Show the player the have an epidemic - send a fax
- This happens when the epidemic is chosen to the be
- the "active" epidemic out of all the queued ones.]]
+--- Show the player the have an epidemic - send a fax
+--- This happens when the epidemic is chosen to the be
+--- the "active" epidemic out of all the queued ones.
 function Epidemic:revealEpidemic()
   assert(self.ready_to_reveal)
   self.revealed = true
@@ -251,7 +258,7 @@ function Epidemic:_announce(announcements)
   end
 end
 
---[[ Plays the announcement for the start of the epidemic ]]
+--- Plays the announcement for the start of the epidemic
 function Epidemic:announceStartOfEpidemic()
   if self.hospital:isPlayerHospital() then
     self:_announce({"EPID001.wav", "EPID002.wav", "EPID003.wav", "EPID004.wav"})
@@ -259,16 +266,16 @@ function Epidemic:announceStartOfEpidemic()
 end
 
 
---[[ Plays the announcement for the end of the epidemic ]]
+--- Plays the announcement for the end of the epidemic
 function Epidemic:announceEndOfEpidemic()
   if self.hospital:isPlayerHospital() then
     self:_announce({"EPID005.wav", "EPID006.wav", "EPID007.wav", "EPID008.wav"})
   end
 end
 
---[[ Check for conditions that one of the infected and not cured
-patient leaved the hospital. This discover epidemic to public instantly.
-So cover up must end earlier than the length of the timer.]]
+--- Check for conditions that one of the infected and not cured
+--- patient leaved the hospital. This discover epidemic to public instantly.
+--- So cover up must end earlier than the length of the timer.
 function Epidemic:checkInfectedLeftHospital()
   if not self:_isCoverUpActive() then return end
 
@@ -285,9 +292,9 @@ function Epidemic:checkInfectedLeftHospital()
   end
 end
 
---[[ Check for conditions that no any uncured infected patients
-left in hospital. If so then cover up must end earlier than the
-length of the timer.]]
+--- Check for conditions that no any uncured infected patients
+--- left in hospital. If so then cover up must end earlier than the
+--- length of the timer.
 function Epidemic:checkNoInfectedPatients()
   if not self:_isCoverUpActive() then return end
 
@@ -319,30 +326,30 @@ function Epidemic:checkPatientsForRemoval()
   end
 end
 
---[[ Toggle the vaccination mode changes how the cursor interacts with
- the hospital. Toggled by pressing the button on the watch
-(@see UIWatch:UIWatch) ]]
+--- Toggle the vaccination mode changes how the cursor interacts with
+--- the hospital. Toggled by pressing the button on the watch
+--- @see UIWatch:UIWatch
 function Epidemic:toggleVaccinationMode()
   self.vaccination_mode_active = not self.vaccination_mode_active
   self:_updateVaccinationCursor()
 end
 
---[[ Turn off vaccination cursor mode ]]
+--- Turn off vaccination cursor mode
 function Epidemic:turnOffVaccinationMode()
   self.vaccination_mode_active = false
   self:_updateVaccinationCursor()
 end
 
---[[ Update how the cursor interacts with the hospital. ]]
+--- Update how the cursor interacts with the hospital.
 function Epidemic:_updateVaccinationCursor()
   local cursor = self.vaccination_mode_active and "epidemic_hover" or "default"
   self.world.ui:setCursor(self.world.ui.app.gfx:loadMainCursor(cursor))
 end
 
---[[ Show a patient is able to be vaccinated, this is shown to the player by
- changing the icon, once a player has been marked for vaccination they may
- possibly become a vaccination candidate. Marking is done by clicking
- the player and can only happen during a cover up. ]]
+--- Show a patient is able to be vaccinated, this is shown to the player by
+--- changing the icon, once a player has been marked for vaccination they may
+--- possibly become a vaccination candidate. Marking is done by clicking
+--- the player and can only happen during a cover up.
 function Epidemic:markForVaccination(patient, quiet)
   if patient.infected and not patient.vaccinated and
       not patient.marked_for_vaccination then
@@ -352,9 +359,9 @@ function Epidemic:markForVaccination(patient, quiet)
   end
 end
 
---[[ Counts the number of patients that have been infected that are still
--- infected
--- @return infected_count (Integer) the number of patients still infected.]]
+--- Counts the number of patients that have been infected that are still
+--- infected
+--- @return (integer) infected_count The number of patients still infected.
 function Epidemic:countInfectedPatients()
   local infected_count = 0
   for _, patient in pairs(self.infected_patients) do
@@ -365,7 +372,7 @@ function Epidemic:countInfectedPatients()
   return infected_count
 end
 
---[[ Sends the initial fax to the player when the epidemic is revealed.]]
+--- Sends the initial fax to the player when the epidemic is revealed.
 function Epidemic:sendInitialFax()
   local num_infected = self:countInfectedPatients()
   --Save it in a global variable so we can apply the fine in the declare function
@@ -385,10 +392,10 @@ function Epidemic:sendInitialFax()
   self.world.ui.bottom_panel:queueMessage("epidemy", message, self, 24*20,2)
 end
 
---[[ Calculate the fine for having a given number of infected patients
---Used to determine the initial declaration fine as the cover up fine.
---@param infected_count (Integer) number of patients still infected
---@return fine (Integer) the fine amount ]]
+--- Calculate the fine for having a given number of infected patients
+--- Used to determine the initial declaration fine as the cover up fine.
+--- @param infected_count (integer) Number of patients still infected
+--- @return (integer) fine The fine amount
 function Epidemic:calculateInfectedFine(infected_count)
   local level_config = self.world.map.level_config
   local fine_per_infected = level_config.gbv.EpidemicFine or 2000
@@ -396,52 +403,33 @@ function Epidemic:calculateInfectedFine(infected_count)
 end
 
 -- Multiplayer with a hospital each: declaring an epidemic costs less (the
--- single player rule, the cover-up fine for every infected patient and a
--- hundredth of it off the reputation, was ruinous in a race: 10 patients
--- cost $20,000 and 200 reputation).
+-- single player rule, the cover-up fine for every infected patient, was
+-- ruinous in a race: 10 patients cost $20,000).
 local MP_DECLARE_FINE_EACH, MP_DECLARE_FINE_MAX = 1000, 10000
-local MP_DECLARE_REPUTATION_EACH, MP_DECLARE_REPUTATION_MAX = 2, 25
 
---[[ The fine for declaring an epidemic with a given number of infected
- patients (the cover-up fine, but less in multiplayer with a hospital each).
- @param infected_count (Integer) number of infected patients
- @return fine (Integer) the fine amount ]]
+--- The fine for declaring an epidemic with a given number of infected
+--- patients (the cover-up fine, but less in multiplayer with a hospital each).
+--- @param infected_count (integer) number of infected patients
+--- @return (integer) the fine amount
 function Epidemic:calculateDeclareFine(infected_count)
   if not self.world.mp_coop then return self:calculateInfectedFine(infected_count) end
   return math.min(MP_DECLARE_FINE_MAX, math.max(MP_DECLARE_FINE_EACH, infected_count * MP_DECLARE_FINE_EACH))
 end
 
---[[ Gets the amount of reputation to add/remove from the player
- based on a given fine. Reputation gain/loss isn't specified
- in the configs so we use a percentage of the fine as a base
- value with extra being gained/lost for specific circumstances.
- @param fine_amount (Integer) amount the player will be fined
- @return reputation hit (Integer) reputation to be deducted relative to fine]]
-local function getBaseReputationFromFine(fine_amount)
-  return math.round(fine_amount / 100)
-end
-
---[[ When the player chooses to declare the epidemic instead of trying
- to cover up it from the initial faxes - ends the epidemic immediately
- after applying fine.]]
+--- When the player chooses to declare the epidemic instead of trying
+--- to cover up it from the initial faxes - ends the epidemic immediately
+--- after applying fine.
 function Epidemic:resolveDeclaration()
   self:clearAllInfectedPatients()
 
-  --No fax for declaration just apply fines and rep hit
+  --No fax for declaration just apply fine and rep hit
   self.hospital:spendMoney(self.declare_fine, _S.transactions.epidemy_fine)
-  local reputation_hit = getBaseReputationFromFine(self.declare_fine)
-  if self.world.mp_coop then
-    reputation_hit = math.min(MP_DECLARE_REPUTATION_MAX,
-        MP_DECLARE_REPUTATION_EACH * math.max(1, self.declare_infected or 1))
-  end
-  -- (Through the hospital, which keeps it between its minimum and maximum:
-  -- set directly, it went below zero.)
-  self.hospital:unconditionalChangeReputation(-reputation_hit)
+  self.hospital:reputationEvent(ReputationAccount.epidemic_gave_up)
   self.hospital.epidemic = nil
 end
 
---[[ Remove all infected patients by vaccinating from the hospital and clear
- any epidemic-specific icons from their heads.]]
+--- Remove all infected patients by vaccinating from the hospital and clear
+--- any epidemic-specific icons from their heads.
 function Epidemic:clearAllInfectedPatients()
   for _, infected_patient in ipairs(self.infected_patients) do
     -- Remove any vaccination calls still open
@@ -453,8 +441,9 @@ function Epidemic:clearAllInfectedPatients()
 end
 
 
---[[ When the player chooses to begin the cover up over declaring from the
- initial fax (@see sendInitialFax) ]]
+--- When the player chooses to begin the cover up over declaring from the
+--- initial fax
+--- @see sendInitialFax
 function Epidemic:startCoverUp()
   if self.world.mp_coop then
     -- Multiplayer co-op: the countdown runs in the simulation on every peer
@@ -482,8 +471,8 @@ function Epidemic:startCoverUp()
   end
 end
 
---[[ Stop the cover up countdown (the watch, or in multiplayer co-op the
-countdown in the simulation and the watch showing it). ]]
+--- Stop the cover up countdown (the watch, or in multiplayer co-op the
+--- countdown in the simulation and the watch showing it).
 function Epidemic:_closeTimer()
   if self.watch then
     self.watch:close()
@@ -494,7 +483,7 @@ function Epidemic:_closeTimer()
   end
 end
 
---[[ Ends the cover up epidemic stage ]]
+--- Ends the cover up epidemic stage
 function Epidemic:finishCoverUp()
   if not self.inspector then
     self:spawnInspector()
@@ -506,8 +495,8 @@ function Epidemic:finishCoverUp()
   self:turnOffVaccinationMode()
 end
 
---[[ Inspector had arrived at reception desk, or a hospital without a desk.
-Check if any infected still in hospital and determine final verdict.]]
+--- Inspector had arrived at reception desk, or a hospital without a desk.
+--- Check if any infected still in hospital and determine final verdict.
 function Epidemic:handleInspectorArrival()
   local still_infected = self:countInfectedPatients()
   self:determineFaxAndFines(still_infected)
@@ -515,14 +504,14 @@ function Epidemic:handleInspectorArrival()
   self:applyOutcome()
 end
 
---[[ Epidemic timer time is up ]]
+--- Epidemic timer time is up
 function Epidemic:coverUpTimeIsUp()
   self:finishCoverUp()
 end
 
---[[ Calculates the contents of the fax and the appropriate fines based on the
-result of a cover up, results are stored globally to the class to be applied later.
- @param still_infected (Integer) the number of patients still infected]]
+--- Calculates the contents of the fax and the appropriate fines based on the
+--- result of a cover up, results are stored globally to the class to be applied later.
+--- @param still_infected (integer) the number of patients still infected
 function Epidemic:determineFaxAndFines(still_infected)
 
   -- Losing text
@@ -554,6 +543,9 @@ function Epidemic:determineFaxAndFines(still_infected)
       choices = {close_option}
     }
   elseif still_infected >= self.reputation_loss_minimum and still_infected < self.evacuation_minimum then
+    -- A serious failure. The original penalises this outcome and the next one,
+    -- but not a minor failure, so the flag is what decides.
+    self.serious_coverup_failure = true
     self.cover_up_result_fax = {
       {text = fail_text_1},
       {text = fail_text_2},
@@ -561,6 +553,7 @@ function Epidemic:determineFaxAndFines(still_infected)
       choices = {close_option}
     }
   else
+    self.serious_coverup_failure = true
     self.will_be_evacuated = true
     self.cover_up_result_fax = {
       {text = fail_text_1},
@@ -571,20 +564,20 @@ function Epidemic:determineFaxAndFines(still_infected)
   end
 end
 
---[[ Apply the compensation or fines where appropriate to the player as
-determined when the cover up was completed (@see finishCoverUp) ]]
+--- Apply the compensation or fines where appropriate to the player as
+--- determined when the cover up was completed (@see finishCoverUp)
 function Epidemic:applyOutcome()
   -- If there is no compensation to apply the epidemic has been failed
   if self.compensation == 0 then
     if self.will_be_evacuated then
-      self.reputation_hit = math.round(self.hospital.reputation * (1/3))
       self:evacuateHospital()
-    else
-      self.reputation_hit = getBaseReputationFromFine(self.coverup_fine)
     end
     -- Apply fine and reputation hit
     self.hospital:spendMoney(self.coverup_fine,_S.transactions.epidemy_coverup_fine)
-    self.hospital:unconditionalChangeReputation(-self.reputation_hit)
+    self.hospital:reputationEvent(ReputationAccount.epidemic_gave_up)
+    if self.serious_coverup_failure then
+      self.hospital:reputationEvent(ReputationAccount.epidemic_inspection_failed)
+    end
   else
     self.hospital:receiveMoney(self.compensation, _S.transactions.compensation)
   end
@@ -594,10 +587,10 @@ function Epidemic:applyOutcome()
   self.hospital.epidemic = nil
 end
 
---[[ For compatibility. Mark all the current patients who are in the hospital
---but not in the reception queues as being "passed reception" used to decide
---who is evacuated @see evacuateHospital. For new patients they are marked
---as they leave the reception desks.]]
+--- For compatibility. Mark all the current patients who are in the hospital
+--- but not in the reception queues as being "passed reception" used to decide
+--- who is evacuated @see evacuateHospital. For new patients they are marked
+--- as they leave the reception desks.
 function Epidemic:markPatientsAsPassedReception()
   local queuing_patients = {}
   for _, desk in ipairs(self.hospital:getReceptionDesks()) do
@@ -616,7 +609,7 @@ function Epidemic:markPatientsAsPassedReception()
   end
 end
 
---[[ Forces evacuation of the hospital - it makes ALL patients leave and storm out. ]]
+--- Forces evacuation of the hospital - it makes ALL patients leave and storm out.
 function Epidemic:evacuateHospital()
   for _, patient in ipairs(self.hospital.patients) do
     if patient.has_passed_reception and
@@ -627,14 +620,14 @@ function Epidemic:evacuateHospital()
   end
 end
 
---[[ Send the results of the cover up to the player - will be a
-success/compensation or fail/fines + reputation hit]]
+--- Send the results of the cover up to the player - will be a
+--- success/compensation or fail/fines + reputation hit
 function Epidemic:sendResultFax()
   self.world.ui.bottom_panel:queueMessage("report", self.cover_up_result_fax, nil, 24*20, 1, nil, self.hospital)
   self:announceEndOfEpidemic()
 end
 
---[[ Spawns the inspector who will walk to the reception desk. ]]
+--- Spawns the inspector who will walk to the reception desk.
 function Epidemic:spawnInspector()
   self:_say(_A.information.epidemic_health_inspector)
   local inspector = self.world:newEntity("Inspector", 2, 2)
@@ -647,30 +640,32 @@ function Epidemic:spawnInspector()
   inspector:queueAction(SeekReceptionAction())
 end
 
---[[ Private function to check if a inspector already spawned.
-@return (boolean) true if spawned already, false if not]]
+--- Private function to check if a inspector already spawned.
+--- @return (boolean) # true if spawned already, false if not
+--- @private
 function Epidemic:_inspectorSpawned()
   return self.inspector ~= nil
 end
 
---[[ Private function to check if a cover up is in progress
-@return (boolean) true if cover up in progress, false if not]]
+--- Private function to check if a cover up is in progress
+--- @return (boolean) true if cover up in progress, false if not
+--- @private
 function Epidemic:_isCoverUpActive()
   return self.coverup_selected and not self:_inspectorSpawned()
 end
 
---[[ Is the patient "still" either idle queuing or sitting on a bench
-  Typically this is used to determine if a patient can be vaccinated
-  @param patient (Patient) the patient we wish to determine if they are static.]]
+--- Is the patient "still" either idle queuing or sitting on a bench
+---  Typically this is used to determine if a patient can be vaccinated
+---  @param patient (Patient) the patient we wish to determine if they are static.
 local function is_static(patient)
   local action = patient:getCurrentAction()
   return action.name == "queue" or action.name == "idle" or action.name == "seek_room" or
       (action.name == "use_object" and action.object.object_type.id == "bench")
 end
 
---[[ During a cover up every patient marked for vaccination (clicked)
- creates a call to be vaccinated by a nurse - patients must also be static
- (seated or standing queuing) ]]
+--- During a cover up every patient marked for vaccination (clicked)
+--- creates a call to be vaccinated by a nurse - patients must also be static
+--- (seated or standing queuing)
 function Epidemic:markedPatientsCallForVaccination()
   for _, infected_patient in ipairs(self.infected_patients) do
     if infected_patient.marked_for_vaccination and
@@ -680,11 +675,11 @@ function Epidemic:markedPatientsCallForVaccination()
   end
 end
 
---[[ In response to a vaccination call by the vaccination candidate
-  (@see makeVaccinationCandidateCallForNurse) perform the vaccination
-  actions or deal with call if unable to vaccinate.
-  @param patient (Patient) the patient who make the original call
-  @param nurse (Nurse) the nurse attempting to vaccinate the patient]]
+--- In response to a vaccination call by the vaccination candidate
+--- (@see makeVaccinationCandidateCallForNurse) perform the vaccination
+--- actions or deal with call if unable to vaccinate.
+--- @param patient (Patient) the patient who make the original call
+--- @param nurse (Nurse) the nurse attempting to vaccinate the patient
 function Epidemic:createVaccinationActions(patient,nurse)
   patient.reserved_for = nurse
   -- Check square is reachable first
@@ -708,10 +703,11 @@ function Epidemic:createVaccinationActions(patient,nurse)
 end
 
 
---[[Find the best tile to stand on to vaccinate a patient
- @param nurse (Nurse) the nurse performing the vaccination
- @param patient (Patient) the patient to be vaccinated
- @return best_x,best_y (Integer,nil) the best tiles to vaccinate from.]]
+--- Find the best tile to stand on to vaccinate a patient
+--- @param nurse (Nurse) the nurse performing the vaccination
+--- @param patient (Patient) the patient to be vaccinated
+--- @return (integer?) best_x The best tiles to vaccinate from.
+--- @return (integer?) best_y The best tiles to vaccinate from.
 function Epidemic:getBestVaccinationTile(nurse, patient)
   local px, py = patient.tile_x, patient.tile_y
   -- If the patient is using a bench the best tile to use is
@@ -762,8 +758,8 @@ function Epidemic:getBestVaccinationTile(nurse, patient)
   return best_x, best_y
 end
 
---[[When the nurse is interrupted unreserve the patient and unassign the call.
-  @param nurse (Nurse) the nurse whose vaccination actions we are interrupting]]
+--- When the nurse is interrupted unreserve the patient and unassign the call.
+--- @param nurse (Nurse) the nurse whose vaccination actions we are interrupting
 function Epidemic:interruptVaccinationActions(nurse)
   assert(class.is(nurse, Nurse))
   local call = nurse.on_call
@@ -778,8 +774,8 @@ function Epidemic:interruptVaccinationActions(nurse)
   end
 end
 
---[[ Make the advisor show appropriate messages under certain
-  conditions of the epidemic.]]
+--- Make the advisor show appropriate messages under certain
+--- conditions of the epidemic.
 function Epidemic:showAppropriateAdviceMessages()
   if not self:_isCoverUpActive() then return end
 
@@ -800,8 +796,8 @@ function Epidemic:showAppropriateAdviceMessages()
   end
 end
 
---[[ Are no infected patients, cured or still infected in the hospital?
-@returns true if so, false otherwise. (boolean) ]]
+--- Are no infected patients, cured or still infected in the hospital?
+--- @returns (boolean) # true if so, false otherwise.
 function Epidemic:hasNoInfectedPatients()
   return #self.infected_patients == 0
 end
@@ -818,7 +814,7 @@ function Epidemic:tryAnnounceInspector()
   end
 end
 
---[[ For Cheat - Cancel the epidemic. ]]
+--- For Cheat - Cancel the epidemic.
 function Epidemic:cancelEpidemic()
   -- Remove init epidemic fax
   self.world.ui.bottom_panel:deleteMessage(self)

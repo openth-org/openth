@@ -45,8 +45,8 @@ jobs:
         run: bash scripts/multiplayer/build_linux_package.sh "$(git rev-parse --short=8 HEAD)"
       - name: Smoke test (program starts and finds its libraries)
         run: |
-          cd dist/CorsixTH-Multiplayer
-          ldd ./corsix-th | grep -i "not found" && exit 1 || true
+          cd dist/OpenTH
+          ldd ./openth | grep -i "not found" && exit 1 || true
           for so in lua/*.so lua/*/*.so; do ldd "$so" | grep -i "not found" && exit 1 || true; done
           ls -la
       - name: Upload the package

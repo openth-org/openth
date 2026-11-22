@@ -18,7 +18,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-local UIResizable = _G['UIResizable'] ---@type UIResizable
+local UIResizable = cth_require("dialogs.resizable")
 
 --! Customise window used in the main menu and ingame.
 class "UICustomise" (UIResizable)
@@ -46,6 +46,9 @@ function UICustomise:UICustomise(ui, mode)
     { name = "movies" },
     -- Intro movie
     { name = "play_intro" },
+    -- Main menu: the professor's (the original game's) or the list of
+    -- buttons (CorsixTH's)
+    { name = "professor_menu", func = self.buttonProfessorMenu, custom_labels = true },
     -- Allow user actions when paused
     { name = "allow_user_actions_while_paused" },
     -- Alien DNA from emergencies only/must stand/can knock on doors
@@ -72,10 +75,10 @@ function UICustomise:buttonAliens(app)
   app.config.alien_dna_can_knock_on_doors = not app.config.alien_dna_can_knock_on_doors
 end
 
-function UICustomise:buttonBack()
-  self:close()
-  local window = UIOptions(self.ui, "menu")
-  self.ui:addWindow(window)
+function UICustomise:buttonProfessorMenu(app)
+  app.config.professor_menu = not app.config.professor_menu
+  -- The menu's background changes at once, the menu when this window closes.
+  if not app.world then self.ui:setMenuBackground() end
 end
 
 -- So that we can see the option has been changed reload the menu
@@ -86,7 +89,9 @@ end
 
 function UICustomise:close()
   UIResizable.close(self)
-  if self.mode == "menu" then
-    self.ui:addWindow(UIMainMenu(self.ui))
-  end
+  local UIOptions = cth_require("dialogs.resizables.options")
+  local window = UIOptions(self.ui, "menu")
+  self.ui:addWindow(window)
 end
+
+return UICustomise

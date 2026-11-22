@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-command setup of the CorsixTH multiplayer server on a Debian or Ubuntu
+# One-command setup of the OpenTH multiplayer server on a Debian or Ubuntu
 # VPS. Run as root (or with sudo). Safe to run again: it updates the server.
 #
 #   curl -fsSLO https://raw.githubusercontent.com/openth-org/openth/master/mp_server/deploy/setup-vps.sh
@@ -81,7 +81,7 @@ if (( UFW )); then
   ssh_ports=$(sshd -T 2>/dev/null | awk '$1 == "port" {print $2}' | sort -u)
   [[ -n "$ssh_ports" ]] || ssh_ports=22
   for p in $ssh_ports; do ufw allow "${p}/tcp" comment "SSH" >/dev/null; done
-  ufw allow "${PORT}/tcp" comment "CorsixTH multiplayer" >/dev/null
+  ufw allow "${PORT}/tcp" comment "OpenTH multiplayer" >/dev/null
   ufw --force enable >/dev/null
   ufw status verbose | sed 's/^/   /'
   echo "   Note: ports published by Docker bypass ufw; the compose file publishes only ${PORT}."

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2026 CorsixTH-Multiplayer contributors
+Copyright (c) 2026 OpenTH contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -36,7 +36,9 @@ namespace th::packs {
 
 //! The engine's level for game packs. A pack names the lowest level it needs;
 //! raise this when the scripts come to need something new from the engine.
-constexpr int engine_level = 1;
+//! 2: upstream CorsixTH master merged (Lua API 2722: PNG pictures, sound
+//! pitch); the scripts refuse to run on an engine of API 2721.
+constexpr int engine_level = 2;
 
 //! Read `out_size` bytes written as hexadecimal digits (2 per byte).
 bool parse_hex(std::string_view hex, uint8_t* out, std::size_t out_size);

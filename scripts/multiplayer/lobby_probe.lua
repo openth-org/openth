@@ -2335,6 +2335,59 @@ local function run()
             end
             log("MAP |" .. table.concat(row) .. "|")
           end
+        elseif a == "assistant" then
+          -- A job of the bots in this hospital switched as a click in the
+          -- MULTIPLAYER menu's ASSISTANT list would: "<job>=<0 or 1>".
+          local job, value = entry.arg:match("^(%w+)=(%d)$")
+          local item
+          for _, it in ipairs(lobby:_assistantMenu().items) do
+            if it.title == _S.multiplayer_window["menu_assistant_" .. tostring(job)] then item = it end
+          end
+          if item then
+            item.checked = value == "1"
+            item.handler(item)
+            log(string.format("UI: assistant job %s switched to %s at step %d", job, value, session.step))
+          else
+            log("UI: no assistant job " .. tostring(entry.arg))
+          end
+        elseif a == "buildwindow" then
+          -- The build window on page <arg> (1 diagnosis .. 4 facilities), a
+          -- picture, closed again.
+          local page = tonumber(entry.arg) or 4
+          local win = UIBuildRoom(world.ui)
+          world.ui:addWindow(win)
+          win:setCategory(page)
+          shot("build-window-" .. page)
+          win:close()
+        elseif a == "assistantmenu" then
+          -- A picture of the MULTIPLAYER menu with its ASSISTANT list open,
+          -- as the mouse opens them (and of the build button's count).
+          local bar = world.ui.menu_bar
+          local s = TheApp.gfx:getUIScale()
+          local top
+          for _, m in ipairs(bar.menus) do
+            if m.title == _S.multiplayer_window.menu_caption then top = m end
+          end
+          if top then
+            bar:appear()
+            bar:onMouseDown("left", (top.x + 10) * s, 8 * s)
+            local menu = bar.active_menu
+            local index
+            for n, it in ipairs(menu and menu.items or {}) do
+              if it.title == _S.multiplayer_window.menu_assistant then index = n end
+            end
+            if index then bar:onMouseMove((menu.x + 20) * s, (menu.y + index * 14 - 4) * s) end
+            shot("assistant-menu", true)
+            bar.open_menus, bar.active_menu = {}, false
+            log(string.format("UI: assistant menu shown (item %s)", tostring(index)))
+          else
+            log("UI: no MULTIPLAYER menu")
+          end
+        elseif a == "flow" then
+          -- How well patients get from room to room in each hospital
+          -- (flow_metrics.lua: Argus's metrics, 2026-11-22).
+          local Flow = assert(loadfile(source_dir .. "/scripts/multiplayer/flow_metrics.lua"))()
+          for _, line in ipairs(Flow.lines(world)) do log(line) end
         elseif a == "hospitals" then
           -- Every hospital: open or not, balance, its rooms and staff (to
           -- see what a bot built), with the game date.
@@ -2366,12 +2419,17 @@ local function run()
                 objects = objects + 1
               end
             end
+            -- (What its bots may do: MultiplayerSession.ASSISTANT_JOBS.)
+            local jobs = {}
+            for _, job in ipairs(MultiplayerSession.ASSISTANT_JOBS or {}) do
+              jobs[#jobs + 1] = job.name .. ":" .. (MultiplayerSession.assistantMay(world, hosp, job.name) and 1 or 0)
+            end
             parts[#parts + 1] = string.format("[%d %s opened=%s balance=%d reputation=%d rooms=%s staff=%s corridor_objects=%d"
-                .. " value=%d cured=%d deaths=%d visitors=%d loan=%d goals=%s]", h,
+                .. " value=%d cured=%d deaths=%d visitors=%d loan=%d goals=%s assistant=%s]", h,
                 tostring(hosp.name), tostring(hosp.opened or false), math.floor(hosp.balance), math.floor(hosp.reputation),
                 table.concat(rooms, ","), table.concat(st, ","), objects, math.floor(hosp.value or 0),
                 hosp.num_cured or 0, hosp.num_deaths or 0, hosp.num_visitors or 0, hosp.loan or 0,
-                tostring(world.endconditions and world.endconditions:goalsMet(hosp) or false))
+                tostring(world.endconditions and world.endconditions:goalsMet(hosp) or false), table.concat(jobs, ","))
           end
           log(string.format("UI: hospitals at step %d (%s, month %d): %s", session.step, d:tostring(),
               d:monthOfGame(), table.concat(parts, " ")))
@@ -2544,6 +2602,56 @@ local function run()
             map:close()
           end
           log(string.format("UI: balance before the sale $%d", before))
+        elseif a == "plotroom" then
+          -- plotroom:<room>:<w>:<h>: that room on the plot (session.probe_plot),
+          -- through the room editor, where all its tiles are free floor of
+          -- the plot with nothing on them.
+          local id, rw, rh = entry.arg:match("^([%w_]+):(%d+):(%d+)$")
+          rw, rh = tonumber(rw), tonumber(rh)
+          local th, flags = world.map.th, {}
+          local plot = session.probe_plot
+          local tiles = MultiplayerSession.plotTiles(th, plot)
+          local at
+          for k = 1, #tiles, 2 do
+            local x, y = tiles[k], tiles[k + 1]
+            local fits = true
+            for dy = 0, rh - 1 do
+              for dx = 0, rw - 1 do
+                th:getCellFlags(x + dx, y + dy, flags)
+                if not (flags.parcelId == plot and flags.buildable and flags.passable and flags.hospital and
+                    (flags.roomId or 0) == 0) or world:getObject(x + dx, y + dy) then
+                  fits = false
+                end
+              end
+            end
+            if fits and (not at or y < at[2] or (y == at[2] and x < at[1])) then at = {x, y} end
+          end
+          log(string.format("UI: %s on plot %s at %s,%s, step %d", id, tostring(plot), tostring(at and at[1]),
+              tostring(at and at[2]), session.step))
+          if not at then
+            -- (Where the plot's free floor is, to see why nothing fits.)
+            local free = {}
+            for k = 1, #tiles, 2 do
+              local x, y = tiles[k], tiles[k + 1]
+              th:getCellFlags(x, y, flags)
+              if flags.buildable and flags.passable and flags.hospital and (flags.roomId or 0) == 0 and
+                  not world:getObject(x, y) then
+                free[#free + 1] = x .. "," .. y
+              end
+            end
+            log(string.format("UI: free floor of plot %s (%d tiles of %d): %s", tostring(plot), #free, #tiles / 2,
+                table.concat(free, " ")))
+          end
+          if at then builder.ui_room(world, desk_x, desk_y, id, rw, rh, false, log, at) end
+        elseif a == "plotrooms" then
+          -- The rooms on the plot now (all of them, any hospital's).
+          local list = {}
+          for _, r in ipairs(MultiplayerSession.plotRooms(world, session.probe_plot)) do
+            list[#list + 1] = string.format("%s#%d:%s%s", r.room_info.id, r.id,
+                r.is_active and "open" or "closed", next(r.humanoids) and "+people" or "")
+          end
+          log(string.format("UI: rooms on plot %s at step %d: %s", tostring(session.probe_plot), session.step,
+              #list > 0 and table.concat(list, " ") or "none"))
         elseif a == "plotbench" then
           -- A bench on the plot: the free tile nearest its middle, with no
           -- object within two tiles (the entrance's doors).
@@ -2605,7 +2713,7 @@ local function run()
               if world:getHospitalIndex(ally) == tonumber(to) then window:selectAlly(k, true) end
             end
             window:setPrice(tonumber(price))
-            shot("plot-give-window")
+            shot("plot-give-window-" .. session.step)
             log(string.format("UI: giving plot %s to hospital %s for $%d at step %d", tostring(plot), to,
                 window.price, session.step))
             window:give()
@@ -2624,7 +2732,7 @@ local function run()
           end
           if icon then
             if not icon.fax then icon:openMessage() end
-            shot("plot-offer-fax")
+            shot("plot-offer-fax-" .. session.step)
             local offer = icon.message.mp_offer
             log(string.format("UI: %s the offer of plot %s for $%d at step %d", entry.arg, tostring(offer.plot),
                 offer.price or 0, session.step))

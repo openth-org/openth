@@ -93,7 +93,7 @@ def report(day: str, env: dict[str, str] | None = None) -> str:
 
 
 def post(url: str, text: str) -> None:
-    body = json.dumps({"username": "CorsixTH multiplayer", "content": text}).encode("utf-8")
+    body = json.dumps({"username": "OpenTH", "content": text}).encode("utf-8")
     request = urllib.request.Request(url, data=body, method="POST", headers={
         "Content-Type": "application/json", "User-Agent": "corsixth-mp-report/1"})
     with urllib.request.urlopen(request, timeout=20) as response:

@@ -23,7 +23,11 @@
 -- whether a bot ever played it), and notes what they build (rooms, objects,
 -- moves) in <dir>/builds/<room>.jsonl. layout_learn.py learns from them.
 -- An expert who did nothing since the last save (a save loaded and only
--- looked at) is not saved again.
+-- looked at) is not saved again. A hospital an expert shares is named after
+-- all its players ("ARGUS + BOT EDNA" with an assistant): it counts too, and
+-- the .json notes who built each room and put down each object in it this
+-- game (built), so that only the expert's own work is learnt
+-- (mp_server/corsixth_mp/learn.py, own_records).
 local args = {...}
 local unpack_args = table.unpack or unpack
 local source_dir = assert(os.getenv("CORSIXTH_SOURCE"), "Missing CORSIXTH_SOURCE")
@@ -92,15 +96,61 @@ local function level_name(world)
   return (tostring(world.map.level_name or ""):gsub("^<LocalisedString> Current value:", ""))
 end
 
---! The experts playing now: hospital index -> name (a person's own
---! hospital, named after them).
+--! The experts among the players a hospital is named after: its own
+--! player's name ("ARGUS"), or all its players' ("ARGUS + BOT EDNA").
+local function experts_in(hospital)
+  local out = {}
+  for each in (tostring(hospital.name or ""):upper() .. " + "):gmatch("(.-) %+ ") do
+    local part = each:gsub("^%s+", ""):gsub("%s+$", "")
+    if experts[part] then out[#out + 1] = part end
+  end
+  return out
+end
+
+--! The experts playing now: hospital index -> their names ("ARGUS"), in
+--! their own hospital or one they share.
 local function experts_playing(world)
   local out = {}
   for index, hospital in ipairs(world and world.hospitals or {}) do
-    local name = tostring(hospital.name or ""):upper()
-    if experts[name] and not bot_ever[index] and players_hospital(hospital) then out[index] = name end
+    local names = players_hospital(hospital) and not bot_ever[index] and experts_in(hospital) or {}
+    if names[1] then out[index] = table.concat(names, ", ") end
   end
   return out
+end
+
+-- The game's lobby (run): its peer_names say who sent a command.
+local the_lobby
+
+--! The name of the player who sent a command ("ARGUS", "BOT EDNA"), or nil.
+local function sender(cmd)
+  local names = the_lobby and the_lobby.peer_names
+  local name = names and names[tonumber(cmd.peer)]
+  return name and tostring(name):upper() or nil
+end
+
+-- Who built what this game in the hospitals with an expert in them: index
+-- -> {rooms = {{kind, x, y, by, expert}...}, objects = {{id, x, y, by,
+-- expert}...}} (a room by its corner, an object by its tile, as
+-- layout_dump.lua has them).
+local built = {}
+
+--! Note who built a room (build_room, room_rebuild) or put down an object
+--! (place_object, move_object, room_object) in hospital index.
+local function note_builder(index, kind, cmd)
+  -- (Without the players' names nobody is noted: all counts as the expert's.)
+  local by = sender(cmd)
+  if not (by and cmd.x and cmd.y) then return end
+  local entry = {x = cmd.x, y = cmd.y, by = by, expert = experts[by] and true or false}
+  local h = built[index] or {rooms = {}, objects = {}}
+  built[index] = h
+  if kind == "build_room" or kind == "room_rebuild" then
+    -- (room_rebuild names the room by its number, not its kind.)
+    if kind == "build_room" and type(cmd.room) == "string" then entry.kind = cmd.room end
+    h.rooms[#h.rooms + 1] = entry
+  elseif kind == "place_object" or kind == "move_object" or kind == "room_object" then
+    if type(cmd.object) == "string" then entry.id = cmd.object end
+    h.objects[#h.objects + 1] = entry
+  end
 end
 
 local function ensure_dir(path)
@@ -151,8 +201,14 @@ local function learn_save(why, lobby)
     end
     local hospitals = {}
     for index, hospital in ipairs(world.hospitals) do
-      hospitals[#hospitals + 1] = {index = index, name = tostring(hospital.name),
+      local entry = {index = index, name = tostring(hospital.name),
           expert = playing[index] ~= nil, bot_ever = bot_ever[index] or false}
+      -- (An expert's hospital: who is the expert, and who built what in it.)
+      if players_hospital(hospital) and experts_in(hospital)[1] then
+        entry.experts = experts_in(hospital)
+        entry.built = built[index] or {rooms = {}, objects = {}}
+      end
+      hospitals[#hospitals + 1] = entry
     end
     local f = assert(io.open(path .. ".json", "w"))
     f:write(json_text({room = room, why = why, date = date:tostring(), step = session and session.step or 0,
@@ -184,7 +240,12 @@ local function watch_builds()
           local hospital = world.hospitals[index]
           local name = hospital and tostring(hospital.name):upper()
           note_bots(world)
-          if not (name and experts[name]) or bot_ever[index] or not players_hospital(hospital) then return end
+          if not name or bot_ever[index] or not players_hospital(hospital) or not experts_in(hospital)[1] then
+            return
+          end
+          -- (Everyone's building in a hospital an expert shares: whose is whose.)
+          if ok then note_builder(index, kind, cmd) end
+          local by = sender(cmd)
           ensure_dir(learn_dir)
           ensure_dir(learn_dir .. "/builds")
           local f = io.open(learn_dir .. "/builds/" .. room:gsub("[^%w%-_]", "_") .. ".jsonl", "a")
@@ -194,6 +255,7 @@ local function watch_builds()
             if type(v) == "string" or type(v) == "number" then fields[k] = v end
           end
           f:write(json_text({date = world:date():tostring(), hospital = index, name = name, kind = kind,
+              by = by, by_expert = by and experts[by] and true or false,
               ok = ok and true or false, why = why and tostring(why) or nil, cmd = fields}), "\n")
           f:close()
         end)
@@ -209,7 +271,7 @@ local IDLE_KINDS = {set_speed = true, speed_vote = true, speed_vote_answer = tru
     player_away = true, hold_done = true, room_takeover = true}
 
 --! Note which hospitals act (acted): every command that ran for one, but
---! IDLE_KINDS.
+--! IDLE_KINDS, and not an assistant's (a bot's) in an expert's hospital.
 local function watch_commands()
   corsixth.require("mp_session")
   local handlers = MultiplayerSession.default_handlers
@@ -220,7 +282,10 @@ local function watch_commands()
     if not IDLE_KINDS[kind] and type(handler) == "function" then
       handlers[kind] = function(world, cmd)
         local ok, why = handler(world, cmd)
-        if ok then acted[tonumber(cmd.hospital) or 1] = true end
+        if ok then
+          local by = sender(cmd)
+          if by == nil or experts[by] then acted[tonumber(cmd.hospital) or 1] = true end
+        end
         return ok, why
       end
     end
@@ -237,6 +302,7 @@ local function run()
       {role = "referee", room = room, token = token})
   assert(lobby, "cannot connect: " .. tostring(err))
   lobby.log = log
+  the_lobby = lobby
   log("connected as " .. lobby.build)
   if learning then
     local names = {}

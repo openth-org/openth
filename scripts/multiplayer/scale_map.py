@@ -1,4 +1,4 @@
-"""Scale a 128x128 Theme Hospital map (CorsixTH multiplayer layout, 8 players)
+"""Scale a 128x128 Theme Hospital map (OpenTH multiplayer layout, 8 players)
 to NxN by repeating rows and columns that can repeat without breaking
 anything (no borders across them, no doors, no diagonal pieces), spread so
 that every old row lands near 1.5x its place. Window pairs are repaired

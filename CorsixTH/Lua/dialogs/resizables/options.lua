@@ -18,7 +18,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-local UIResizable = _G['UIResizable'] ---@type UIResizable
+local UIDropdown = cth_require("dialogs.resizables.dropdown")
+local UIResizable = cth_require("dialogs.resizable")
 
 --! Options window used in the main menu and ingame.
 class "UIOptions" (UIResizable)
@@ -64,9 +65,7 @@ local current_autosave_frequency = function()
 end
 
 function UIOptions:UIOptions(ui, mode)
-  local width = 620
-  local height = 360
-  self:UIResizable(ui, width, height, col.bg)
+  self:UIResizable(ui, 335, 370, col.bg)
 
   local app = ui.app
   self.mode = mode
@@ -113,27 +112,26 @@ function UIOptions:UIOptions(ui, mode)
     { name = "back", func = self.buttonBack },
   }
 
-  width = self.width
+  local btn_width = self.btn_width
   local nav_y_pos = self:_getOptionYPos() + big_button_padding
-  local nav_x_pos = self.margin
+  local nav_x_pos_1, nav_x_pos_2 = self.margin, self.margin + btn_width + big_button_padding
   for i, entry in ipairs(nav_buttons) do
     local name, func = entry.name, entry.func
-
-    local btn_width = self.btn_width
-    -- If back is the only bottom row button then make it full width
-    if i == #nav_buttons and #nav_buttons % 2 == 1 then
-      btn_width = btn_width * 2 + element_spacing
+    local x_pos = nav_x_pos_2
+    if i % 2 == 1 then -- New column
+      x_pos = nav_x_pos_1
+      -- If back is the only bottom row button then make it full width
+      if i == #nav_buttons then
+        btn_width = btn_width * 2 + big_button_padding
+      end
+      if i > 1 then -- Not needed for the first row of buttons
+        nav_y_pos = nav_y_pos + self.big_button_height + element_spacing
+      end
     end
-    self:addBevelPanel(nav_x_pos, nav_y_pos, btn_width, self.big_button_height, col.button)
+    self:addBevelPanel(x_pos, nav_y_pos, btn_width, self.big_button_height, col.button)
       :setLabel(_S[self.strings_ref][name])
       :makeButton(0, 0, btn_width, self.big_button_height, nil, func)
       :setTooltip(_S.tooltip[self.strings_ref][name])
-
-    nav_x_pos = nav_x_pos + self.btn_width + element_spacing
-    if nav_x_pos + self.btn_width + self.margin > width then
-      nav_x_pos = self.margin
-      nav_y_pos = nav_y_pos + self.big_button_height + element_spacing
-    end
   end
 end
 
@@ -231,66 +229,46 @@ function UIOptions:buttonMouseCapture()
 end
 
 function UIOptions:buttonCustomise()
+  local UICustomise = cth_require("dialogs.resizables.customise")
   local window = UICustomise(self.ui, "menu")
   self.ui:addWindow(window)
 end
 
 function UIOptions:buttonFolder()
+  local UIFolder = cth_require("dialogs.resizables.folder_settings")
   local window = UIFolder(self.ui, "menu")
   self.ui:addWindow(window)
 end
 
 function UIOptions:buttonHotkey()
+  local UIHotkeyAssign = cth_require("dialogs.resizables.hotkey_assign")
   local window = UIHotkeyAssign(self.ui, "menu")
   self.ui:addWindow(window)
 end
 
 function UIOptions:buttonSound()
+  local UISoundSettings = cth_require("dialogs.resizables.sound_setting")
   local window = UISoundSettings(self.ui, "menu")
   self.ui:addWindow(window)
 end
 
 function UIOptions:buttonGraphics()
+  local UIGraphicSettings = cth_require("dialogs.resizables.graphics_settings")
   local window = UIGraphicSettings(self.ui, "menu")
   self.ui:addWindow(window)
 end
 
 function UIOptions:buttonAccessibility()
+  local UIAccessibility = cth_require("dialogs.resizables.menu_list_dialogs.accessibility")
   local window = UIAccessibility(self.ui, "menu")
   self.ui:addWindow(window)
-end
-
-function UIOptions:buttonScrollSpeed()
-  local callback = function(scrollspeed_number)
-    self.buttons.scroll_speed:setLabel(tostring(scrollspeed_number)):setToggleState(false)
-  end
-
-  self.ui:addWindow(UIScrollSpeed(self.ui, callback))
-end
-
-function UIOptions:buttonBack()
-  self:close()
-end
-
-function UIOptions:buttonShiftScrollSpeed()
-  local callback = function(shift_scrollspeed_number)
-    self.buttons.shift_scroll_speed:setLabel(tostring(shift_scrollspeed_number)):setToggleState(false)
-  end
-
-  self.ui:addWindow(UIShiftScrollSpeed(self.ui, callback))
-end
-
-function UIOptions:buttonZoomSpeed()
-  local callback = function(zoomspeed_number)
-    self.buttons.zoom_speed:setLabel(tostring(zoomspeed_number)):setToggleState(false)
-  end
-
-  self.ui:addWindow( UIZoomSpeed(self.ui, callback) )
 end
 
 function UIOptions:close()
   UIResizable.close(self)
   if self.mode == "menu" then
-    self.ui:addWindow(UIMainMenu(self.ui))
+    self.ui:openMainMenu()
   end
 end
+
+return UIOptions

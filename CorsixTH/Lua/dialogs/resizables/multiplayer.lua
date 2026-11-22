@@ -1,4 +1,4 @@
---[[ Copyright (c) 2026 CorsixTH-Multiplayer contributors
+--[[ Copyright (c) 2026 OpenTH contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -684,7 +684,8 @@ function UIMultiplayer:_buildRoom()
         :makeButton(0, 0, colour_w, 25, nil, function() self:clickColour(i) end)
         :setTooltip(T.colour)
     self.team_buttons[i] = self:addBevelPanel(WIDTH - 20 - team_w, y, team_w, 25, col.button)
-        :setLabel(""):makeButton(0, 0, team_w, 25, nil, function() self:clickTeam(i) end)
+        :setLabel(""):makeButton(0, 0, team_w, 25, nil, function() self:clickTeam(i) end, nil,
+            function() self:clickTeam(i, -1) end)
         :setTooltip(T.team)
   end
   -- The assistants' column: beside each person their assistant, or (for
@@ -1032,7 +1033,8 @@ function UIMultiplayer:sideMenu(i)
 end
 
 --! A place in the room's player list was clicked: the host adds a bot to an
---! empty place or takes a bot away.
+--! empty place or takes a bot away. (The server knows players by their peer
+--! number, not by their line: assistants have one but no line of their own.)
 function UIMultiplayer:clickPlace(i)
   local lobby = self.lobby
   local p = self:rowPlayer(i)
@@ -1049,7 +1051,7 @@ function UIMultiplayer:clickPlace(i)
   end
   if not lobby:canAddBots() then return end
   if p and p.bot == "1" then
-    lobby:removeBot(i)
+    lobby:removeBot(p.peer)
   elseif not p and self.add_lines and self.add_lines[i] then
     lobby:addBot()
   end
@@ -1153,21 +1155,24 @@ function UIMultiplayer:clickColour(i)
   if p.peer == lobby.room.peer then
     lobby:setSeat(colour, nil)
   elseif lobby:isOwner() then
-    lobby:setSeat(colour, nil, i)
+    lobby:setSeat(colour, nil, p.peer)
   end
 end
 
---! A player's team button: the next team (for everybody of their colour);
---! the host may change anybody's.
-function UIMultiplayer:clickTeam(i)
+--! A player's team button: the next team (for everybody of their colour),
+--! with a right click the one before (Jan, 2026-11-21); the host may change
+--! anybody's.
+--!param step (number) optional: -1 for the team before
+function UIMultiplayer:clickTeam(i, step)
   local lobby = self.lobby
   local p = self:rowPlayer(i)
   if not (p and lobby:isFreeRoom()) then return end
-  local team = (tonumber(p.team) or 1) % MultiplayerLobby.TEAMS + 1
+  local n = MultiplayerLobby.TEAMS
+  local team = ((tonumber(p.team) or 1) - 1 + (step or 1)) % n + 1
   if p.peer == lobby.room.peer then
     lobby:setSeat(nil, team)
   elseif lobby:isOwner() then
-    lobby:setSeat(nil, team, i)
+    lobby:setSeat(nil, team, p.peer)
   end
 end
 
@@ -1244,7 +1249,7 @@ function UIMultiplayer:close()
   -- This window took the main menu's place; give it back (not when a game
   -- has just started and replaced the whole screen).
   if not self.rebuilding and not TheApp.world and not (self.lobby and self.lobby.state == "in_game") then
-    self.ui:addWindow(UIMainMenu(self.ui))
+    self.ui:openMainMenu()
   end
 end
 

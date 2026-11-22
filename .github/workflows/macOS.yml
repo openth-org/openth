@@ -74,8 +74,8 @@ jobs:
         run: bash scripts/multiplayer/build_macos_app.sh "$(git rev-parse --short=8 HEAD)"
       - name: Videos (FFmpeg linked and bundled)
         run: |
-          app=dist/CorsixTH-Multiplayer/CorsixTH.app
-          otool -L "$app/Contents/MacOS/CorsixTH" | grep -E "avcodec|avformat|swscale|swresample"
+          app=dist/OpenTH/OpenTH.app
+          otool -L "$app/Contents/MacOS/OpenTH" | grep -E "avcodec|avformat|swscale|swresample"
           ls "$app/Contents/Frameworks" | grep -E "^libavcodec"
       - name: Smoke test (Lua modules, build checksum, LuaSocket to a local server)
         run: |
@@ -83,19 +83,19 @@ jobs:
           PYTHONPATH=mp_server python3 -m corsixth_mp --host 127.0.0.1 --port 47891 --log-level INFO > server.log 2>&1 &
           server=$!
           sleep 2
-          app=dist/CorsixTH-Multiplayer/CorsixTH.app
-          "$app/Contents/MacOS/CorsixTH" --interpreter="$PWD/scripts/multiplayer/macos_smoke.lua" \
+          app=dist/OpenTH/OpenTH.app
+          "$app/Contents/MacOS/OpenTH" --interpreter="$PWD/scripts/multiplayer/macos_smoke.lua" \
             --resources="$PWD/$app/Contents/Resources" --server=127.0.0.1:47891 | tee smoke.txt
           kill "$server" || true
           grep -q "MACOS SMOKE OK" smoke.txt
       - name: Smoke test (the game starts and keeps running without game data)
         run: |
-          app=$PWD/dist/CorsixTH-Multiplayer/CorsixTH.app
+          app=$PWD/dist/OpenTH/OpenTH.app
           export SDL_VIDEODRIVER=dummy SDL_AUDIO_DRIVER=dummy SDL_RENDER_DRIVER=software
           # From an empty folder, as from Finder: the program looks for
           # CorsixTH.lua in the current folder first (here the checkout has one).
           mkdir -p "$RUNNER_TEMP/run" && cd "$RUNNER_TEMP/run"
-          "$app/Contents/MacOS/CorsixTH" > game.log 2>&1 &
+          "$app/Contents/MacOS/OpenTH" > game.log 2>&1 &
           pid=$!
           sleep 15
           if kill -0 "$pid" 2>/dev/null; then

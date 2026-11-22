@@ -18,10 +18,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-corsixth.require("announcer")
+cth_require("announcer")
+local UIFullscreen = cth_require("dialogs.fullscreen")
 
 local AnnouncementPriority = _G["AnnouncementPriority"] --[[@as AnnouncementPriority]]
-local UIFullscreen = _G['UIFullscreen'] ---@type UIFullscreen
 
 class "UIFax" (UIFullscreen)
 
@@ -222,9 +222,23 @@ function UIFax:choice(choice_number)
       humanoid:setNextAction(SeekRoomAction("research"))
     end
   end
-  local vip_ignores_refusal = math.random(1, 2)
+  -- (Multiplayer: drawn only for a refused VIP. A fax answered in one game
+  -- only, such as a message there alone whose time ran out, must not move
+  -- that game's random numbers: eu2, 2026-11-21, a fax on hospital 1's
+  -- machines drew here and everybody had to reload. Single player draws on
+  -- every answer as before.)
+  local mp = TheApp and TheApp.mp_session
+  local vip_ignores_refusal
+  if not mp or choice == "refuse_vip" then vip_ignores_refusal = math.random(1, 2) end
+  if mp and not mp.applying then
+    -- (A time-out runs in every game alike; one that shows up in only some
+    -- games' logs is a message those games alone had.)
+    mp.log(string.format("fax answered outside a command: %s, choice %s (message %s)",
+        tostring(self.icon and self.icon.type), tostring(choice), tostring(self.icon and self.icon.mp_id)))
+  end
   if choice == "accept_emergency" then
     self.ui.app.world:newObject("helicopter", "north", nil, nil, nil, hospital)
+    local UIWatch = cth_require("dialogs.watch")
     if self.ui.app.world.mp_coop then
       -- The countdown runs in the simulation; the watch only shows it, to
       -- the player whose emergency it is.
@@ -239,7 +253,7 @@ function UIFax:choice(choice_number)
     -- Some multiplayer levels make refusing (or not answering) cost reputation.
     local penalty = self.ui.app.world.map.level_config.mp_refused_emergency
     if penalty and hospital.emergency then
-      hospital:changeReputation("emergency_refused", hospital.emergency.disease, penalty)
+      MultiplayerSession.changeReputation(hospital, penalty)
       if self.ui.app.world.mp_coop then
         MultiplayerSession.tellPlayer(self.ui.app.world, hospital,
             _S.multiplayer_window.emergency_refused:format(-penalty))
@@ -352,6 +366,7 @@ function UIFax:validate()
   if code == "24328" then
     -- Original game cheat code
     self.ui.adviser:say(_A.cheats.th_cheat)
+    local UICheats = cth_require("dialogs.resizables.cheats_dialog")
     self.ui:addWindow(UICheats(self.ui))
     if not self.ui.app.cheats_menu_unlocked then
       self.ui.app.cheats_menu_unlocked = true
@@ -399,3 +414,5 @@ function UIFax:afterLoad(old, new)
     self:close()
   end
 end
+
+return UIFax

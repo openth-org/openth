@@ -18,7 +18,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-local UIMenuList = _G['UIMenuList'] ---@type UIMenuList
+local UIInformation = cth_require("dialogs.information")
+local UIMenuList = cth_require("dialogs.resizables.menu_list_dialog")
 
 --! Custom Game Window
 class "UICustomGame" (UIMenuList)
@@ -137,8 +138,11 @@ function UICustomGame:buttonLoadLevel()
       self.ui:addWindow(UIInformation(self.ui, {errors}))
       return
     end
-    app:loadLevel(item.level_file, nil, self.chosen_level_name, item.map_file,
-        self.chosen_level_description, nil, _S.errors.load_level_prefix, nil)
+    local name, description = self.chosen_level_name, self.chosen_level_description
+    self.ui:leaveMainMenu(function()
+      app:loadLevel(item.level_file, nil, name, item.map_file, description,
+          nil, _S.errors.load_level_prefix, nil)
+    end)
   end
 end
 
@@ -160,3 +164,5 @@ function UICustomGame:draw(canvas, x, y)
               x + 270 * s, y + 40 * s, details_width * s, nil, self.max_rows_shown, self.description_offset)
   end
 end
+
+return UICustomGame

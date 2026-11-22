@@ -650,12 +650,45 @@ function Bot:hospitalMates()
 end
 
 --! Does it leave building to the person it shares the hospital with (the
---! room's "helpers" game option off: no rooms, nothing for the corridors)?
---! (From the room's options: one shared hospital has no world.mp_coop.)
+--! room's "helpers" game option off, or the hospital's people switched it
+--! off in the game: no rooms, nothing for the corridors)? (From the room's
+--! options: one shared hospital has no world.mp_coop.)
 function Bot:leavesBuilding()
+  if #self:hospitalMates() == 0 then return false end
   local off = (self.lobby and self.lobby.optionValue and self.lobby:optionValue("helpers") == "0") or
       (self.world and self.world.mp_coop and self.world.mp_coop.helpers_off)
-  return off and #self:hospitalMates() > 0 or false
+  if off then return true end
+  local may = MultiplayerSession.assistantMay
+  return may ~= nil and not may(self.world, self.world.ui.hospital, "build")
+end
+
+--! May it do `job` (MultiplayerSession.ASSISTANT_JOBS: build, hire,
+--! replace, faxes, loan, auctions) in its hospital? The hospital's people
+--! decide while one of them is in the game, also while they are away (Jan,
+--! 2026-11-21: "Hires staff" off must stay off); a hospital nobody plays any
+--! more is the bot's own. (A game from before the switches: building and
+--! hiring as before, the rest while the person is away.)
+function Bot:mayDo(job)
+  if job == "build" then return not self:leavesBuilding() end
+  if #self:hospitalMates() == 0 then return true end
+  local may = MultiplayerSession.assistantMay
+  if may then return may(self.world, self.world.ui.hospital, job) end
+  return job == "hire" or not self:sharesWithPerson()
+end
+
+-- What an assistant hires (Argus, 2026-11-21: staff below 75% are not worth
+-- it; the person hires them if they want): doctors (specialists too),
+-- nurses and handymen above this skill, else nobody.
+local ASSISTANT_MIN_SKILL = 0.75
+local ASSISTANT_SKILLED = {Doctor = true, Nurse = true, Handyman = true}
+
+--! The least skill (0 to 1, above it) for a hire of `category` (Doctor, a
+--! specialist, Nurse, Handyman, Receptionist), or nil for anybody: an
+--! assistant, that is a bot sharing the hospital with a person in the game.
+function Bot:hireFloor(category)
+  if #self:hospitalMates() == 0 then return nil end
+  local class = SPECIALISTS[category] and "Doctor" or category
+  return ASSISTANT_SKILLED[class] and ASSISTANT_MIN_SKILL or nil
 end
 
 --! Note who gives commands (every command, just before it runs): a person
@@ -1010,6 +1043,9 @@ end
 function Bot:answerOffers()
   local panel = self.world.ui and self.world.ui.bottom_panel
   if not panel then return end
+  -- (In a person's hospital the offers are theirs, unless they let the bot
+  -- answer faxes: Bot:mayDo.)
+  if not self:mayDo("faxes") then return end
   local mine = self.world.ui.hospital
   for _, icon in ipairs(panel:allMessageIcons()) do
     local offer = type(icon.message) == "table" and icon.message.mp_offer
@@ -1436,11 +1472,18 @@ end
 --! furnished or edited (by anybody; while a person edits a room its walls
 --! are down, but it is coming back), and the outline another player is
 --! drawing; a tile of margin around each. Kept for one drawRoom.
-function Bot:reservedTiles()
+function Bot:reservedTiles(without_plan)
   local reserved = {}
   local function mark(r)
     for y = r.y - 1, r.y + r.h do
       for x = r.x - 1, r.x + r.w do reserved[y * 1000 + x] = true end
+    end
+  end
+  -- (The places kept for the big rooms, but the one being drawn now:
+  -- Bot:plannedPlaces.)
+  if not without_plan then
+    for id, p in pairs(self:plannedPlaces()) do
+      if id ~= self.zone_for then mark(p) end
     end
   end
   for _, entry in pairs(self.world.mp_furnishing or {}) do
@@ -1473,20 +1516,150 @@ function Bot:freeFloor()
   return n
 end
 
+-- Corridor objects a bot sells when they stand on the best spot for a room
+-- (Argus, 2026-11-22: corridor items are no obstacle; sell them. The waiting
+-- area rules buy new ones where they fit). Never a reception desk.
+Bot.SELLABLE = {bench = true, plant = true, radiator = true, drinks_machine = true, bin = true,
+    extinguisher = true, video_game = true}
+-- Game days a spot cleared for a room stays kept for it.
+local CLEARING_DAYS = 20
+
+--! Are all the objects on this tile (but litter) corridor objects it may sell?
+function Bot:onlySellable(x, y)
+  local any = false
+  for _, obj in ipairs(self.world:getObjects(x, y) or {}) do
+    local id = obj.object_type.id
+    if id ~= "litter" then
+      if not Bot.SELLABLE[id] then return false end
+      any = true
+    end
+  end
+  return any
+end
+
 --! Is this tile free floor of this hospital (no room, no object but litter on
---! it, not on a plot it is handing over)?
+--! it, not on a plot it is handing over)? While it looks for a spot to clear
+--! (Bot.sell_ok, Bot:clearSpot) a tile with only corridor objects it may sell
+--! counts as free; a spot it cleared for a room is only free for that room.
 function Bot:freeTile(x, y)
   local world = self.world
   local th = world.map.th
   local mw, mh = th:size()
   if x < 1 or y < 1 or x > mw or y > mh then return false end
   if self.reserved and self.reserved[y * 1000 + x] then return false end
-  if not world.ui.hospital:isInHospital(x, y) or world:getRoom(x, y) or builder.solid_object(world, x, y) then
-    return false
+  local c = self.clearing
+  if c and not self.drawing_room and x >= c.x and x < c.x + c.w and y >= c.y and y < c.y + c.h then
+    if self:gameDay() - c.day < CLEARING_DAYS then return false end
+    self.clearing = nil
   end
+  if not world.ui.hospital:isInHospital(x, y) or world:getRoom(x, y) then return false end
   local flags = th:getCellFlags(x, y)
   if self:plotsGiven()[flags.parcelId] then return false end
+  if builder.solid_object(world, x, y) then
+    return self.sell_ok and self:onlySellable(x, y) or false
+  end
   return flags.buildable and flags.passable
+end
+
+-- The big rooms a hospital needs sooner or later, each given its place
+-- first, biggest first (Argus, 2026-11-22: plan ahead; start the plan with
+-- the largest rooms, research, the operating theatre and the ward, then the
+-- smaller ones; the first room built is still a GP's office). The places are
+-- kept free of smaller rooms (Bot:reservedTiles) until those rooms are built.
+local PLANNED_ROOMS = {"research", "operating_theatre", "ward"}
+-- The plan is made again after this many game days (land bought, rooms built).
+local PLAN_DAYS = 30
+-- Places are kept only while the free floor is this many times what they take.
+local PLAN_FLOOR_SHARE = 3
+
+--! The places kept for the big rooms it has not built yet: id -> {x, y, w,
+--! h}, found by Bot:layoutSpot as for the room itself (the walks between the
+--! doors kept short too), one after the other. The smart brain only.
+function Bot:plannedPlaces()
+  local world = self.world
+  if not (self.manager and world and world.ui and world.ui.hospital and TheApp.rooms) then return {} end
+  local today = self:gameDay()
+  local z = self.zones
+  if z and z.world == world and today - z.day < PLAN_DAYS then return z.places end
+  z = {world = world, day = today, places = {}}
+  self.zones = z
+  local hosp = world.ui.hospital
+  local have = {}
+  for _, r in pairs(world.rooms) do
+    if r.hospital == hosp and not r.crashed then have[r.room_info.id] = true end
+  end
+  local free = self:freeFloor()
+  local saved_reserved, saved_cache, saved_for = self.reserved, self.walk_cache, self.zone_for
+  self.zone_for = nil
+  self.reserved = self:reservedTiles(true)
+  self.walk_cache = {}
+  local area, parts = 0, {}
+  for _, id in ipairs(PLANNED_ROOMS) do
+    local rt = TheApp.rooms[id]
+    if rt and not have[id] then
+      local min = math.max(rt.minimum_size or 4, 4)
+      local size = math.max(min, (Manager.roomPlan(id)))
+      if free >= PLAN_FLOOR_SHARE * (area + size * size) then
+        local ok, x, y, w, h = pcall(self.layoutSpot, self, min, size)
+        if ok and x then
+          h = h or w
+          z.places[id] = {x = x, y = y, w = w, h = h}
+          area = area + w * h
+          for ty = y - 1, y + h do
+            for tx = x - 1, x + w do self.reserved[ty * 1000 + tx] = true end
+          end
+          parts[#parts + 1] = string.format("%s %dx%d at %d,%d", id, w, h, x, y)
+        end
+      end
+    end
+  end
+  self.reserved, self.walk_cache, self.zone_for = saved_reserved, saved_cache, saved_for
+  if #parts > 0 then log("plan: places kept for " .. table.concat(parts, ", ")) end
+  return z.places
+end
+
+--! No spot for a room: the best one with only corridor objects in the way
+--! (Bot:layoutSpot, those tiles counted as free), its objects sold, and the
+--! spot kept for the room (Bot.clearing) for CLEARING_DAYS days; the room is
+--! drawn there at the next try. Once per room kind in 30 days.
+--!return true if it sold something
+function Bot:clearSpot(min, size, id)
+  local session = TheApp.mp_session
+  if not session or session.held or not MultiplayerSession.default_handlers.sell_object then return false end
+  local today = self:gameDay()
+  self.cleared_day = self.cleared_day or {}
+  if self.cleared_day[id] and today - self.cleared_day[id] < 30 then return false end
+  self.sell_ok = true
+  local ok, x, y, w, h, side = pcall(self.layoutSpot, self, min, size)
+  self.sell_ok = nil
+  if not (ok and x) then
+    if not ok then log("layout: " .. tostring(x)) end
+    return false
+  end
+  h = h or w
+  -- The room and the row (or column) on its door's side, as layoutSpot asks.
+  local x0, y0, x1, y1 = x, y, x + w - 1, y + h
+  if side == "north" then y0, y1 = y - 1, y + h - 1
+  elseif side == "east" then x1, y1 = x + w, y + h - 1
+  elseif side == "west" then x0, y1 = x - 1, y + h - 1 end
+  local sold, seen = {}, {}
+  for ty = y0, y1 do
+    for tx = x0, x1 do
+      for _, obj in ipairs(self.world:getObjects(tx, ty) or {}) do
+        if Bot.SELLABLE[obj.object_type.id] and not seen[obj] and obj.mp_id then
+          seen[obj] = true
+          session:issue({kind = "sell_object", object = obj.mp_id})
+          sold[#sold + 1] = obj.object_type.id
+        end
+      end
+    end
+  end
+  if #sold == 0 then return false end
+  self.cleared_day[id] = today
+  self.clearing = {x = x, y = y, w = w, h = h, day = today, id = id}
+  log(string.format("%s: the best spot, %dx%d at %d,%d, had corridor objects in the way: sold %s", id, w, h, x, y,
+      table.concat(sold, ", ")))
+  return true
 end
 
 --! The plan an expert left for this hospital's place (bot_learned.lua): the
@@ -1541,7 +1714,10 @@ function Bot:planSlot(id, refused)
     end
     if ok and self:keepsCorridor(slot.x, slot.y, slot.w, slot.h) and
         self:roomKeepsFloor(slot.x, slot.y, slot.w, slot.h) then
-      return slot
+      -- (The expert's other rooms may stand elsewhere in this game.)
+      local short, why = self:keepsWalksShort(slot.x, slot.y, slot.w, slot.h)
+      if short then return slot end
+      log(string.format("not the expert's spot for the %s at %d,%d: %s", id, slot.x, slot.y, why))
     end
   end
 end
@@ -1709,20 +1885,133 @@ function Bot:layoutSpot(min, size, near, shapes)
   end
   -- (And its own floor stays one piece with every door on it, Bot:roomKeepsFloor:
   -- a scan of the floor per spot, so at most FLOOR_TRIES of them.)
-  local floor_tries = 0
+  local floor_tries, detours, detour_why = 0, 0, nil
   for i, spot in ipairs(spots) do
     if self:keepsCorridor(spot[2], spot[3], spot[4], spot[5]) then
       floor_tries = floor_tries + 1
       if floor_tries > FLOOR_TRIES then
-        log(string.format("layout: %d spots would cut its floor in two; no more tried", FLOOR_TRIES))
+        log(string.format("layout: %d spots would cut its floor in two or make long walks (%d: %s); no more tried",
+            FLOOR_TRIES, detours, tostring(detour_why)))
         return nil
       end
-      if self:roomKeepsFloor(spot[2], spot[3], spot[4], spot[5]) then
-        if i > 1 then log(string.format("layout: %d better spots would cut the corridor or the floor in two", i - 1)) end
+      -- (Patients' walks between the rooms around it stay short: Bot:keepsWalksShort.)
+      local short, why = self:keepsWalksShort(spot[2], spot[3], spot[4], spot[5])
+      if not short then
+        detours, detour_why = detours + 1, detour_why or why
+      elseif self:roomKeepsFloor(spot[2], spot[3], spot[4], spot[5]) then
+        if i > 1 then
+          log(string.format("layout: %d better spots would cut the corridor or the floor in two, %d make long walks%s",
+              i - 1, detours, detours > 0 and (" (" .. tostring(detour_why) .. ")") or ""))
+        end
         return spot[2], spot[3], spot[4], spot[5], spot[6]
       end
     end
   end
+end
+
+-- A new room may make the walk between two doors near it this many tiles
+-- longer, or by this share, not more. (Argus, 2026-11-22: Bertie's research
+-- room, put against a GP office and the pharmacy, turned a walk of 10 tiles
+-- between them into 100; in Argus's own hospitals no two rooms side by side
+-- are far apart on foot. Argus's door-to-door walks averaged 30 tiles,
+-- Bertie's and Agnes's 90-98.)
+local DETOUR_TILES = 8
+local DETOUR_SHARE = 0.5
+-- The doors checked: those this near the new room, ...
+local WALK_NEAR = 16
+-- ... their walks measured within this many tiles of each door.
+local WALK_BOX = 30
+
+--! Walking distances from x, y through the hospital's corridor (in the
+--! building, no room, passable), within WALK_BOX tiles: key y * 1000 + x ->
+--! tiles. `blocked(tx, ty)` tiles count as wall (a room not built yet).
+function Bot:corridorWalks(x, y, blocked)
+  local world, hosp = self.world, self.world.ui.hospital
+  local th = world.map.th
+  local mw, mh = th:size()
+  local bx0, by0 = math.max(1, x - WALK_BOX), math.max(1, y - WALK_BOX)
+  local bx1, by1 = math.min(mw, x + WALK_BOX), math.min(mh, y + WALK_BOX)
+  local walkable = {}
+  local function open(tx, ty)
+    if tx < bx0 or ty < by0 or tx > bx1 or ty > by1 then return false end
+    local k = ty * 1000 + tx
+    local v = walkable[k]
+    if v == nil then
+      v = hosp:isInHospital(tx, ty) and not world:getRoom(tx, ty) and th:getCellFlags(tx, ty).passable and true or false
+      walkable[k] = v
+    end
+    return v and not (blocked and blocked(tx, ty))
+  end
+  local dist = {}
+  if not open(x, y) then return dist end
+  dist[y * 1000 + x] = 0
+  local queue, head = {{x, y}}, 1
+  while head <= #queue do
+    local cx, cy = queue[head][1], queue[head][2]
+    head = head + 1
+    local d = dist[cy * 1000 + cx] + 1
+    for _, s in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
+      local nx, ny = cx + s[1], cy + s[2]
+      local k = ny * 1000 + nx
+      if not dist[k] and open(nx, ny) then
+        dist[k] = d
+        queue[#queue + 1] = {nx, ny}
+      end
+    end
+  end
+  return dist
+end
+
+--! Would a w x h room at x, y keep the walks between the rooms near it
+--! short? For the tiles outside the doors of this hospital's rooms within
+--! WALK_NEAR tiles of the spot, the walk between each two of them through the
+--! corridor may get at most DETOUR_TILES and DETOUR_SHARE longer with the
+--! room there, none may be cut off, and the room may not stand on one.
+--!return true, or false and why (for the log)
+function Bot:keepsWalksShort(x, y, w, h)
+  local world, hosp = self.world, self.world.ui.hospital
+  local function inside(tx, ty) return tx >= x and tx < x + w and ty >= y and ty < y + h end
+  local points = {}
+  for _, rm in pairs(world.rooms) do
+    -- (A room still being built may have its door, not yet on the map.)
+    if rm.hospital == hosp and rm.door and rm.door.tile_x and not rm.crashed then
+      local ex, ey = rm:getEntranceXY(false)
+      local gap = math.max(0, x - ex, ex - (x + w - 1)) + math.max(0, y - ey, ey - (y + h - 1))
+      if gap <= WALK_NEAR then
+        if inside(ex, ey) then return false, rm.room_info.id .. "'s door" end
+        points[#points + 1] = {ex, ey, rm.room_info.id}
+      end
+    end
+  end
+  if #points < 2 then return true end
+  -- (Fixed order: the same answer however the rooms are stored.)
+  table.sort(points, function(a, b) return a[2] * 1000 + a[1] < b[2] * 1000 + b[1] end)
+  -- The walks without the room: the same for every spot of one search
+  -- (Bot.walk_cache, Bot:layoutSpot), so measured once.
+  local cache = self.walk_cache or {}
+  for i, p in ipairs(points) do
+    local key = p[2] * 1000 + p[1]
+    local before = cache[key]
+    if not before then
+      before = self:corridorWalks(p[1], p[2])
+      cache[key] = before
+    end
+    local after = self:corridorWalks(p[1], p[2], inside)
+    for j = i + 1, #points do
+      local q = points[j]
+      local qk = q[2] * 1000 + q[1]
+      local d0, d1 = before[qk], after[qk]
+      if d0 then
+        if not d1 then
+          return false, string.format("cuts the %s from the %s", p[3], q[3])
+        end
+        if d1 - d0 > DETOUR_TILES and d1 > d0 * (1 + DETOUR_SHARE) then
+          return false, string.format("%s to %s: %d tiles instead of %d", p[3], q[3], d1, d0)
+        end
+      end
+    end
+  end
+  return true
 end
 
 --! Would a w x h room at x, y leave the hospital's corridor in one piece?
@@ -1992,7 +2281,10 @@ function Bot:drawRoom(room_type, size, extras, near)
   if (self.research_heavy or self.skill == "hard") and room_type.id == "research" then min = math.max(min, 6) end
   local ax, ay = self:anchor()
   size = math.max(min, size or min + 1) -- (one more than the smallest: room for a plant)
+  self.zone_for = room_type.id -- (its own planned place is not kept from it: Bot:reservedTiles)
   self.reserved = self:reservedTiles()
+  self.walk_cache = {} -- (Bot:keepsWalksShort: the walks as they are now, for this search)
+  self.drawing_room = true -- (a spot it cleared for a room counts as free now: Bot:freeTile)
   -- Spots the room editor refused lately (it would cut off part of the
   -- hospital): the same search found the same spot every time, and Bot Agnes
   -- drew a hair restoration room there six times in 60 days (eu2).
@@ -2044,6 +2336,42 @@ function Bot:drawRoom(room_type, size, extras, near)
       end
     end
   end
+  -- A big room in the place planned for it (Bot:plannedPlaces), if that is
+  -- still free and keeps the corridor and the walks as they should be.
+  local planned = self.zones and self.zones.world == self.world and self.zones.places[room_type.id]
+  if not x and not near and planned and not refused(planned.x, planned.y, planned.w, planned.h) then
+    local free = true
+    for ty = planned.y, planned.y + planned.h - 1 do
+      for tx = planned.x, planned.x + planned.w - 1 do
+        if free and not self:freeTile(tx, ty) then free = false end
+      end
+    end
+    if free and self:keepsCorridor(planned.x, planned.y, planned.w, planned.h) and
+        self:keepsWalksShort(planned.x, planned.y, planned.w, planned.h) and
+        self:roomKeepsFloor(planned.x, planned.y, planned.w, planned.h) then
+      x, y, w, h = planned.x, planned.y, planned.w, planned.h
+      log(string.format("%s in the place planned for it: %dx%d at %d,%d", room_type.id, w, h, x, y))
+    else
+      self.zones.places[room_type.id] = nil
+      log(string.format("the place planned for the %s is gone: the plan is made again", room_type.id))
+      self.zones.day = -PLAN_DAYS
+    end
+  end
+  -- A staff room beside the research department, where the researchers work
+  -- long hours (Argus, 2026-11-22: a small staff room near research, so they
+  -- need not walk far for a rest); elsewhere if none fits there.
+  if not x and not near and room_type.id == "staff_room" then
+    local rects = self:nearRects("research")
+    if #rects > 0 then
+      local ok_r, rx, ry, rw, rh = pcall(self.layoutSpot, self, min, size, rects)
+      if ok_r and rx and not refused(rx, ry, rw, rh or rw) then
+        x, y, w, h = rx, ry, rw, rh
+        log(string.format("staff_room beside the research department: %dx%d at %d,%d", rw, rh or rw, rx, ry))
+      elseif not ok_r then
+        log("layout: " .. tostring(rx))
+      end
+    end
+  end
   -- Beside what a person asked for, if it fits within reach.
   self.near_missed = nil
   if near then
@@ -2079,7 +2407,10 @@ function Bot:drawRoom(room_type, size, extras, near)
         if self.reserved[ty * 1000 + tx] then return end -- (a room being edited, an outline)
       end
     end
-    if self:keepsCorridor(fx, fy, s, s) and self:roomKeepsFloor(fx, fy, s, s) then x, y, w = fx, fy, s end
+    if self:keepsCorridor(fx, fy, s, s) and self:keepsWalksShort(fx, fy, s, s) and
+        self:roomKeepsFloor(fx, fy, s, s) then
+      x, y, w = fx, fy, s
+    end
   end
   for s = size, min, -1 do
     if not x then try(s, builder.find_free_rect(self.world, ax, ay, s + 1, s + 1, 40)) end
@@ -2090,7 +2421,28 @@ function Bot:drawRoom(room_type, size, extras, near)
   for s = size, min, -1 do
     if not x then try(s, self:packedSpot(ax, ay, s, s)) end
   end
+  -- Nothing free but the places planned for the big rooms: one of those
+  -- (better a room than none), and the plan made again.
+  if not x and not near and self.zones and self.zones.world == self.world and next(self.zones.places) then
+    self.reserved = self:reservedTiles(true)
+    local ok_p, px, py, pw, ph = pcall(self.layoutSpot, self, min, size)
+    if ok_p and px and not refused(px, py, pw, ph or pw) then
+      x, y, w, h = px, py, pw, ph
+      log(string.format("%s: no spot but the places planned for the big rooms: %dx%d at %d,%d; the plan is made again",
+          room_type.id, pw, ph or pw, px, py))
+      self.zones.day = -PLAN_DAYS
+    end
+  end
+  -- Nothing free: a good spot with only corridor objects in the way, those
+  -- sold, the room drawn there at the next try (Bot:clearSpot).
+  local clearing = not x and not near and self.manager and self:clearSpot(min, size, room_type.id)
   self.reserved = nil
+  self.walk_cache = nil
+  self.drawing_room = nil
+  self.zone_for = nil
+  if clearing then return nil, "clearing" end
+  -- (Its planned place is used now, or it stood elsewhere.)
+  if x and self.zones and self.zones.places then self.zones.places[room_type.id] = nil end
   if not x then
     log(string.format("no space for a %s (%dx%d)", room_type.id, min, min))
     self.no_space_day = self:gameDay() -- (then it looks for land anywhere, cheapestPlot)
@@ -2552,10 +2904,12 @@ function Bot:cheapestPlot()
   return best, best_price
 end
 
---! An auction this hospital bids in, while a person sharing it is away (or
---! nobody does: then the game bids, MultiplayerSession's bots_bid): bid
---! once a step up to what the plot is worth to it, then drop out. True
---! while there is an auction (the bot does nothing else meanwhile).
+--! An auction this hospital bids in, when the person sharing it lets the
+--! bot bid (Bot:mayDo "auctions"; a hospital nobody shares: the game bids,
+--! MultiplayerSession's bots_bid): bid once a step up to what the plot is
+--! worth to it, then drop out; while the person is here it only stops
+--! bidding, so they may still go on. True while there is an auction (the
+--! bot does nothing else meanwhile).
 function Bot:bidAtAuction()
   local world = self.world
   local auction = world.mp_auction
@@ -2564,7 +2918,7 @@ function Bot:bidAtAuction()
   local bidder = false
   for _, i in ipairs(auction.bidders) do bidder = bidder or i == me end
   if not bidder or auction.out[me] or auction.leader == me then return true end
-  if (world.mp_coop.bot_hospitals or {})[me] or #self:hospitalMates() == 0 or self:sharesWithPerson() then
+  if (world.mp_coop.bot_hospitals or {})[me] or #self:hospitalMates() == 0 or not self:mayDo("auctions") then
     return true
   end
   local key = auction.id .. ":" .. auction.bid
@@ -2572,7 +2926,7 @@ function Bot:bidAtAuction()
   if not (self.auction_worth and self.auction_worth.id == auction.id) then
     local worth, need, fill = MultiplayerSession.botPlotWorth(world, me, auction)
     self.auction_worth = {id = auction.id, worth = worth, fill = fill}
-    log(string.format("auction %d for plot %d: worth $%d to us (land %d%% full, need %d%%), the person is away",
+    log(string.format("auction %d for plot %d: worth $%d to us (land %d%% full, need %d%%), bidding for the person",
         auction.id, auction.plot, worth, math.floor(fill * 100 + 0.5), math.floor(need * 100 + 0.5)))
   end
   local amount = auction.bid + auction.step
@@ -2597,6 +2951,8 @@ function Bot:bidAtAuction()
   if bids then
     log(string.format("auction %d: bidding $%d", auction.id, amount))
     session:issue({kind = "auction_bid", auction = auction.id, amount = amount})
+  elseif self:sharesWithPerson() then
+    log(string.format("auction %d: no more bids from us at $%d; the person may go on", auction.id, auction.bid))
   else
     log(string.format("auction %d: dropping out at $%d", auction.id, auction.bid))
     session:issue({kind = "auction_pass", auction = auction.id})
@@ -2946,6 +3302,59 @@ function Bot:buyCorridor(object_id, near_x, near_y)
       if x then break end
     end
   end
+  -- A bench for a room: first against the wall with its door, beside the
+  -- door, then across the corridor facing the door (Argus, 2026-11-22:
+  -- benches belong to one room and stand near its door).
+  if not x and object_id == "bench" and near_x then
+    local room_of
+    for _, r in pairs(world.rooms) do
+      if r.hospital == hosp and r.door and r.door.tile_x == near_x and r.door.tile_y == near_y and r.width
+          and r.getEntranceXY then
+        room_of = r
+      end
+    end
+    if room_of then
+      local ex, ey = room_of:getEntranceXY(false)
+      -- Steps along the door's wall and away from the room.
+      local along, away
+      if ey < room_of.y then along, away = {1, 0}, {0, -1}
+      elseif ey >= room_of.y + room_of.height then along, away = {1, 0}, {0, 1}
+      elseif ex < room_of.x then along, away = {0, 1}, {-1, 0}
+      else along, away = {0, 1}, {1, 0} end
+      local function try_tile(tx, ty)
+        if not x and not clear[ty * 1000 + tx] and self:freeTile(tx, ty) and fits(tx, ty) then x, y = tx, ty end
+      end
+      -- Along the wall (within the room's length), nearest the door first.
+      for d = 1, math.max(room_of.width, room_of.height) do
+        for _, sgn in ipairs({-1, 1}) do
+          local tx, ty = ex + sgn * d * along[1], ey + sgn * d * along[2]
+          local on_wall
+          if along[1] ~= 0 then
+            on_wall = tx >= room_of.x and tx < room_of.x + room_of.width
+          else
+            on_wall = ty >= room_of.y and ty < room_of.y + room_of.height
+          end
+          if on_wall then try_tile(tx, ty) end
+        end
+      end
+      if x then
+        log(string.format("a bench along the wall with the %s's door: %d,%d", room_of.room_info.id, x, y))
+      else
+        -- Across the corridor, its back to the far wall, then free standing,
+        -- facing the door either way (the tile at the door kept clear).
+        for _, free_standing in ipairs({false, true}) do
+          loose = free_standing
+          for k = 2, 4 do
+            for _, s in ipairs({0, -1, 1, -2, 2}) do
+              try_tile(ex + k * away[1] + s * along[1], ey + k * away[2] + s * along[2])
+            end
+          end
+        end
+        loose = false
+        if x then log(string.format("a bench facing the %s's door across the corridor: %d,%d", room_of.room_info.id, x, y)) end
+      end
+    end
+  end
   if not x and object_id ~= "reception_desk" then nearest() end
   -- (A bench: facing the door beside another one, then by a wall facing the
   -- door; the same a bit further from the door, as a standing patient looks
@@ -3016,7 +3425,8 @@ end
 
 --! Can it hire somebody of this category (Doctor, Nurse, Handyman,
 --! Receptionist, or a specialist: Psychiatrist, Surgeon, Researcher) now?
-function Bot:canHire(category, hospital)
+--!param min (number) optional; only somebody with a skill above it (0 to 1)
+function Bot:canHire(category, hospital, min)
   local class, skill = category, SPECIALISTS[category]
   if skill then class = "Doctor" end
   -- (Its hospital's own list; a game without World:staffPool has one list.
@@ -3032,16 +3442,18 @@ function Bot:canHire(category, hospital)
   end
   local pool = pools[class]
   if not pool or #pool == 0 then return false end
-  if not skill then return true end
+  if not skill and not min then return true end
   for _, profile in ipairs(pool) do
-    if flag(profile, "is_" .. skill) then return true end
+    if (not skill or flag(profile, "is_" .. skill)) and (not min or (profile.skill or 0) > min) then return true end
   end
   return false
 end
 
---! Hire one member of staff of this category (see Bot:canHire).
+--! Hire one member of staff of this category (see Bot:canHire). An
+--! assistant hires only above its floor (Bot:hireFloor), else nobody.
 function Bot:hireCategory(category)
-  if self.world.ui.hospital.balance < RESERVE or not self:canHire(category) then return false end
+  local floor = self:hireFloor(category)
+  if self.world.ui.hospital.balance < RESERVE or not self:canHire(category, nil, floor) then return false end
   local class, skill = category, SPECIALISTS[category]
   if skill then class = "Doctor" end
   local dx, dy = self:anchor()
@@ -3053,7 +3465,9 @@ function Bot:hireCategory(category)
   -- before a junior (Argus, 2026-11-14: juniors are catastrophically slow;
   -- one only when nobody else is on the list).
   local ok, err = pcall(builder.ui_hire, self.world, dx, dy, what, log, function(p)
-    return (p.skill or 0) - (flag(p, "is_junior") and 2 or 0)
+    local v = (p.skill or 0) - (flag(p, "is_junior") and 2 or 0)
+    if floor and (p.skill or 0) <= floor then v = v - 10 end
+    return v
   end)
   if not ok then log("could not hire a " .. category .. ": " .. tostring(err)) end
   return ok
@@ -3236,6 +3650,11 @@ function Bot:playTrick()
   local world = self.world
   if world.mp_coop and world.mp_coop.tricks_off then return false end -- (switched off in this game)
   if self.standin then return false end -- (not in a person's name)
+  -- (Nor in a hospital it shares with a person still in the game, also while
+  -- they give no orders for a while: the person plays the tricks. Jan,
+  -- 2026-11-21: his assistant bought a litter bomb on a rival while he only
+  -- watched.)
+  if #self:hospitalMates() > 0 then return false end
   local mine = world.ui.hospital
   -- (Not while it owes the bank: Jan, 2026-11-14.)
   if (mine.loan or 0) > 0 then
@@ -3498,8 +3917,9 @@ function Bot:think()
     self.learned = TheApp.mp_session:issue({kind = "probe_learn"}) ~= false
     log(string.format("test: learning something on day %d", day))
   end
-  -- (A person sharing the hospital answers its emergencies.)
-  if not (self.manager and self:sharesWithPerson()) then self:answerEmergencies() end
+  -- (A person sharing the hospital answers its emergencies, unless they let
+  -- the bot answer faxes: Bot:mayDo.)
+  if not self.manager or self:mayDo("faxes") then self:answerEmergencies() end
 
   if day >= plan.greet and not plan.greeted then
     plan.greeted = true
@@ -3520,6 +3940,10 @@ function Bot:think()
     -- (Not when bots leave the building to the person sharing the hospital:
     -- the "helpers" game option.)
     local leaves_building = self:leavesBuilding()
+    if leaves_building ~= self.left_building then
+      self.left_building = leaves_building
+      log(leaves_building and "building: off, left to the people of the hospital" or "building: on")
+    end
     if not hospital.mp_place and #hospital:getReceptionDesks() == 0 and not leaves_building then
       if day >= plan.desk then
         plan.desk = self:later(3)

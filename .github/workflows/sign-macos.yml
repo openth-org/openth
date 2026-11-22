@@ -117,17 +117,17 @@ jobs:
           PYTHONPATH=mp_server python3 -m corsixth_mp --host 127.0.0.1 --port 47891 --log-level INFO > server.log 2>&1 &
           server=$!
           sleep 2
-          app=signed/CorsixTH-Multiplayer/CorsixTH.app
-          "$app/Contents/MacOS/CorsixTH" --interpreter="$PWD/scripts/multiplayer/macos_smoke.lua" \
+          app=$(ls -d signed/*/*.app | head -n 1)  # OpenTH.app (CorsixTH.app before the rename)
+          "$app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$app/Contents/Info.plist")" --interpreter="$PWD/scripts/multiplayer/macos_smoke.lua" \
             --resources="$PWD/$app/Contents/Resources" --server=127.0.0.1:47891 | tee smoke.txt
           kill "$server" || true
           grep -q "MACOS SMOKE OK" smoke.txt
       - name: Smoke test (the game starts and keeps running without game data)
         run: |
-          app=$PWD/signed/CorsixTH-Multiplayer/CorsixTH.app
+          app=$PWD/$(ls -d signed/*/*.app | head -n 1)
           export SDL_VIDEODRIVER=dummy SDL_AUDIO_DRIVER=dummy SDL_RENDER_DRIVER=software
           mkdir -p "$RUNNER_TEMP/run" && cd "$RUNNER_TEMP/run"
-          "$app/Contents/MacOS/CorsixTH" > game.log 2>&1 &
+          "$app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$app/Contents/Info.plist")" > game.log 2>&1 &
           pid=$!
           sleep 15
           if kill -0 "$pid" 2>/dev/null; then
@@ -222,18 +222,18 @@ jobs:
           PYTHONPATH=mp_server python3 -m corsixth_mp --host 127.0.0.1 --port 47891 --log-level INFO > server.log 2>&1 &
           server=$!
           sleep 2
-          app=signed/CorsixTH-Multiplayer/CorsixTH.app
-          "$app/Contents/MacOS/CorsixTH" --interpreter="$PWD/scripts/multiplayer/macos_smoke.lua" \
+          app=$(ls -d signed/*/*.app | head -n 1)  # OpenTH.app (CorsixTH.app before the rename)
+          "$app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$app/Contents/Info.plist")" --interpreter="$PWD/scripts/multiplayer/macos_smoke.lua" \
             --resources="$PWD/$app/Contents/Resources" --server=127.0.0.1:47891 | tee smoke.txt
           kill "$server" || true
           grep -q "MACOS SMOKE OK" smoke.txt
       - name: Smoke test (the game starts and keeps running without game data)
         if: steps.setup.outputs.ready == 'true'
         run: |
-          app=$PWD/signed/CorsixTH-Multiplayer/CorsixTH.app
+          app=$PWD/$(ls -d signed/*/*.app | head -n 1)
           export SDL_VIDEODRIVER=dummy SDL_AUDIO_DRIVER=dummy SDL_RENDER_DRIVER=software
           mkdir -p "$RUNNER_TEMP/run" && cd "$RUNNER_TEMP/run"
-          "$app/Contents/MacOS/CorsixTH" > game.log 2>&1 &
+          "$app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$app/Contents/Info.plist")" > game.log 2>&1 &
           pid=$!
           sleep 15
           if kill -0 "$pid" 2>/dev/null; then

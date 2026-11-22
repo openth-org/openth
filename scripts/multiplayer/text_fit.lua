@@ -1,4 +1,4 @@
---[[ Copyright (c) 2026 CorsixTH-Multiplayer contributors
+--[[ Copyright (c) 2026 OpenTH contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -67,9 +67,14 @@ local list = {
   {"server_us1", S.server_us1, 113},
   {"server_eu2", S.server_eu2, 241},
   {"discord", S.discord, 126},
+  -- The plot hand-over window (multiplayer_plot.lua, WIDTH 380): what is
+  -- sold with the plot.
+  {"plot_give_sold_line", S.plot_give_sold_line:format(12, 34), 334},
   -- The main menu's last row: Discord (56 wide) and Exit (96).
   {"main_menu.discord", _S.main_menu.discord, 52},
   {"main_menu.exit", _S.main_menu.exit, 92},
+  -- The Customise window's labels are 165 wide: the professor menu switch.
+  {"customise_window.professor_menu", _S.customise_window.professor_menu, 160},
 }
 
 local font = TheApp.gfx:loadFontAndSpriteTable("QData", "Font01V", nil, nil, {ttf_shadow = true, apply_ui_scale = true})

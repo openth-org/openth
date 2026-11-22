@@ -1,4 +1,4 @@
-"""CorsixTH multiplayer relay and lobby.
+"""OpenTH multiplayer relay and lobby (CorsixTH with network multiplayer).
 
 The server never simulates the game. It
   * keeps password-protected rooms and checks that everyone runs the same
@@ -140,6 +140,9 @@ RECLAIM_SILENT = 5.0
 # CORSIXTH_MP_KEEP_PLACES=0: neither (a room closes once nobody plays, as
 # before; the older test scripts expect that).
 KEEP_PLACES = os.environ.get("CORSIXTH_MP_KEEP_PLACES", "1") != "0"
+# The speed a game starts at (pacing.start_speed: Slower unless set; the test
+# scripts' servers start at Normal).
+START_SPEED = os.environ.get("CORSIXTH_MP_START_SPEED", pacing.DEFAULT_START_SPEED)
 # The game options the room owner may set (OPTION <name>=<value>): land
 # auctions (1 plots near other hospitals, 2 every plot, 0 off), dirty tricks
 # (in a race; 1 on, unlocked month by month in the first year, 2 on from the
@@ -319,6 +322,9 @@ class Room:
     # A free room's first seats for newcomers, as a mode ("teamshared": the
     # smaller team's hospital); anybody may change them after.
     preset: str = "coop"
+    # A free room a person made without asking for a mode: each newcomer takes
+    # the team after the player above (seat_newcomer).
+    spread_teams: bool = False
     # How many hospitals the level's map has room for (the client knows the
     # maps): newcomers get colours up to this many.
     hospitals: int = 4
@@ -326,7 +332,7 @@ class Room:
     state: str = "lobby"  # lobby | running
     seed: int = 0
     pace: pacing.Pacing | None = None
-    speed: str = pacing.TARGET_SPEED
+    speed: str = START_SPEED
     fingerprints: dict[int, dict[int, str]] = field(default_factory=dict)
     desync_step: int | None = None
     left: dict[int, int] = field(default_factory=dict)  # peer -> last step
@@ -451,7 +457,8 @@ class Room:
 
     def seat_newcomer(self, player: Player) -> None:
         """A free room: a new player (or bot) gets the first colour nobody has,
-        on the owner's team (a new room starts as co-op); with another preset
+        on the team after the player above's in a room a person made
+        (spread_teams), else on the owner's team (co-op); with another preset
         as that mode would (one colour for "shared", their own team in
         "competitive", the smaller of teams 1 and 2 in "teams" and
         "teamshared"; the team's players then pick one colour)."""
@@ -464,6 +471,14 @@ class Room:
         usable = COLOURS[:self.hospitals]
         player.colour = next((c for c in usable if c not in used), None) or             min(usable, key=lambda c: sum(1 for p in others if p.colour == c))
         player.team = self.owner.team if self.owner is not player and self.owner.team else 1
+        if self.spread_teams and others:
+            # (Not everybody on team 1: each newcomer takes the team after the
+            # player above, so everybody starts on a team of their own;
+            # Argus and Jan, 2026-11-21. A click on the team changes it.)
+            peer = getattr(player, "peer", 0) or 0
+            before = [p for p in others if (getattr(p, "peer", 0) or 0) < peer]
+            above = max(before, key=lambda p: p.peer) if before else others[-1]
+            player.team = (above.team or 0) % len(TEAMS) + 1
         if self.preset == "shared":
             player.colour = player.team = 1
         elif self.preset == "competitive":
@@ -936,6 +951,9 @@ class Server:
                     difficulty=difficulty, speed_control=speed_control, owner=player, hospitals=hospitals,
                     continue_step=continue_step, continue_date=f.get("date", "")[:20],
                     seat_names=seat_names, seat_colours=seat_colours, seat_teams=seat_teams)
+        # (No mode asked for: a person's new room. The scripted tests ask for
+        # one, "coop" keeping everybody on one team.)
+        room.spread_teams = continue_step is None and f.get("mode", "free") == "free"
         self.rooms[name] = room
         log.info("room %r created by %r (%s, level %d, %d players)", name, player.name, mode,
                  level, max_players)
@@ -1738,8 +1756,7 @@ class Server:
         room.mode = room.current_mode()
         room.state = "running"
         room.pace = room.current_pacing()
-        room.speed = room.pace.max_speed if pacing.speed_rank(room.pace.max_speed) < \
-            pacing.speed_rank(pacing.TARGET_SPEED) else pacing.TARGET_SPEED
+        room.speed = pacing.start_speed(room.pace.max_speed, START_SPEED)
         room.seed = random.SystemRandom().randrange(1, 2**31 - 1)
         peers = ",".join(str(n) for n in sorted(room.players))
         log.info("room %r starts: seed %d, delay %d, max speed %s, peers %s", room.name,
@@ -2429,7 +2446,7 @@ class Server:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="CorsixTH multiplayer relay and lobby")
+    parser = argparse.ArgumentParser(description="OpenTH multiplayer relay and lobby")
     parser.add_argument("--host", default=os.environ.get("CORSIXTH_MP_HOST", "0.0.0.0"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("CORSIXTH_MP_PORT", "47800")))
     parser.add_argument("--motd", default=os.environ.get("CORSIXTH_MP_MOTD", ""))

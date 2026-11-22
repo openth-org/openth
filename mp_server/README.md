@@ -98,7 +98,7 @@ bots. Set four environment variables before you start the server:
 
 | Variable | What to set it to |
 |---|---|
-| `CORSIXTH_MP_REFEREE_BINARY` | The game program of the same release: `CorsixTH.exe` in the unpacked Windows download |
+| `CORSIXTH_MP_REFEREE_BINARY` | The game program of the same release: `OpenTH.exe` in the unpacked Windows download (`CorsixTH.exe` in older ones) |
 | `CORSIXTH_MP_REFEREE_SOURCE` | The unpacked **Source code (zip)** of that release: the folder with `CorsixTH`, `mp_server` and `scripts` in it |
 | `CORSIXTH_MP_REFEREE_DATA` | Your Theme Hospital folder (the one with DATA, LEVELS, ...) |
 | `CORSIXTH_MP_REFEREE_WORKDIR` | A folder for the referee's saves and logs, for example `C:\CorsixTH-referee` (the default, `/tmp/corsixth-referee`, is meant for Linux) |
@@ -106,8 +106,8 @@ bots. Set four environment variables before you start the server:
 In PowerShell, in the `mp_server` folder (change the paths to yours):
 
 ```powershell
-$env:CORSIXTH_MP_REFEREE_BINARY  = "C:\Games\CorsixTH-Multiplayer\CorsixTH.exe"
-$env:CORSIXTH_MP_REFEREE_SOURCE  = "C:\Games\CorsixTH-Multiplayer-mp-stable-a03adfdc"
+$env:CORSIXTH_MP_REFEREE_BINARY  = "C:\Games\OpenTH\OpenTH.exe"
+$env:CORSIXTH_MP_REFEREE_SOURCE  = "C:\Games\OpenTH-mp-stable-a03adfdc"
 $env:CORSIXTH_MP_REFEREE_DATA    = "C:\GOG Games\Theme Hospital"
 $env:CORSIXTH_MP_REFEREE_WORKDIR = "C:\CorsixTH-referee"
 py -3 -m corsixth_mp

@@ -1,4 +1,4 @@
---[[ Copyright (c) 2026 CorsixTH-Multiplayer contributors
+--[[ Copyright (c) 2026 OpenTH contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -918,7 +918,7 @@ function levels.raceEmergencyResolved(hospital, emergency)
   if emergency.cured_emergency_patients < emergency.victims then return end
   race.winner = world:getHospitalIndex(hospital)
   hospital:receiveMoney(RACE_BONUS, _S.multiplayer_window.level7_race_bonus)
-  hospital:changeReputation(nil, nil, RACE_REPUTATION)
+  MultiplayerSession.changeReputation(hospital, RACE_REPUTATION)
   tellAll(world, _S.multiplayer_window.level7_race_won:format(hospital.name, RACE_BONUS))
 end
 
@@ -943,7 +943,7 @@ local function checkBreakthroughs(world, state)
         if state.breakthroughs[id] == "open" and progress and progress.discovered and not spied then
           state.breakthroughs[id] = world:getHospitalIndex(hospital)
           hospital:receiveMoney(BREAKTHROUGH_BONUS, _S.multiplayer_window.level7_breakthrough_bonus)
-          hospital:changeReputation(nil, nil, BREAKTHROUGH_REPUTATION)
+          MultiplayerSession.changeReputation(hospital, BREAKTHROUGH_REPUTATION)
           tellAll(world, _S.multiplayer_window.level7_breakthrough:format(hospital.name,
               object.name, BREAKTHROUGH_BONUS))
         end
@@ -962,7 +962,7 @@ local function quarterRanking(world, state)
     elseif cured == best and cured > 0 then winners[#winners + 1] = hospital end
   end
   for _, hospital in ipairs(winners) do
-    hospital:changeReputation(nil, nil, QUARTER_REPUTATION)
+    MultiplayerSession.changeReputation(hospital, QUARTER_REPUTATION)
     tellAll(world, _S.multiplayer_window.level7_quarter:format(hospital.name, best))
   end
   for index = 1, world.mp_coop.players do
@@ -1048,8 +1048,9 @@ end
 -- Six hospitals at the foot of the mountain. Twice a year, in the climbing
 -- seasons (April and October), about a hundred climbers come down to every
 -- hospital within the month, on top of the usual patients. Earthquakes shake
--- the valley every three months for the first four years, a little harder
--- each year. The hiring list starts with consultants; in the ninth month the
+-- the valley every four months for the first four years, a little harder
+-- each year (every three months until 2026-11-21: Jan, too many to deal
+-- with). The hiring list starts with consultants; in the ninth month the
 -- medical university in the capital collapses (players are warned in the
 -- middle of the month), and from the second year until the end of the third
 -- only junior doctors look for work. From the fourth year a new university
@@ -1066,15 +1067,19 @@ local SEASON_DAYS = 28
 --! of the month before).
 local UNIVERSITY_WARNING = {month = 9, day = 15}
 local JUNIORS_FROM, JUNIORS_TO = 13, 36
---! Earthquakes: one in each three months for the first four years, in the
---! first two months of the three (the last one's shaking is over before the
---! next window opens), severity by year.
+--! Earthquakes: one in each four months for the first four years, in March,
+--! July and November (never in a climbing season's April or October; with
+--! four months between them a window of two months could not miss both),
+--! severity by year.
+local QUAKE_EVERY, QUAKE_FIRST = 4, 3
 local function everestQuakes()
   local quakes = {}
-  local severity = {{2, 2, 3, 3}, {3, 3, 4, 4}, {3, 4, 4, 5}, {4, 5, 5, 6}}
-  for n = 0, 15 do
-    quakes[n] = {StartMonth = 3 * n + 2, EndMonth = 3 * n + 3,
-        Severity = severity[math.floor(n / 4) + 1][n % 4 + 1]}
+  local severity = {{2, 2, 3}, {3, 3, 4}, {3, 4, 5}, {4, 5, 6}}
+  local per_year = 12 / QUAKE_EVERY
+  for n = 0, 4 * per_year - 1 do
+    local month = QUAKE_EVERY * n + QUAKE_FIRST
+    quakes[n] = {StartMonth = month, EndMonth = month,
+        Severity = severity[math.floor(n / per_year) + 1][n % per_year + 1]}
   end
   return quakes
 end

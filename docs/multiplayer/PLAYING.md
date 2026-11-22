@@ -32,25 +32,24 @@ rough edges in those); please report what you find.
    and download the newest stable release's `...-win64.zip` (or the newest
    test build's, for EU2; no GitHub account needed). Unzip it into a new
    folder.
-2. Start `CorsixTH.exe`. The first time it asks for your Theme Hospital
-   folder.
+2. Start `OpenTH.exe` (`CorsixTH.exe` in downloads from before November
+   2026). The first time it asks for your Theme Hospital folder.
 3. Any game language works: players in different languages play together
    (from the test build after 174c9927).
 
 **Linux** (x86_64; Linux Mint 22, Ubuntu 24.04 or newer): download the
 `...-linux-x86_64.tar.gz` of the same release, unpack it
-(`tar xzf CorsixTH-Multiplayer-*-linux-x86_64.tar.gz`) and start
-`CorsixTH-Multiplayer/CorsixTH-Multiplayer.sh`. Settings and saves stay in
+(`tar xzf OpenTH-*-linux-x86_64.tar.gz`) and start `OpenTH/OpenTH.sh`. Settings and saves stay in
 that folder. It brings its own libraries; the usual desktop ones (graphics,
 sound) come from your system.
 
 **macOS** (Apple Silicon, the macOS version the release names): download the
 `...-macos-arm64.zip` of the same release, unzip it and move
-`CorsixTH.app` to Applications. The app is not notarized by Apple, so the
+`OpenTH.app` to Applications. The app is not notarized by Apple, so the
 first time macOS refuses to open it: open **System Settings > Privacy &
-Security**, scroll down to the note about CorsixTH and click **Open
+Security**, scroll down to the note about OpenTH and click **Open
 Anyway** (once). (Or in Terminal:
-`xattr -dr com.apple.quarantine /Applications/CorsixTH.app`.) Settings
+`xattr -dr com.apple.quarantine /Applications/OpenTH.app`.) Settings
 and saves are in the hidden folder `~/.config/CorsixTH`.
 
 Everybody in a game must use the same release, and the server must run the
@@ -77,10 +76,12 @@ Linux package or the macOS app workflow on `master`, Artifacts; this needs a Git
    two buttons. The **colour** is your hospital: players with the same
    colour build one hospital together. The **team** is who you win with:
    the same team wins together, different teams race each other (and may
-   play dirty tricks on each other). Click yours to change it; the host can
-   change anybody's, bots' too. A newcomer gets a colour of their own on the
-   host's team, so a new room starts as co-op. The line under the players
-   says what the colours and teams make:
+   play dirty tricks on each other). Click yours for the next team, right
+   click for the one before; the host can change anybody's, bots' too. A
+   newcomer gets a colour of their own and the team after the player above,
+   so everybody starts on a team of their own (a race): put players on one
+   team to play co-op. The line under the players says what the colours and
+   teams make:
 
    | Colours and teams | The game |
    |---|---|
@@ -107,7 +108,7 @@ Linux package or the macOS app workflow on `master`, Artifacts; this needs a Git
    of it, all laid out alike, each a start hospital with five buildings for
    sale round it (and four big ones beside the square), with climbing
    seasons that bring about a hundred patients to every hospital each April
-   and October, an earthquake every three months for four years, and only
+   and October, an earthquake every four months for four years, and only
    junior doctors to hire in years 2 and 3.
 5. **Sharing a hospital:** team mates build, hire and answer faxes in the
    same hospital. A bot can share yours too: it builds in your hospital along
@@ -165,7 +166,31 @@ with you; in a game it plays on in your hospital if you leave, and no other
 bot comes for your place. One each; the host may add one for anybody. A
 click on it (yours, or the host's on any) sends it away again; the host's
 right click picks how good it is. The game's 8 players count assistants
-too: with 8 people there is no room for one. A bot builds its
+too: with 8 people there is no room for one.
+
+**What your assistant does.** In the game, **Multiplayer > Assistant** has a
+tick for each of its jobs, for the bots in your hospital: **Builds
+departments** (and furnishes the corridors), **Hires staff** (doctors, nurses
+and handymen above 75% skill only; hire weaker ones yourself if you want
+them), **Replaces staff with better ones** (from the 4th month, when someone
+better is on the list), **Answers faxes** (emergencies, questions, offers
+from other players), **Repays the loan** (in the last days of each month, with
+more than $10,000 in the bank, as much as leaves at least $5,000), **Bids
+at auctions** (up to what the plot is worth to your hospital; it never drops
+out for you), **Buys plots** (land for the rooms it wants, outside auctions),
+**Sets research priorities** (aims research at the rooms it wants) and
+**Adjusts the heating** (warmer when patients are cold, cooler when they are
+hot). A new game starts with building, hiring, the loan, plots, research and
+heating on, the others off. A click switches a job
+for everybody's game at once; the tick changes a moment later. The ticks
+hold while you are in the game, also while you are not clicking; if you leave
+the game, the assistant runs your hospital fully. With **Allied bots build**
+off in the room's game options, no player's bots build and the tick cannot
+be switched on: everybody plays under the same rules. Dirty tricks are yours
+to deal with while you are in the game: your assistant does not pick up
+litter bombs, throw out evil handymen or shoot rats; once you leave, it does.
+
+A bot builds its
 hospital slowly, as a beginner would (a desk, a GP's office, then one room
 after the other), hires staff, opens, and chats a little. In co-op it accepts
 whatever you offer it and thanks you; in a competitive race it plays a dirty
@@ -188,6 +213,13 @@ stays smooth, and how long a click takes to happen ("actions take 108 ms").
 
 ## In the game
 
+- **Rooms to build:** a red number on the build button's top left corner
+  counts the kinds of room your hospital may build and has none of yet (not
+  the training room or the research department); when research finds a new
+  kind it goes up, and with one of each it is gone. The build window shows
+  beside each kind how many of it you have (rooms being built count too):
+  green for what you have, a red 0 for a kind you still lack. Long names
+  are shortened there to leave room for the number ("General Diag.").
 - **Everything is shared:** every action happens on every player's game a
   moment after the click. If one player is slower or pauses, the others wait
   ("Waiting for the other player...").
@@ -312,6 +344,16 @@ stays smooth, and how long a click takes to happen ("actions take 108 ms").
   Short of money? Under the bars your balance and loan are shown: **+**
   borrows $5,000 from the bank (up to the bank's limit), **-** pays $5,000
   back, without leaving the auction.
+- **Selling or handing over a plot:** on the town map each plot you bought
+  has a red X (sell it back to the bank for 80% of its price; only when it
+  is empty) and a blue arrow (hand it to an ally, as a gift or for up to
+  $50,000). A plot with rooms or corridor objects on it can be handed over:
+  the window says how many, and the ally's fax says they come empty. When
+  the ally accepts, the price is paid, the rooms close (the people in them
+  leave, as for an edit), and once nobody is inside the rooms and objects
+  are sold to you (half a room's price back, as when you delete it; objects
+  at their price) and the plot is the ally's. A plot with a room still
+  being built or changed, or a destroyed room, cannot be handed over yet.
 - **Sharing research:** **Share research** on the research
   blackboard (left of the total), or **MULTIPLAYER**, **SHARE RESEARCH**
   (no research room needed). Pick what to share (equipment you have found,
@@ -498,9 +540,10 @@ they are switched on).
 - **Competitive race:** a hospital each, but every player for themselves.
   The first hospital to reach the level's goals takes 1st place, the next
   one 2nd, and so on. A placed player gets a fax: **Back to the lobby**
-  (only that player leaves; the others play on) or **Watch**. A placed
-  hospital gets no more patients. A hospital that fails the goals at two
-  year ends in a row is out, at the bottom of the standings. When only one
+  (only that player leaves; the others play on) or **Play on**: patients
+  keep coming to a winner who stays. A hospital that fails the goals at two
+  year ends in a row is out, at the bottom of the standings, and gets no
+  more patients (its player may **Watch**). When only one
   hospital is still racing, it takes the place left and everybody gets the
   final standings. MULTIPLAYER > PLAYERS shows each place. In the Progress
   Report, click another player's name to see how their hospital is doing.
@@ -565,14 +608,14 @@ Cutthroat, has its own, later months (below).
 
 | Trick | L1 | L2 | L3 |
 |---|---|---|---|
-| **Evil handyman**: looks like one of their handymen and strolls their corridors; stays 4, 3 or 2 months (L1, L2, L3), then goes home | $5,000: does no work | $12,500: also drops litter | $20,000: also "repairs" a machine about every three days, and walks away leaving it nearly broken |
-| **Epidemic**: contagious patients of one disease arrive at their hospital | $6,000: 2 patients | $12,000: 4 | $20,000: 7 |
-| **Emergency** they cannot refuse: patients arrive by helicopter | $5,000: 3 patients | $10,000: 6 | $18,000: 10, maybe of a disease they have not discovered |
-| **Rat attack** (only when the host allowed it in the game options): rats come out of new holes in their walls; while they run about they cost them a reputation point a day for every 5 rats, at most 3 a day (for 30 days at most) | $4,000: 5 rats | $9,000: 10 | $15,000: 20 |
-| **Headhunter**: their best member of staff of a kind gets a better offer and asks for a pay rise; if they do not agree within 10 days, that person leaves for the hiring list, kept for you for 2 weeks | $4,000: a junior doctor or nurse, +50% | $9,000: a doctor, +75% | $16,000: a consultant or specialist, double the wage |
-| **Broken boiler**: their heating fails (too cold in winter, too hot in summer) until their handymen repair it; more handymen repair it sooner | $3,000: short | $7,000: about twice as long | $12,000: long |
-| **Smear campaign**: bad press sends some of their new patients to the other hospitals | $5,000: 1 month, 3 in 10 | $10,000: 2 months, 4 in 10 | $18,000: 3 months, half |
-| **Espionage**: copy research results they have and you do not; a list shows what there is, you pick, then press Steal | $6,000: one drug or machine improvement | $12,000: one discovery | $20,000: two of either, and their current research set back by half |
+| **Evil handyman**: looks like one of their handymen and strolls their corridors; stays 4, 3 or 2 months (L1, L2, L3), then goes home | $4,000: does no work | $9,500: also drops litter | $15,000: also "repairs" a machine about every three days, and walks away leaving it nearly broken |
+| **Epidemic**: contagious patients of one disease arrive at their hospital | $4,500: 2 patients | $9,000: 4 | $15,000: 7 |
+| **Emergency** they cannot refuse: patients arrive by helicopter | $4,000: 3 patients | $7,500: 6 | $13,500: 10, maybe of a disease they have not discovered |
+| **Rat attack** (only when the host allowed it in the game options): rats come out of new holes in their walls; while they run about they cost them a reputation point a day for every 5 rats, at most 3 a day (for 30 days at most) | $3,000: 5 rats | $7,000: 10 | $11,500: 20 |
+| **Headhunter**: their best member of staff of a kind gets a better offer and asks for a pay rise; if they do not agree within 10 days, that person leaves for the hiring list, kept for you for 2 weeks | $3,000: a junior doctor or nurse, +50% | $7,000: a doctor, +75% | $12,000: a consultant or specialist, double the wage |
+| **Broken boiler**: their heating fails (too cold in winter, too hot in summer) until their handymen repair it; more handymen repair it sooner | $2,500: short | $5,500: about twice as long | $9,000: long |
+| **Smear campaign**: bad press sends some of their new patients to the other hospitals | $4,000: 1 month, 3 in 10 | $7,500: 2 months, 4 in 10 | $13,500: 3 months, half |
+| **Espionage**: copy research results they have and you do not; a list shows what there is, you pick, then press Steal | $4,500: one drug or machine improvement | $9,000: one discovery | $15,000: two of either, and their current research set back by half |
 | **Litter bomb** (from the original game's network play): placed like an object, its blueprint on the tile under the mouse (blue floor where it can go, red where not); click a corridor in a rival's hospital to plant it there (right-click puts it away, unpaid). Its fuse burns for 16 days (about 45 seconds at Normal speed), then it throws litter about | $1,000: 15 pieces | $2,000: 25, further | $3,000: 40, all over the place |
 
 **Found a handyman who is not on your staff list?** Click him and press the
@@ -654,6 +697,6 @@ Please tell us, in an [issue on GitHub](https://github.com/openth-org/openth/iss
 or on [Discord](https://openth.org/discord): the server address, the room
 name, roughly when it happened, and what you were doing, and attach the
 newest file from the game's `Logs` folder (in
-`%APPDATA%\CorsixTH`, or next to `CorsixTH.exe` if `config.txt` is there).
+`%APPDATA%\CorsixTH`, or next to `OpenTH.exe` if `config.txt` is there).
 After an out-of-sync, a game error or a game that stopped, the server's log
 also says what happened, which helps a lot.

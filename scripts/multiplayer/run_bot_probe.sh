@@ -38,7 +38,8 @@
 #      of and the bot gets
 #  13. a bot bids for the hospital it shares while its person is away
 #      ("afk", a race of team hospitals on level 2: jon alone; kay and one
-#      bot share hospital 2, kay gives no commands): jon asks for a plot
+#      bot share hospital 2, kay lets its bots bid at auctions (ASSISTANT
+#      menu, 2026-11-21) and then gives no commands): jon asks for a plot
 #      on their side, the bot bids for hospital 2 (worth to it: the more
 #      its land is full, the more) and gets it
 #  14. "Allied bots build: off" ("hands", one shared hospital on level 2: liv
@@ -111,7 +112,7 @@ export MP_REFEREE_PROBE_SCENARIO="team=none;race=none;trio=none;duel=none;lab=no
 export CORSIXTH_MP_MAX_BOTS=9 # (nine bots in all the rooms)
 # (MP_BOT_AWAY_SECONDS: kay in "afk" counts as away after a game week; the
 # bots' games run faster than real time.)
-MP_BOT_PACE=20 MP_BOT_FAST=1 MP_BOT_SEED=7 MP_BOT_TESTS=1 MP_BOT_LEARN=20 MP_BOT_AWAY_SECONDS=3 MP_BOT_GIVE_LIMITS=1000:2000 MP_BOT_TEST_LACK=5:Surgeon:operating_theatre MP_BOT_TEST_WIN="1:10;2:12;3:12;lab/2:5" MP_BOT_TEST_FAIL=20 PYTHONPATH="$source_dir/mp_server" \
+MP_BOT_PACE=20 MP_BOT_FAST=1 MP_BOT_SEED=7 MP_BOT_TESTS=1 MP_BOT_LEARN=20 MP_BOT_AWAY_SECONDS=3 MP_BOT_GIVE_LIMITS=1000:2000 MP_BOT_TEST_LACK=5:Surgeon:operating_theatre MP_BOT_TEST_WIN="1:10;2:12;3:12;lab/2:5" MP_BOT_TEST_FAIL=20 CORSIXTH_MP_START_SPEED="${CORSIXTH_MP_START_SPEED:-Normal}" PYTHONPATH="$source_dir/mp_server" \
   python3 -m corsixth_mp --host 127.0.0.1 --port "$port" \
   --log-level INFO --max-per-address 64 > "$out/server.log" 2>&1 &
 server_pid=$!
@@ -164,7 +165,7 @@ run_probe cid MP_ROLE=host MP_ROOM=trio MP_MODE=coop MP_PLAYERS=3 MP_ADD_BOTS=1 
   MP_STEPS=600 MP_STALL_LIMIT=120 MP_UI_SCRIPT="20:openhospital;300:speedother" & pids+=($!)
 run_probe jon MP_ROLE=host MP_ROOM=afk MP_MODE=teamshared MP_TEAM=1 MP_PLAYERS=3 MP_ADD_BOTS=1 MP_LEVEL=2   MP_SCENARIO=none MP_STEPS=1300 MP_STALL_LIMIT=120 MP_UI_SCRIPT="20:openhospital;900:auctionbuy" & pids+=($!)
 sleep 3
-run_probe kay MP_ROLE=join MP_ROOM=afk MP_TEAM=2 MP_SCENARIO=none MP_STEPS=1300 MP_STALL_LIMIT=120   MP_UI_SCRIPT="60:teams" & pids+=($!)
+run_probe kay MP_ROLE=join MP_ROOM=afk MP_TEAM=2 MP_SCENARIO=none MP_STEPS=1300 MP_STALL_LIMIT=120   MP_UI_SCRIPT="50:assistant:auctions=1;60:teams" & pids+=($!)
 run_probe liv MP_ROLE=host MP_ROOM=hands MP_MODE=shared MP_PLAYERS=2 MP_ADD_BOTS=1 MP_LEVEL=2 MP_SCENARIO=none   MP_OPTIONS="helpers=0" MP_STEPS=1500 MP_STALL_LIMIT=120 MP_UI_SCRIPT="20:openhospital" & pids+=($!)
 run_probe dee MP_ROLE=join MP_ROOM=trio MP_SCENARIO=none MP_STEPS=600 MP_STALL_LIMIT=120 MP_VOTE=ask \
   MP_UI_SCRIPT="30:openhospital;310:votefax:1" & pids+=($!)
@@ -352,7 +353,7 @@ if not ok12: bad.append("ok12")
 j = log('jon')
 bids13 = re.findall(r'auction \d+: hospital 2 bids \$(\d+)', j)
 sold13 = re.findall(r'auction \d+: plot \d+ sold to hospital (\d)', j)
-away13 = [l for k, t in bots.items() if k.startswith('afk/') for l in t.splitlines() if 'the person is away' in l]
+away13 = [l for k, t in bots.items() if k.startswith('afk/') for l in t.splitlines() if 'bidding for the person' in l]
 ok13 = (bool(bids13) and sold13 == ['2'] and bool(away13)
         and result('jon').startswith('IN SYNC') and result('kay').startswith('IN SYNC'))
 print(f"13. Bot bids for away mate: bids {bids13}; sold to {sold13}; bot: {away13[:1]}; {result('jon')} / {result('kay')}")

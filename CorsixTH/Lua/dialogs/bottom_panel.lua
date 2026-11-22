@@ -18,7 +18,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-local Window = _G['Window'] ---@type Window
+local Window = cth_require("window")
 
 --! The multi-purpose panel for launching dialogs / screens and dynamic information.
 class "UIBottomPanel" (Window)
@@ -311,6 +311,15 @@ function UIBottomPanel:draw(canvas, x, y)
   end
 
   self:drawReputationMeter(canvas, x + 55 * s, y + 35 * s)
+
+  -- The kinds of room left to build, on the build button's top left corner,
+  -- away from the other buttons (Argus, 2026-11-21; UIBuildRoom.missingRoomKinds).
+  local build = rawget(_G, "UIBuildRoom")
+  local hospital = self.ui.hospital
+  local missing = build and hospital and build.missingRoomKinds(self.ui.app.world, hospital) or 0
+  if missing > 0 then
+    build.drawCount(canvas, self.white_font, x + 213 * s, y + 9 * s, missing, build.COUNT_MISSING)
+  end
 end
 
 function UIBottomPanel:setPosition(x, y)
@@ -623,21 +632,21 @@ function UIBottomPanel:onWorldTick()
   end
 end
 
---[[ A fax can be queued if the event the fax causes does not affect
-an event caused by any other fax that is queued. i.e both emergency
-and epidemics use the timer, so both faxes cannot appear at the same time.
-@param fax (table) the fax we want to determine if can be queued.
-@return true if fax can be queued, false otherwise (boolean) ]]
+--- A fax can be queued if the event the fax causes does not affect
+--- an event caused by any other fax that is queued. i.e both emergency
+--- and epidemics use the timer, so both faxes cannot appear at the same time.
+--- @param fax (table) the fax we want to determine if can be queued.
+--- @return (boolean) can_be_queued True if fax can be queued, false otherwise
 function UIBottomPanel:canQueueFax(fax)
-  --[[ Determine if fax of a particular type is queued either in the
-  message queue or the message window (ui)
-  @param fax_type (string) the fax type to check if any queued
-  @return true if any of fax_type is queued false otherwise (boolean) ]]
   -- (Multiplayer with a hospital each: only that hospital's faxes clash.)
   local per_hospital = TheApp.mp_session and self.world.mp_coop
   local function same(fax_msg)
     return not per_hospital or fax_msg.hospital == fax.hospital
   end
+  --- Determine if fax of a particular type is queued either in the
+  --- message queue or the message window (ui)
+  --- @param fax_type (string) the fax type to check if any queued
+  --- @return boolean is_queued True if any of fax_type is queued false otherwise
   local function isFaxTypeQueued(fax_type)
     -- Check the queued messages
     for _, fax_msg in ipairs(self.message_queue) do
@@ -683,7 +692,6 @@ function UIBottomPanel:cancelFax(fax_type, hospital)
   end
 end
 
--- Opens the last available message. Currently used to open the level completed message.
 --! Open the message numbered `mp_id` (multiplayer), showing it on the bar
 --! first if it still waits in the queue; nothing if it is gone.
 function UIBottomPanel:openMessageById(mp_id)
@@ -701,11 +709,30 @@ function UIBottomPanel:openMessageById(mp_id)
   end
 end
 
+--- Opens the last available message (multiplayer: a race's end, a team
+--- mate's message).
 function UIBottomPanel:openLastMessage()
   if #self.message_queue > 0 then
     self:_showMessageIcon(#self.message_queue)
   end
   self.message_windows[#self.message_windows]:openMessage()
+end
+
+--- Show the icon of a queued message at once, at the end of the row of shown
+--- messages. Used for the level completed message.
+--- @param icon (UIMessage) the message's icon
+--- @return (UIMessage?) # the icon, or nil if the message is no longer there
+function UIBottomPanel:showMessageIcon(icon)
+  for i, message_info in ipairs(self.message_queue) do
+    if message_info.drawer_icon == icon then
+      self:_showMessageIcon(i)
+      return icon
+    end
+  end
+  for _, shown in ipairs(self.message_windows) do
+    if shown == icon then return icon end
+  end
+  return nil
 end
 
 -- Return the index of the first fax message in the queue that is suitable to be
@@ -1254,3 +1281,5 @@ function UIBottomPanel:afterLoad(old, new)
 
   Window.afterLoad(self, old, new)
 end
+
+return UIBottomPanel
