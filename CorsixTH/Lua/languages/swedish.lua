@@ -1366,6 +1366,7 @@ tooltip.main_menu.multiplayer = "Spela med andra via en flerspelarserver (experi
 tooltip.main_menu.discord = "OpenTH:s Discord: hitta andra spelare, få hjälp och hör om nya versioner först. Öppnar openth.org/discord i webbläsaren."
 customise_window.professor_menu = "Professorsmeny"
 tooltip.customise_window.professor_menu = "Originalspelets huvudmeny: professorn pekar på sin plansch på det du väljer. Av: listan med knappar. Med introfilmen på kommer han fram till planschen efter den."
+main_menu.tips = "Vill du ha tips?"
 tooltip.multiplayer_window.bot_level = "Högerklick: en lätt, normal eller svår bot"
 tooltip.multiplayer_window.ask_money = "Be en annan spelare om pengar. Spelaren bestämmer om hen betalar."
 tooltip.multiplayer_window.auctions = "Värden bestämmer vilka tomter som går till auktion när en spelare vill köpa en"

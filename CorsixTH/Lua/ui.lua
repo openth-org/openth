@@ -569,7 +569,6 @@ function UI:openMainMenu()
     self:addWindow(menu)
     -- Under the other windows (the tips): only its spots take the mouse.
     self:sendToBottom(menu)
-    menu:placeTips()
     return menu
   end
   local menu = UIMainMenu(self)

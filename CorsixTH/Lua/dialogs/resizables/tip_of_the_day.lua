@@ -27,6 +27,9 @@ class "UITipOfTheDay" (UIResizable)
 ---@operator call: UITipOfTheDay
 local UITipOfTheDay = _G["UITipOfTheDay"] ---@type UITipOfTheDay
 
+-- The size of the close button.
+local close_size = 16
+
 local col_bg = {
   red = math.cosmetic_random(20, 200),
   green = math.cosmetic_random(20, 200),
@@ -69,6 +72,10 @@ function UITipOfTheDay:UITipOfTheDay(ui)
   else -- The buttons are stacked
     add_nav_buttons(height - 55, 10, width - 20)
   end
+  -- A button to close the tips, at the top right corner (the tip is written
+  -- beside it).
+  self:addBevelPanel(width - close_size - 6, 6, close_size, close_size, col_bg):setLabel("X")
+    :makeButton(0, 0, close_size, close_size, nil, self.close)
 end
 
 function UITipOfTheDay:draw(canvas, x, y)
@@ -80,7 +87,8 @@ function UITipOfTheDay:draw(canvas, x, y)
   x, y = self.x * s + x, self.y * s + y
 
   local text = _S.totd_window.tips[self.tip_num]
-  self.white_font:drawWrapped(canvas, text, x + 10 * s, y + 10 * s, self.width * s - 20 * s)
+  self.white_font:drawWrapped(canvas, text, x + 10 * s, y + 10 * s,
+      self.width * s - (20 + close_size) * s)
 end
 
 function UITipOfTheDay:buttonPrev()

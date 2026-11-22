@@ -1411,6 +1411,7 @@ tooltip.main_menu.multiplayer = "Jogar com outros através de um servidor multij
 tooltip.main_menu.discord = "O Discord do OpenTH: encontre outros jogadores, peça ajuda e saiba primeiro das novas versöes. Abre openth.org/discord no navegador."
 customise_window.professor_menu = "Menu do professor"
 tooltip.customise_window.professor_menu = "O menu principal do jogo original: o professor aponta no seu quadro o que escolher. Desligado: a lista de botöes. Com a introduçäo ligada, ele chega ao quadro depois dela."
+main_menu.tips = "Quer umas dicas?"
 tooltip.multiplayer_window.bot_level = "Botäo direito: bot fácil, normal ou difícil"
 tooltip.multiplayer_window.ask_money = "Pede dinheiro a outro jogador. Ele decide se paga."
 tooltip.multiplayer_window.auctions = "O anfitriäo decide quais os terrenos que väo a leiläo quando um jogador pede para comprar um"

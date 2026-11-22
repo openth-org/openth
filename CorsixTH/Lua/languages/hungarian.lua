@@ -2539,6 +2539,7 @@ tooltip.main_menu.multiplayer = "Játék másokkal egy többjátékos szerveren 
 tooltip.main_menu.discord = "Az OpenTH Discordja: találj más játékosokat, kérj segítséget, és értesülj elsőként az új verziókról. Megnyitja az openth.org/discord oldalt a böngészőben."
 customise_window.professor_menu = "Professzoros menü"
 tooltip.customise_window.professor_menu = "Az eredeti játék főmenüje: a professzor a tábláján arra mutat, amit választasz. Kikapcsolva: a gombok listája. Ha be van kapcsolva a bevezető, utána odasétál a táblához."
+main_menu.tips = "Kérsz egy tippet?"
 tooltip.multiplayer_window.add_assistant = "Jobb klikk: segítő, vagyis bot, amely ebben a kórházban segít, és nem foglal helyet"
 tooltip.multiplayer_window.add_assistant_button = "Segítő hozzáadása: bot, amely ebben a kórházban segít, és nem foglal helyet"
 tooltip.multiplayer_window.assistant = "Bot, amely ebben a kórházban segít"

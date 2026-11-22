@@ -4155,6 +4155,7 @@ tooltip.main_menu.multiplayer = "Speel met anderen via een multiplayerserver (ex
 tooltip.main_menu.discord = "De Discord van OpenTH: vind andere spelers, vraag om hulp en hoor als eerste over nieuwe versies. Opent openth.org/discord in je webbrowser."
 customise_window.professor_menu = "Professormenu"
 tooltip.customise_window.professor_menu = "Het hoofdmenu van het originele spel: de professor wijst op zijn kaart aan wat je kiest. Uit: de lijst met knoppen. Met de intro aan komt hij daarna naar zijn kaart."
+main_menu.tips = "Wil je wat tips?"
 tooltip.multiplayer_window.bot_level = "Rechtsklik: een makkelijke, normale of moeilijke bot"
 tooltip.multiplayer_window.ask_money = "Vraag een andere speler om geld. Die beslist of hij betaalt."
 tooltip.multiplayer_window.auctions = "De host bepaalt welke percelen worden geveild als een speler er een wil kopen"

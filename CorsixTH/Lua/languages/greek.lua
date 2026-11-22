@@ -3943,6 +3943,7 @@ tooltip.main_menu.multiplayer = "Παίξτε με άλλους μέσω δια�
 tooltip.main_menu.discord = "Το Discord του OpenTH: βρείτε άλλους παίκτες, ζητήστε βοήθεια και μάθετε πρώτοι για νέες εκδόσεις. Ανοίγει το openth.org/discord στον περιηγητή σας."
 customise_window.professor_menu = "Μενού του καθηγητή"
 tooltip.customise_window.professor_menu = "Το κύριο μενού του αρχικού παιχνιδιού: ο καθηγητής δείχνει στον πίνακά του αυτό που επιλέγετε. Απενεργοποιημένο: η λίστα με τα κουμπιά. Με την εισαγωγή ενεργή, έρχεται στον πίνακα μετά από αυτήν."
+main_menu.tips = "Θέλετε μια συμβουλή;"
 tooltip.multiplayer_window.bot_level = "Δεξί κλικ: εύκολο, κανονικό ή δύσκολο bot"
 tooltip.multiplayer_window.ask_money = "Ζητήστε χρήματα από άλλον παίκτη. Αποφασίζει εκείνος αν θα πληρώσει."
 tooltip.multiplayer_window.auctions = "Ο οικοδεσπότης αποφασίζει ποια οικόπεδα πηγαίνουν σε δημοπρασία όταν ένας παίκτης ζητά να αγοράσει ένα"

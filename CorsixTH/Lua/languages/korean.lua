@@ -3142,6 +3142,7 @@ tooltip.main_menu.multiplayer = "멀티플레이어 서버를 통해 다른 사�
 tooltip.main_menu.discord = "OpenTH 디스코드: 다른 플레이어를 찾고, 도움을 받고, 새 버전 소식을 가장 먼저 들어 보세요. 웹 브라우저에서 openth.org/discord를 엽니다."
 customise_window.professor_menu = "교수 메뉴"
 tooltip.customise_window.professor_menu = "원작 게임의 메인 메뉴: 교수가 차트에서 선택한 항목을 가리킵니다. 끄면 버튼 목록이 나옵니다. 인트로가 켜져 있으면 그 뒤에 교수가 차트 앞으로 걸어옵니다."
+main_menu.tips = "팁을 볼까요?"
 tooltip.multiplayer_window.bot_level = "오른쪽 클릭: 쉬움, 보통, 어려움 봇"
 tooltip.multiplayer_window.ask_money = "다른 플레이어에게 돈을 요청합니다. 낼지 말지는 상대가 정합니다."
 tooltip.multiplayer_window.auctions = "플레이어가 토지를 사려 할 때 어느 부지를 경매에 부칠지 방장이 정합니다"

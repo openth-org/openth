@@ -4486,6 +4486,7 @@ tooltip.main_menu.multiplayer = "Hrajte s ostatními přes server pro více hrá
 tooltip.main_menu.discord = "Discord OpenTH: najděte další hráče, zeptejte se na radu a o nových verzích se dozvězte jako první. Otevře openth.org/discord ve webovém prohlížeči."
 customise_window.professor_menu = "Menu s profesorem"
 tooltip.customise_window.professor_menu = "Hlavní menu z původní hry: profesor u své tabule ukazuje na to, co vyberete. Vypnutím dostanete seznam tlačítek. Se zapnutým úvodním videem k tabuli po něm přijde."
+main_menu.tips = "Chcete radu?"
 tooltip.multiplayer_window.add_assistant = "Pravé tlačítko: přidat pomocníka, tedy bota, který pomáhá v této nemocnici a nezabírá místo"
 tooltip.multiplayer_window.add_assistant_button = "Přidat pomocníka: bot, který pomáhá v této nemocnici a nezabírá místo"
 tooltip.multiplayer_window.assistant = "Bot, který pomáhá v této nemocnici"

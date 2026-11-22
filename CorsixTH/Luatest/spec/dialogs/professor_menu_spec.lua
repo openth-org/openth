@@ -93,4 +93,38 @@ describe("Professor menu", function()
       assert.is_true(seen[item], item)
     end
   end)
+
+  it("writes and takes the chalk where no spot is", function()
+    -- (Argus: what he writes clear of the small skull, the Settings spot.)
+    for _, rect in ipairs({UIProfessorMenu.TEXT, UIProfessorMenu.WRITING, UIProfessorMenu.CHALK}) do
+      for y = rect[2], rect[2] + rect[4] - 1 do
+        for x = rect[1], rect[1] + rect[3] - 1 do
+          local spot = UIProfessorMenu.spotAtPicture(x + 0.5, y + 0.5)
+          assert.is_nil(spot, ("%d,%d is on %s"):format(x, y, spot and spot.item or ""))
+        end
+      end
+    end
+    -- He writes on the chart, between the big skull and its red edge, under
+    -- the small skull; the chalk is on the blackboard under the chart.
+    local text = UIProfessorMenu.TEXT
+    assert.is_true(text[1] >= 122 and text[1] + text[3] <= 172 and text[2] >= 64)
+    assert.is_true(UIProfessorMenu.CHALK[2] >= 160 and UIProfessorMenu.CHALK[2] + UIProfessorMenu.CHALK[4] <= 182)
+  end)
+
+  it("decodes his arm's pictures as the engine does", function()
+    local decode = UIProfessorMenu.decodeChunks
+    local function bytes(...) return string.char(...) end
+    -- 4 wide, 3 high: two colours, the end of the line, a gap of two, five
+    -- of one colour (0x41: 65 - 60), and the end of the line.
+    local data = bytes(0x02, 7, 8, 0x00, 0x82, 0x41, 9, 0x00)
+    local pixels = decode(data, 1, #data, 4, 3)
+    assert.same({[0] = 7, [1] = 8, [6] = 9, [7] = 9, [8] = 9, [9] = 9, [10] = 9}, pixels)
+    -- An end of line right after a full line does not skip the next one;
+    -- colour 255 is transparent (0xFF: a count and a colour).
+    data = bytes(0x02, 1, 2, 0x00, 0x01, 3, 0xFF, 1, 255, 0x01, 4)
+    assert.same({[0] = 1, [1] = 2, [2] = 3, [4] = 4}, decode(data, 1, #data, 2, 3))
+    -- From the middle of a sheet's data: only the given bytes.
+    data = bytes(0x01, 5, 0x01, 6, 0x01, 7)
+    assert.same({[0] = 6}, decode(data, 3, 4, 3, 1))
+  end)
 end)

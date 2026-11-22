@@ -408,6 +408,7 @@ main_menu = {
   map_edit = "Map Editor",
   multiplayer = "Multiplayer",
   discord = "Discord",
+  tips = "Want some tips?",
   savegame_version = "Savegame version: ",
   updates_off = "Not checking for updates",
   version = "Version: ",

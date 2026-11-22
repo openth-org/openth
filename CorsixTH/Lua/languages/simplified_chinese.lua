@@ -4477,6 +4477,7 @@ tooltip.main_menu.multiplayer = "通过多人游戏服务器与他人一起游�
 tooltip.main_menu.discord = "OpenTH 的 Discord：寻找其他玩家、寻求帮助，并第一时间了解新版本。将在浏览器中打开 openth.org/discord。"
 customise_window.professor_menu = "教授菜单"
 tooltip.customise_window.professor_menu = "原版游戏的主菜单：教授在挂图上指出你所选的项目。关闭后为按钮列表。开启片头动画时，教授会在片头之后走到挂图前。"
+main_menu.tips = "需要提示吗？"
 tooltip.multiplayer_window.bot_level = "右键：简单、普通或困难机器人"
 tooltip.multiplayer_window.ask_money = "向另一位玩家要钱。由对方决定是否支付。"
 tooltip.multiplayer_window.auctions = "房主决定当有玩家要买地时，哪些地块要拍卖"

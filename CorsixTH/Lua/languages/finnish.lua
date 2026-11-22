@@ -3781,6 +3781,7 @@ tooltip.main_menu.multiplayer = "Pelaa muiden kanssa moninpelipalvelimen kautta 
 tooltip.main_menu.discord = "OpenTH:n Discord: löydä muita pelaajia, kysy apua ja kuule uusista versioista ensimmäisenä. Avaa openth.org/discord selaimessa."
 customise_window.professor_menu = "Professorivalikko"
 tooltip.customise_window.professor_menu = "Alkuperäisen pelin päävalikko: professori osoittaa taulullaan sitä, minkä valitset. Pois päältä: painikeluettelo. Kun alkuvideo on päällä, hän tulee taululle sen jälkeen."
+main_menu.tips = "Haluatko vihjeitä?"
 tooltip.multiplayer_window.bot_level = "Oikea klikkaus: helppo, normaali tai vaikea botti"
 tooltip.multiplayer_window.ask_money = "Pyydä toiselta pelaajalta rahaa. Hän päättää, maksaako."
 tooltip.multiplayer_window.auctions = "Isäntä päättää, mitkä tontit menevät huutokauppaan, kun pelaaja pyytää ostaa sellaisen"

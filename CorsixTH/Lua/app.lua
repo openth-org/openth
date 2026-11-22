@@ -748,9 +748,10 @@ function App:loadMainMenu(message)
   self.ui = UI(self, false)
   self.ui:setMenuBackground()
   local menu = self.ui:openMainMenu()
-  self.ui:addWindow(UITipOfTheDay(self.ui))
-  -- (On the professor's blackboard, in an empty space.)
-  if menu.placeTips then menu:placeTips() end
+  -- (The professor's menu opens the tips when they are asked for.)
+  if not menu.tips_when_asked then
+    self.ui:addWindow(UITipOfTheDay(self.ui))
+  end
 
   -- Show update window if there's an update
   self:checkForUpdates()

@@ -3037,6 +3037,7 @@ tooltip.main_menu.multiplayer = "マルチプレイヤーサーバーで他の�
 tooltip.main_menu.discord = "OpenTH の Discord：ほかのプレイヤーを見つけたり、質問したり、新しいバージョンの情報をいち早く入手できます。ブラウザーで openth.org/discord を開きます。"
 customise_window.professor_menu = "教授のメニュー"
 tooltip.customise_window.professor_menu = "オリジナル版のメインメニュー：教授が図表で選んだ項目を指し示します。オフにするとボタンの一覧になります。オープニングがオンのときは、その後に教授が図表の前にやって来ます。"
+main_menu.tips = "ヒントを見ますか？"
 tooltip.multiplayer_window.bot_level = "右クリック: やさしい・ふつう・むずかしいボット"
 tooltip.multiplayer_window.ask_money = "他のプレイヤーにお金をお願いします。払うかどうかは相手が決めます。"
 tooltip.multiplayer_window.auctions = "プレイヤーが土地の購入を希望したとき、どの区画をオークションにかけるかをホストが決めます"

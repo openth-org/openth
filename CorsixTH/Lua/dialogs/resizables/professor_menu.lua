@@ -25,42 +25,59 @@ if not rawget(_G, "UIMainMenu") then
   corsixth.require("dialogs/resizables" .. package.config:sub(1, 1) .. "main_menu")
 end
 local UIMainMenu = _G["UIMainMenu"] ---@type UIMainMenu
+local TH = require("TH")
 
 --! The original game's main menu: the professor at his blackboard, pointing
 --! at the parts of the skull on his chart (QData Main01M, a 320x200 picture,
 --! and Main02M, his arm pointing at each part, which turns pink). The menu
 --! items the original did not have are on the skeleton beside the skull and
 --! on the small skull, which turn pink the same way. The name of the item
---! pointed at, and what it does, are written on the chart, where he says it.
---! The picture is the menu's background (UI:setMenuBackground), so it stays
---! behind the windows the menu opens; this window draws what is pointed at.
+--! pointed at, and what it does, are written on the chart in place of its
+--! own writing. The picture is the menu's background (UI:setMenuBackground),
+--! so it stays behind the windows the menu opens; this window draws the
+--! picture with what is pointed at, made once for each item, and on the
+--! blackboard under the chart, in chalk, the question that opens the tips.
 class "UIProfessorMenu" (UIMainMenu)
 
 ---@class UIProfessorMenu: UIMainMenu
 ---@operator call: UIProfessorMenu
 local UIProfessorMenu = _G["UIProfessorMenu"] ---@type UIProfessorMenu
 
--- The picture's size, and where the pictures of his arm go on it.
+-- The tips window opens when asked for (Argus), not with the menu (app.lua).
+UIProfessorMenu.tips_when_asked = true
+
+-- The picture's size.
 local PIC_W, PIC_H = 320, 200
-local ARM_X, ARM_Y = 16, 22
 -- What stays on the screen when the picture is scaled to fill it: all but
 -- the professor's back and the edges of the wall above and below.
 local KEEP_W, KEEP_TOP, KEEP_BOTTOM = 300, 2, 182
--- The chart's writing, covered to write on (x, y, width, height): the name in
--- the top part, what it does in the bottom one, and between them the left of
--- the line where his speech mark is (the mark itself is kept).
-local NAME_BOX = {124, 58, 46, 21}
-local MARK_BOX = {124, 79, 32, 7}
-local INFO_BOX = {124, 86, 46, 27}
--- What covers them: the same columns of the chart's blank paper below them
--- (rows 113 to 154 there are blank), the row each copy starts at.
-local COVERS = {{NAME_BOX, 113}, {MARK_BOX, 134}, {INFO_BOX, 125}}
--- Where the tips window goes: right of the jaw, under the chart's writing,
--- clear of every spot (none is right of x 100 and below y 120).
-local TIPS_LEFT, TIPS_TOP = 101, 120
--- The pink of a part he points at (the paper below shows through as in his
--- pictures).
-local PINK = {alpha = 115, red = 133, green = 47, blue = 101}
+-- Where each picture of his arm (Main02M 1 to 5) goes on the picture. They
+-- do not share a corner: each is a pixel or two off the others (found by
+-- matching each one's lines with the picture's).
+local ARMS_AT = {{18, 23}, {18, 23}, {18, 22}, {16, 23}, {18, 23}}
+-- The chart's own writing (x0, y0, x1, y1), rubbed out when he says what he
+-- points at: under the small skull, between the big skull and the paper's
+-- shaded edge. The end of his speech mark, over that edge (MARK), is mended
+-- with a row under it (MARK_FROM).
+local WRITING = {123, 67, 167, 110}
+local MARK = {168, 79, 177, 85}
+local MARK_FROM = 89
+-- Where he writes: the name of what he points at, and under it what it
+-- does, clear of the small skull and away from the big skull and the
+-- chart's edge (closer to them only for a word too long for that, as
+-- openth.org/discord); in the middle of where the chart's writing was, or
+-- further down its blank paper when there is more to say.
+local TEXT_X, TEXT_W = 126, 40
+local WIDE_X, WIDE_W = 123, 47
+local TEXT_TOP, TEXT_BOTTOM, WRITING_BOTTOM = 67, 152, 111
+local NAME_H, GAP = 26, 4
+-- The tips are asked for in chalk on the blackboard under the chart, at its
+-- left, away from the professor's arm.
+local CHALK_X, CHALK_TOP, CHALK_BOTTOM = 6, 161, 181
+local CHALK = {red = 226, green = 226, blue = 214}
+local CHALK_LIT = {red = 255, green = 232, blue = 120}
+-- The sound of pointing at something, as on the game's other menus.
+local HOVER_SOUND = "HLight5.wav"
 -- The version lines, as on the list menu.
 local LABEL_TTF_COL = {red = 255, green = 255, blue = 255, alpha = 192}
 
@@ -97,6 +114,13 @@ UIProfessorMenu.SPOTS = {
     outline = {133, 26, 160, 24, 168, 35, 168, 50, 158, 58, 147, 66, 136, 62, 132, 45}},
 }
 
+--! Rectangles of the picture (x, y, width, height) for the tests: where he
+--! writes and what he rubs out, and where the chalk goes.
+UIProfessorMenu.TEXT = {WIDE_X, TEXT_TOP, WIDE_W, TEXT_BOTTOM - TEXT_TOP}
+UIProfessorMenu.WRITING = {WRITING[1], WRITING[2], WRITING[3] - WRITING[1] + 1,
+    WRITING[4] - WRITING[2] + 1}
+UIProfessorMenu.CHALK = {CHALK_X, CHALK_TOP, 90, CHALK_BOTTOM - CHALK_TOP}
+
 --! Whether the point is inside an outline (x, y pairs).
 local function inside(outline, x, y)
   local hit = false
@@ -123,7 +147,7 @@ end
 --! screen, cutting off at most the professor's back (the chart stays at the
 --! left) and the edges of the wall, with black bars where the screen's shape
 --! needs more. The corner is a whole number of picture pixels from the
---! screen's, so his arm's pictures (drawn at whole pixels) fit it.
+--! screen's.
 --!return (table) `scale` (screen pixels to each picture pixel), the corner
 --! in picture pixels (`px`, `py`) and in screen pixels (`x`, `y`)
 function UIProfessorMenu.layout(w, h)
@@ -137,6 +161,61 @@ function UIProfessorMenu.layout(w, h)
   local px, py = math.floor(x / f + 0.5), math.floor(y / f + 0.5)
   if py < -KEEP_TOP then py = -KEEP_TOP end
   return {scale = f, px = px, py = py, x = px * f, y = py * f}
+end
+
+--! Decodes a sprite of "complex" chunks as the engine does (chunk_renderer):
+--! its colours by position from 0 (left to right, top to bottom), without
+--! the transparent ones.
+--!param data (string) the sheet's data (a .dat file)
+--!param from (integer) the sprite's first byte in it (from 1)
+--!param to (integer) its last byte
+function UIProfessorMenu.decodeChunks(data, from, to, width, height)
+  local pixels = {}
+  local total, pos, x, skip_eol = width * height, 0, 0, false
+  local function put(count, colour)
+    for k = 0, count - 1 do
+      if pos + k < total and colour ~= 255 then pixels[pos + k] = colour end
+    end
+  end
+  local function step(count)
+    pos = pos + count
+    x = (x + count) % width
+    skip_eol = true
+  end
+  local i = from
+  while i <= to and pos < total do
+    local b = data:byte(i)
+    i = i + 1
+    if b == 0 then
+      -- The end of a line, unless the line was just filled.
+      if x ~= 0 or not skip_eol then step(width - x) end
+      skip_eol = false
+    elseif b < 0x40 then
+      -- (No further than the sprite's data.)
+      local count = math.min(b, to - i + 1)
+      for k = 0, count - 1 do
+        local colour = data:byte(i + k)
+        if pos + k < total and colour ~= 255 then pixels[pos + k] = colour end
+      end
+      i = i + count
+      step(count)
+    elseif b >= 0x80 and b < 0xC0 then
+      step(b - 0x80)
+    else
+      local count, colour
+      if b == 0xFF then
+        count, colour = data:byte(i, i + 1)
+        i = i + 2
+      else
+        count = b < 0x80 and b - 60 or b - 124
+        colour = data:byte(i)
+        i = i + 1
+      end
+      put(count or 0, colour or 255)
+      step(count or 0)
+    end
+  end
+  return pixels
 end
 
 --! The runs of paper of a part of the drawing ({x, y, width} on the
@@ -182,25 +261,125 @@ local function paperRuns(outline, pixels, colours, runs)
   return runs
 end
 
+--! The picture's colours as the game shows them ({r, g, b}, 8 bits each).
+local function colourTable(colours)
+  local rgb = {}
+  local function up(v) return math.floor(v * 255 / 63 + 0.5) end
+  for c = 0, 255 do
+    local r, g, b = colours:byte(c * 3 + 1, c * 3 + 3)
+    rgb[c] = {up(r), up(g), up(b)}
+  end
+  return rgb
+end
+
+local function distance2(p, q)
+  return (p[1] - q[1]) ^ 2 + (p[2] - q[2]) ^ 2 + (p[3] - q[3]) ^ 2
+end
+
+--! For each colour of the picture, its pink: what the paper of a skeleton's
+--! part he points at turns to. In his pictures of the skull the pinks are
+--! about the paper's colours times 0.87, 0.69, 0.87; the nearest of the
+--! palette's pinks to that.
+local function pinkMap(rgb)
+  local pinks = {}
+  for c = 0, 254 do
+    local r, g, b = rgb[c][1], rgb[c][2], rgb[c][3]
+    if r - g >= 30 and b - g >= 8 and b <= r then pinks[#pinks + 1] = c end
+  end
+  local map = {}
+  for c = 0, 255 do
+    local want = {rgb[c][1] * 0.87, rgb[c][2] * 0.69, rgb[c][3] * 0.87}
+    local best, best_d = c, math.huge
+    for _, p in ipairs(pinks) do
+      local d = distance2(rgb[p], want)
+      if d < best_d then best, best_d = p, d end
+    end
+    map[c] = best
+  end
+  return map
+end
+
+--! The chart's writing rubbed out: the colour of each pixel that changes, by
+--! position (from 1). The paper of a row is the commonest light colour in
+--! the rows around it (it is lighter at the top), and every pixel not close
+--! to it becomes it.
+local function rubOut(base, rgb)
+  local x0, y0, x1, y1 = WRITING[1], WRITING[2], WRITING[3], WRITING[4]
+  local changes, paper = {}, nil
+  for y = y0, y1 do
+    local counts, most = {}, 0
+    for yy = y - 3, y + 3 do
+      for x = x0, x1 do
+        local c = base[yy * PIC_W + x + 1]
+        local p = rgb[c]
+        if p[1] + p[2] + p[3] >= 515 then
+          local n = (counts[c] or 0) + 1
+          counts[c] = n
+          if n > most then most, paper = n, c end
+        end
+      end
+    end
+    if paper then
+      for x = x0, x1 do
+        local i = y * PIC_W + x + 1
+        if distance2(rgb[base[i]], rgb[paper]) > 100 then changes[i] = paper end
+      end
+    end
+  end
+  for y = MARK[2], MARK[4] do
+    for x = MARK[1], MARK[3] do
+      changes[y * PIC_W + x + 1] = base[MARK_FROM * PIC_W + x + 1]
+    end
+  end
+  return changes
+end
+
 local art -- false once known that the game files do not have it
 
 --! The professor's pictures from the game files (the demo has them too), or
 --! nil without them.
---!return (table) `picture` (the bitmap), `arms` (the sprite sheet) and
---! `pink` (each skeleton spot's paper runs, by item)
+--!return (table) `picture` (the bitmap), `base` (its colours by position,
+--! from 1), `arms` (his arm's pictures: `pixels` as decodeChunks gives them,
+--! `w`), `pink` (each skeleton spot's paper runs, by item), `pink_of` (the
+--! pink of each colour), `rubbed` (rubOut's changes) and `views` (the
+--! pictures made for the items pointed at, by item)
 function UIProfessorMenu.art(app)
   if art == nil then
     local ok, result = pcall(function()
       local gfx = app.gfx
-      local palette = gfx:getPalette("Main01M.pal")
-      local loaded = {
-        picture = gfx:loadRaw("Main01M", PIC_W, PIC_H, "QData"),
-        arms = gfx:loadSpriteTable("QData", "Main02M", true, palette),
-        pink = {},
-      }
       local pixels = app:readDataFile("QData", "Main01M.dat")
       local colours = app:readDataFile("QData", "Main01M.pal")
       assert(#pixels >= PIC_W * PIC_H and #colours >= 768, "short picture or palette")
+      local loaded = {
+        picture = gfx:loadRaw("Main01M", PIC_W, PIC_H, "QData"),
+        base = {},
+        arms = {},
+        pink = {},
+        views = {},
+      }
+      for i = 1, PIC_W * PIC_H do loaded.base[i] = pixels:byte(i) end
+      local rgb = colourTable(colours)
+      loaded.pink_of = pinkMap(rgb)
+      loaded.rubbed = rubOut(loaded.base, rgb)
+      -- His arm: the sheet's table has the start (4 bytes), width and height
+      -- of each picture; a picture's data ends where the next one's starts.
+      local tab = app:readDataFile("QData", "Main02M.tab")
+      local dat = app:readDataFile("QData", "Main02M.dat")
+      local function start(e)
+        local a, b, c, d = tab:byte(e, e + 3)
+        return a + 256 * (b + 256 * (c + 256 * d)) + 1
+      end
+      for n = 1, #ARMS_AT do
+        local e = n * 6 + 1
+        assert(#tab >= e + 5, "short arm table")
+        local from, to = start(e), #dat
+        for other = 1, #tab - 5, 6 do
+          local s = start(other)
+          if s > from and s - 1 < to then to = s - 1 end
+        end
+        local w, h = tab:byte(e + 4, e + 5)
+        loaded.arms[n] = {pixels = UIProfessorMenu.decodeChunks(dat, from, to, w, h), w = w}
+      end
       for _, spot in ipairs(UIProfessorMenu.SPOTS) do
         if not spot.arm then
           local runs = {}
@@ -224,33 +403,108 @@ function UIProfessorMenu.wanted(app)
   return app.config.professor_menu ~= false and UIProfessorMenu.art(app) ~= nil
 end
 
---! A colour with its alpha for canvas:drawRect (packed as the renderer's
---! palette::pack_argb packs it: red in the lowest byte).
-local function argb(c)
-  return (((c.alpha or 255) * 256 + c.blue) * 256 + c.green) * 256 + c.red
+local CHARS = {}
+for c = 0, 255 do CHARS[c] = string.char(c) end
+
+--! The picture with a spot pointed at, made the first time (Argus: drawn as
+--! one picture, his arm and the pink are as smooth as the rest and line up
+--! with it): the chart's writing rubbed out, then his arm pointing at the
+--! skull's part, or the skeleton's part pink.
+local function view(app, loaded, spot)
+  local made = loaded.views[spot.item]
+  if made then return made end
+  local px = {}
+  for i, c in ipairs(loaded.base) do px[i] = c end
+  for i, c in pairs(loaded.rubbed) do px[i] = c end
+  if spot.arm then
+    local arm, at = loaded.arms[spot.arm], ARMS_AT[spot.arm]
+    for pos, c in pairs(arm.pixels) do
+      local x, y = at[1] + pos % arm.w, at[2] + math.floor(pos / arm.w)
+      if x < PIC_W and y < PIC_H then px[y * PIC_W + x + 1] = c end
+    end
+  else
+    local pink_of = loaded.pink_of
+    for _, run in ipairs(loaded.pink[spot.item]) do
+      for x = run[1], run[1] + run[3] - 1 do
+        local i = run[2] * PIC_W + x + 1
+        px[i] = pink_of[px[i]]
+      end
+    end
+  end
+  local out = {}
+  for i, c in ipairs(px) do out[i] = CHARS[c] end
+  local data = table.concat(out)
+  local gfx = app.gfx
+  local palette = gfx:getPalette("Main01M.pal")
+  local bitmap = TH.bitmap()
+  -- (Made again when the renderer is, as the game's pictures are.)
+  local function load(bm)
+    bm:setPalette(palette)
+    assert(bm:load(data, PIC_W, gfx.target))
+  end
+  load(bitmap)
+  gfx.reload_functions[bitmap] = load
+  loaded.views[spot.item] = bitmap
+  return bitmap
 end
 
---! Draws the picture to fill the screen (the menu's background, UI:draw).
-function UIProfessorMenu.drawPicture(canvas)
+--! Draws the picture (or `picture`, one made for a spot) to fill the screen:
+--! the menu's background (UI:draw), and what is pointed at.
+function UIProfessorMenu.drawPicture(canvas, picture)
   local loaded = UIProfessorMenu.art(TheApp)
   if not loaded then return end
+  picture = picture or loaded.picture
   local l = UIProfessorMenu.layout(canvas:getRenderSize())
   if canvas:scale(l.scale) then
-    loaded.picture:draw(canvas, l.px, l.py)
+    picture:draw(canvas, l.px, l.py)
     canvas:scale(1)
   elseif canvas:scale(l.scale, "bitmap") then
-    loaded.picture:draw(canvas, l.x, l.y)
+    picture:draw(canvas, l.x, l.y)
     canvas:scale(1)
   else
-    loaded.picture:draw(canvas, l.x, l.y)
+    picture:draw(canvas, l.x, l.y)
   end
+end
+
+local chalk_palettes = {}
+-- The blackboard's colour, what the chalk's thinnest strokes fade to.
+local BOARD = {20, 24, 24}
+
+--! The ink font (Font51V) in a colour of chalk: the fax's palette with its
+--! dark ink that colour and its lighter edges fading to the blackboard's.
+--! (A palette for each colour, made once: a sheet is kept for each one.)
+local function chalkFont(app, colour)
+  local palette = chalk_palettes[colour]
+  if not palette then
+    local fax = app:readDataFile("QData", "Fax01V.pal")
+    palette = TH.palette(fax)
+    local want = {colour.red, colour.green, colour.blue}
+    for c = 0, 254 do
+      local r, g, b = fax:byte(c * 3 + 1, c * 3 + 3)
+      local ink = 1 - (r + g + b) / (3 * 63)
+      local mix = {}
+      for i = 1, 3 do mix[i] = math.floor(BOARD[i] + (want[i] - BOARD[i]) * ink + 0.5) end
+      palette:setEntry(c, mix[1], mix[2], mix[3])
+    end
+    -- (Magenta: transparent, as the game's own palettes have it.)
+    palette:setEntry(255, 255, 0, 255)
+    chalk_palettes[colour] = palette
+  end
+  return app.gfx:loadFontAndSpriteTable("QData", "Font51V", false, palette, {ttf_color = colour})
+end
+
+--! A text of the game as a string.
+local function plain(text)
+  if type(text) == "userdata" then text = TH.stringProxy._unwrap(text) end
+  return tostring(text)
 end
 
 function UIProfessorMenu:UIProfessorMenu(ui)
   self:Window()
   local app = ui.app
   self.ui = ui
-  -- The whole screen, in screen pixels; only the spots take clicks.
+  -- The whole screen, in screen pixels; only the spots and the chalk take
+  -- clicks.
   self.apply_ui_scale = false
   self.draggable = false
   self.esc_closes = false
@@ -264,28 +518,39 @@ function UIProfessorMenu:UIProfessorMenu(ui)
   -- The chart's ink: the fax's font, dark on paper.
   local fax_palette = app.gfx:getPalette("Fax01V.pal")
   self.ink_font = app.gfx:loadFontAndSpriteTable("QData", "Font51V", false, fax_palette)
-  self.hover = nil
+  self.chalk_font = chalkFont(app, CHALK)
+  self.chalk_lit_font = chalkFont(app, CHALK_LIT)
+  self.hover = nil -- the spot pointed at
+  self.hover_tips = false -- whether the chalk is
   self.pressed = nil
   self.sayings = {}
 end
 
---! Puts the tips window (UITipOfTheDay) in an empty space (Argus: a window
---! there on its own, as it is now): at the bottom of the screen, right of the
---! skull's jaw, under the chart's writing and over the blackboard, clear of
---! the spots; on a small screen, where it would reach up to them there, at
---! the bottom right, over the professor.
-function UIProfessorMenu:placeTips()
-  local tips = self.ui:getWindow(UITipOfTheDay)
-  if not tips then return end
-  local sw, sh = self.ui.app.video:getRenderSize()
-  local l = UIProfessorMenu.layout(sw, sh)
-  local s = tips.apply_ui_scale and TheApp.gfx:getUIScale() or 1
-  local w, h = tips.width * s, tips.height * s
-  local x = l.x + TIPS_LEFT * l.scale
-  local y = sh - h - 4
-  if y < l.y + TIPS_TOP * l.scale then x = sw - w - 4 end
-  x = math.max(0, math.min(x, sw - w - 4))
-  tips:setPosition(math.floor(x / s), math.floor(math.max(0, y) / s))
+--! The chalk that opens the tips, on the screen: its text, its scale (screen
+--! pixels to each of the font's) and its rectangle, at the left of the
+--! blackboard's strip under the chart.
+function UIProfessorMenu:_chalk()
+  local w, h = self.ui.app.video:getRenderSize()
+  local chalk = self.chalk_at
+  if chalk and chalk.screen_w == w and chalk.screen_h == h then return chalk end
+  local l = UIProfessorMenu.layout(w, h)
+  local text = plain(_S.main_menu.tips)
+  local k = math.max(1, math.floor(l.scale / 2 + 0.5))
+  local tw, th = self.chalk_font:sizeOf(text)
+  chalk = {screen_w = w, screen_h = h, text = text, k = k,
+    x = l.x + CHALK_X * l.scale,
+    y = l.y + (CHALK_TOP + CHALK_BOTTOM) / 2 * l.scale - th * k / 2,
+    w = tw * k, h = th * k}
+  self.chalk_at = chalk
+  return chalk
+end
+
+--! Whether a point of the screen is on the chalk (give or take a little).
+function UIProfessorMenu:onChalk(x, y)
+  local chalk = self:_chalk()
+  local margin = chalk.k * 3
+  return x >= chalk.x - margin and x < chalk.x + chalk.w + margin and
+      y >= chalk.y - margin and y < chalk.y + chalk.h + margin
 end
 
 --! Whether a window above this one is at the point (no pointing through it).
@@ -306,16 +571,26 @@ function UIProfessorMenu:spotAt(x, y)
   return UIProfessorMenu.spotAtPicture((x - l.x) / l.scale, (y - l.y) / l.scale)
 end
 
+--! What a click at a point would choose: a spot, "tips" (the chalk) or nil.
+function UIProfessorMenu:_target(x, y)
+  return self:spotAt(x, y) or (self:onChalk(x, y) and "tips") or nil
+end
+
 function UIProfessorMenu:hitTest(x, y)
-  return self:spotAt(x, y) ~= nil
+  return self:_target(x, y) ~= nil
 end
 
 function UIProfessorMenu:onMouseMove(x, y, dx, dy)
   TheApp:resetIdle()
-  local spot = self:spotAt(x, y)
-  if spot and self:_coveredAt(x, y) then spot = nil end
-  if spot ~= self.hover then
-    self.hover = spot
+  local spot, tips = self:spotAt(x, y), self:onChalk(x, y)
+  if (spot or tips) and self:_coveredAt(x, y) then spot, tips = nil, false end
+  if spot ~= self.hover or tips ~= self.hover_tips then
+    self.hover, self.hover_tips = spot, tips
+    -- (Argus: the original made a sound for each item pointed at.)
+    if spot or tips then
+      if self.hover_sound then self.ui:stopSound(self.hover_sound) end
+      self.hover_sound = self.ui:playSound(HOVER_SOUND)
+    end
     return true
   end
   return false
@@ -323,15 +598,19 @@ end
 
 function UIProfessorMenu:onMouseDown(button, x, y)
   if button ~= "left" then return false end
-  self.pressed = self:spotAt(x, y)
+  self.pressed = self:_target(x, y)
   return self.pressed ~= nil
 end
 
 function UIProfessorMenu:onMouseUp(button, x, y)
   local pressed = self.pressed
   self.pressed = nil
-  if button == "left" and pressed and self:spotAt(x, y) == pressed then
-    self:choose(pressed)
+  if button == "left" and pressed and self:_target(x, y) == pressed then
+    if pressed == "tips" then
+      self:buttonTips()
+    else
+      self:choose(pressed)
+    end
     return true
   end
   return false
@@ -343,10 +622,21 @@ function UIProfessorMenu:choose(spot)
   self[spot.button](self)
 end
 
+--! The chalk: opens the tips window, or closes it when it is open.
+function UIProfessorMenu:buttonTips()
+  self.ui:playSound(self.default_button_sound)
+  local tips = self.ui:getWindow(UITipOfTheDay)
+  if tips then
+    tips:close()
+  else
+    self.ui:addWindow(UITipOfTheDay(self.ui))
+  end
+end
+
 function UIProfessorMenu:onChangeResolution()
   self.width, self.height = self.ui.app.video:getRenderSize()
   self.sayings = {}
-  self:placeTips()
+  self.chalk_at = nil
 end
 
 --! The professor leaves his chart (the original's movie, MMENU2) before the
@@ -359,85 +649,106 @@ function UIProfessorMenu:buttonExit()
     end))
 end
 
---! What is written for a spot at a picture scale: the name in the biggest
---! whole scale (screen pixels to each of the font's) at which it fits its
---! part of the chart, up to half the picture's (the font is drawn for screens
---! twice the picture's size), what it does in a smaller one.
+--! A text at the biggest whole scale up to `biggest` (screen pixels to each
+--! of the font's) at which it fits across, wrapped, the space he writes in
+--! (with its margins, or without them at the same scale), and `max_h` screen
+--! pixels down; at the font's own size, with words off its end until it
+--! fits.
+--!return (table) `text`, `k` (the scale), `x` (where its space starts on the
+--! picture), `w` (the width to wrap at, in the font's pixels) and `h` (its
+--! height)
+local function fit(font, text, f, max_h, biggest)
+  local k = math.max(1, math.floor(biggest + 0.5))
+  -- (sizeOf gives the last line's width: each word has to fit a line, as a
+  -- longer one is not broken.)
+  local widest = 0
+  for word in text:gmatch("%S+") do
+    widest = math.max(widest, (font:sizeOf(word)))
+  end
+  while true do
+    for _, space in ipairs({{TEXT_X, TEXT_W}, {WIDE_X, WIDE_W}}) do
+      local w = math.floor(space[2] * f / k)
+      local _, h = font:sizeOf(text, w)
+      if widest <= w and h * k <= max_h then
+        return {text = text, k = k, x = space[1], w = w, h = h}
+      end
+    end
+    if k == 1 then
+      -- Too long even at the font's own size (a small screen): words off its
+      -- end, also any too wide for a line (the font would draw the rest in
+      -- one line, off the chart).
+      local w = math.floor(WIDE_W * f)
+      local _, h = font:sizeOf(text, w)
+      local words = {}
+      for word in text:gmatch("%S+") do words[#words + 1] = word end
+      local function tooWide()
+        for _, word in ipairs(words) do
+          if font:sizeOf(word) > w then return true end
+        end
+        return false
+      end
+      while #words > 1 and (h > max_h or tooWide()) do
+        words[#words] = nil
+        text = table.concat(words, " ") .. "..."
+        h = select(2, font:sizeOf(text, w))
+      end
+      return {text = text, k = 1, x = WIDE_X, w = w, h = h}
+    end
+    k = k - 1
+  end
+end
+
+--! What he writes for a spot at a picture scale: its name at the biggest
+--! scale that fits (up to half the picture's: the font is drawn for screens
+--! twice the picture's size), and under it what it does, smaller; the two
+--! in the middle of where the chart's writing was, or from its top down
+--! when they need more room.
+--!return (table) the name and what it does, each as `fit` gives it with its
+--! top (`y`, in screen pixels from the picture's)
 function UIProfessorMenu:_saying(spot, f)
   local key = spot.item .. "@" .. f
   local saying = self.sayings[key]
   if saying then return saying end
   local font = self.ink_font
-  local function fit(text, box, biggest)
-    if type(text) == "userdata" then text = require("TH").stringProxy._unwrap(text) end
-    text = tostring(text)
-    local box_w, box_h = box[3] * f, box[4] * f
-    local k = math.max(1, math.floor(biggest + 0.5))
-    while true do
-      local w = math.floor(box_w / k)
-      -- (A word longer than the line is not broken: wider than w.)
-      local tw, h = font:sizeOf(text, w)
-      if tw <= w and h * k <= box_h then
-        return {text = text, k = k, w = w, h = h, box = box}
-      elseif k == 1 then
-        -- Too long even at the font's own size (a small screen): words off
-        -- the end until it fits.
-        local words = {}
-        for word in text:gmatch("%S+") do words[#words + 1] = word end
-        while #words > 1 and h > box_h do
-          words[#words] = nil
-          text = table.concat(words, " ") .. "..."
-          h = select(2, font:sizeOf(text, w))
-        end
-        return {text = text, k = 1, w = w, h = h, box = box}
-      end
-      k = k - 1
-    end
-  end
-  saying = {
-    fit(_S.main_menu[spot.item], NAME_BOX, f / 2),
-    fit(_S.tooltip.main_menu[spot.item], INFO_BOX, f / 3),
-  }
+  local name = fit(font, plain(_S.main_menu[spot.item]), f, NAME_H * f, f / 2)
+  local name_h = name.h * name.k
+  local info = fit(font, plain(_S.tooltip.main_menu[spot.item]), f,
+      (TEXT_BOTTOM - TEXT_TOP - GAP) * f - name_h, f / 3)
+  local block = name_h + GAP * f + info.h * info.k
+  local top = TEXT_TOP * f + math.max(0, ((WRITING_BOTTOM - TEXT_TOP) * f - block) / 2)
+  name.y = top
+  info.y = top + name_h + GAP * f
+  saying = {name, info}
   self.sayings[key] = saying
   return saying
 end
 
 function UIProfessorMenu:draw(canvas, x, y)
-  local loaded = UIProfessorMenu.art(self.ui.app)
-  local spot = self.hover
+  local app = self.ui.app
+  local loaded = UIProfessorMenu.art(app)
   local sw = canvas:getRenderSize()
+  local spot = self.hover
   if loaded and spot then
+    UIProfessorMenu.drawPicture(canvas, view(app, loaded, spot))
+    -- What he says, each part in the middle of the space he writes in.
     local l = UIProfessorMenu.layout(canvas:getRenderSize())
-    local f = l.scale
-    if canvas:scale(f) then
-      local px, py = l.px, l.py
-      if spot.arm then
-        loaded.arms:draw(canvas, spot.arm, px + ARM_X, py + ARM_Y)
-      else
-        local pink = argb(PINK)
-        for _, run in ipairs(loaded.pink[spot.item]) do
-          canvas:drawRect(pink, px + run[1], py + run[2], run[3], 1)
-        end
-      end
-      for _, cover in ipairs(COVERS) do
-        local box = cover[1]
-        loaded.picture:draw(canvas, px + box[1], py + box[2], box[1], cover[2], box[3], box[4])
-      end
+    for _, part in ipairs(self:_saying(spot, l.scale)) do
+      local k = part.k
+      canvas:scale(k)
+      self.ink_font:drawWrapped(canvas, part.text, math.floor((l.x + part.x * l.scale) / k),
+          math.floor((l.y + part.y) / k), part.w, "center")
       canvas:scale(1)
-      -- What he says: each part in the middle of its box.
-      for _, part in ipairs(self:_saying(spot, f)) do
-        local k, box = part.k, part.box
-        local tx = l.x + box[1] * f
-        local ty = l.y + box[2] * f + math.max(0, (box[4] * f - part.h * k) / 2)
-        canvas:scale(k)
-        self.ink_font:drawWrapped(canvas, part.text, math.floor(tx / k),
-            math.floor(ty / k), part.w, "center")
-        canvas:scale(1)
-      end
     end
   end
+  if loaded then
+    local chalk = self:_chalk()
+    local font = self.hover_tips and self.chalk_lit_font or self.chalk_font
+    canvas:scale(chalk.k)
+    font:draw(canvas, chalk.text, math.floor(chalk.x / chalk.k), math.floor(chalk.y / chalk.k))
+    canvas:scale(1)
+  end
   -- The version lines, at the top right (on the wall and the blackboard's
-  -- frame, clear of the chart and the tips).
+  -- frame, clear of the chart).
   local s = TheApp.gfx:getUIScale()
   local lines = {_S.main_menu.version .. self.release_string}
   if TheApp.config.debug then

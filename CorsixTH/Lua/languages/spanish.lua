@@ -2601,6 +2601,7 @@ tooltip.main_menu.multiplayer = "Juega con otros a través de un servidor multij
 tooltip.main_menu.discord = "El Discord de OpenTH: encuentra otros jugadores, pide ayuda y entérate antes que nadie de las nuevas versiones. Abre openth.org/discord en tu navegador."
 customise_window.professor_menu = "Menú del profesor"
 tooltip.customise_window.professor_menu = "El menú principal del juego original: el profesor señala en su lámina lo que elijas. Desactivado: la lista de botones. Con la introducción activada, llega a su lámina después de ella."
+main_menu.tips = "¿Quieres un consejo?"
 tooltip.multiplayer_window.add_assistant = "Clic derecho: un ayudante, un bot que ayuda en este hospital y no ocupa lugar"
 tooltip.multiplayer_window.add_assistant_button = "Añadir un ayudante: un bot que ayuda en este hospital y no ocupa lugar"
 tooltip.multiplayer_window.assistant = "Un bot que ayuda en este hospital"

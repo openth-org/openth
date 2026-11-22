@@ -4560,6 +4560,7 @@ tooltip.main_menu.multiplayer = "Играть с другими через се�
 tooltip.main_menu.discord = "Discord OpenTH: находите других игроков, спрашивайте совета и первыми узнавайте о новых версиях. Открывает openth.org/discord в браузере."
 customise_window.professor_menu = "Меню с профессором"
 tooltip.customise_window.professor_menu = "Главное меню из оригинальной игры: профессор у своей схемы показывает на то, что вы выбираете. Выключите, чтобы вернуть список кнопок. Если включена заставка, после неё профессор подходит к схеме."
+main_menu.tips = "Нужна подсказка?"
 tooltip.multiplayer_window.add_assistant = "Правый щелчок: помощник, бот, который помогает в этой больнице и не занимает место"
 tooltip.multiplayer_window.add_assistant_button = "Добавить помощника: бота, который помогает в этой больнице и не занимает место"
 tooltip.multiplayer_window.assistant = "Бот, который помогает в этой больнице"
