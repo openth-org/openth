@@ -1747,7 +1747,9 @@ function Hospital:humanoidDeath(patient)
   end
   -- Multiplayer: a hard bot's hospital counts every second death only (a
   -- death as half, rounded up: Jan, 2026-11-12; World.MP_BOT_LEVEL_BONUS).
-  if MultiplayerSession.countsDeath(self) then
+  -- (Without the multiplayer code, as in the unit tests: every death.)
+  local mp = rawget(_G, "MultiplayerSession")
+  if not mp or mp.countsDeath(self) then
     self.num_deaths = self.num_deaths + 1
     self.num_deaths_this_year = self.num_deaths_this_year + 1
   end
