@@ -115,7 +115,7 @@ describe("Multiplayer levels", function()
     _G.SpawnAction = function() return {} end
     _G.MultiplayerSession = {tellPlayer = function() end, tellOthers = function(world, _, text)
       world.told[#world.told + 1] = {text = text, month = world.game_date:monthOfGame()}
-    end}
+    end, changeReputation = function(hospital, amount) hospital.rep = hospital.rep + amount end}
     _G._S = {multiplayer_window = {level_rats_notice = "rats", level_slack_tongue_warning = "slack",
         level7_truce_over = "truce over", level7_trick_of_month = "trick %s", level7_job_fair_soon = "fair soon",
         level7_job_fair = "fair", level7_race_emergency = "race %d", level7_race_won = "won %s %d",
@@ -442,7 +442,6 @@ describe("Multiplayer levels", function()
       hospital.name = "H" .. index
       hospital.money, hospital.rep = 0, 0
       function hospital:receiveMoney(amount) self.money = self.money + amount end
-      function hospital:changeReputation(_, _, amount) self.rep = self.rep + amount end
     end
     function world:getHospitalIndex(hospital) return hospital.index end
     function world:mpTeam(hospital) -- as World:mpTeam

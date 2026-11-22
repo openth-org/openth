@@ -152,6 +152,8 @@ describe("hospital.lua: ", function()
       local hospital = research_hospital({scanner = {objects_needed = {scanner = 1, console = 1}}})
       assert.is_true(hospital:canConcentrateResearch("diag_scanner"))
     end)
+  end)
+
   -- A minimal duck-typed hospital carrying just the reputation accounting, so
   -- that these tests describe the accounting rather than a whole hospital.
   local function createReputationHospital()

@@ -36,12 +36,19 @@ local function with_texts(fn)
   if not ok then error(err, 0) end
 end
 
-local function hospital(rep)
-  local h = {reputation = rep, reputation_max = 1000, name = "H"}
-  function h.unconditionalChangeReputation(self, delta)
-    self.reputation = math.max(0, math.min(self.reputation_max, self.reputation + delta))
-  end
+-- A hospital's reputation as the game keeps it (ReputationAccount), with the
+-- weight of 480 outcomes, at which a point of rating is a whole credit.
+local function withReputation(h, rep)
+  local ReputationAccount = require("reputation")
+  h.reputation_account = ReputationAccount(ReputationAccount.accountingForRating(rep, 480))
+  h.reputation_max = 1000
+  function h.updateReputation(self) self.reputation = self.reputation_account:rating() end
+  h:updateReputation()
   return h
+end
+
+local function hospital(rep)
+  return withReputation({name = "H"}, rep)
 end
 
 describe("Trading reputation", function()
@@ -543,12 +550,11 @@ end)
 
 describe("Trading with rivals", function()
   local function make(rivals)
-    local a = {balance = 50000, name = "A", reputation = 300}
-    local b = {balance = 50000, name = "B", reputation = 300}
+    local a = withReputation({balance = 50000, name = "A"}, 300)
+    local b = withReputation({balance = 50000, name = "B"}, 300)
     for _, h in ipairs({a, b}) do
       function h.spendMoney(self, n) self.balance = self.balance - n end
       function h.receiveMoney(self, n) self.balance = self.balance + n end
-      function h.changeReputation(self, _, _, n) self.reputation = self.reputation + n end
     end
     local world = {hospitals = {a, b}, mp_coop = {},
         mpMayTrade = function(_, x, y) return x ~= y end,

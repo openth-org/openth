@@ -202,14 +202,18 @@ function WinLetter:WinLetter(app, paragraphs, choose)
   self.texts = {}
   -- (Multiplayer: the typewriter font has no "+", so a team's name, "ANN +
   -- BEN", reads "ANN and BEN" on the letter, with the race's own "and".)
-  local mp_texts = _S.multiplayer_window
-  local and_word = mp_texts and mp_texts.race_and
-  and_word = and_word and tostring((TH.stringProxy._unwrap(and_word))) or " & "
+  local function andWord()
+    local mp_texts = _S.multiplayer_window
+    local word = mp_texts and mp_texts.race_and
+    if word and type(word) ~= "string" then word = tostring((TH.stringProxy._unwrap(word))) end
+    return word or " & "
+  end
   for _, text in ipairs(paragraphs) do
     if type(text) ~= "string" then
       text = tostring((TH.stringProxy._unwrap(text)))
     end
-    text = text:gsub("//", " "):gsub(" %+ ", function() return and_word end)
+    text = text:gsub("//", " ")
+    if text:find(" %+ ") then text = text:gsub(" %+ ", andWord()) end
     if text:find("%S") then self.texts[#self.texts + 1] = text end
   end
 end
