@@ -48,6 +48,11 @@ local calculateSize = function(me)
   -- calculate target dimensions
   local x, y, w, h, scale
   local screen_w, screen_h = me.app.video:getRenderSize()
+  if me.frame_rect then
+    -- (A movie drawn where something else on the screen is: the professor's.)
+    x, y, w, h, scale = me.frame_rect(screen_w, screen_h)
+    return math.floor(x + 0.5), math.floor(y + 0.5), math.floor(w + 0.5), math.floor(h + 0.5), scale
+  end
   local native_w = me.moviePlayer:getNativeWidth()
   local native_h = me.moviePlayer:getNativeHeight()
   if native_w == 320 and native_h == 200 then
@@ -100,6 +105,7 @@ local destroyMovie = function(me)
   end
   me.refresh_overlay = nil
   me.win_letter = nil
+  me.frame_rect = nil
   me.playing = false
   me.movie_over = false
   -- (Cleared first: the callback may play the next movie, with its own, as
@@ -259,6 +265,17 @@ end
 --!param callback (function) what to do after it (or at once without it)
 function MoviePlayer:playMenuMovie(leaving, callback)
   self:playMovie(leaving and self.menu_out_movie or self.menu_in_movie, false, callback)
+  local UIProfessorMenu = rawget(_G, "UIProfessorMenu")
+  if self.playing and UIProfessorMenu then
+    -- Where and as big as his menu's picture (UIProfessorMenu.layout), not
+    -- stretched to 4:3 as the game's other 320x200 movies are: he walks up
+    -- to (or away from) the very picture the menu shows, without a jump
+    -- (Jan: the picture changed its shape as he left).
+    self.frame_rect = function(screen_w, screen_h)
+      local l = UIProfessorMenu.layout(screen_w, screen_h)
+      return l.x, l.y, 320 * l.scale, 200 * l.scale, l.scale
+    end
+  end
 end
 
 --! Plays the demo gameplay footage movie from TH

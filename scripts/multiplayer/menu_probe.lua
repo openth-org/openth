@@ -72,13 +72,22 @@ local ok, err = pcall(function()
       return TheApp.ui and TheApp.ui:getWindow(UIMainMenu)
     end
     assert(not menu(), "a menu during the intro")
-    movies:onMovieOver()
-    assert(movies.playing, "no movie after the intro")
-    assert(not menu(), "the menu came before the professor")
+    if TheApp.config.play_intro then
+      movies:onMovieOver()
+      assert(movies.playing, "no movie after the intro")
+      assert(not menu(), "the menu came before the professor")
+    end
+    -- His movie, where and as big as his menu's picture (not 4:3).
+    local x, y, w, h = movies.frame_rect(TheApp.video:getRenderSize())
+    local l = UIProfessorMenu.layout(TheApp.video:getRenderSize())
+    assert(x == l.x and y == l.y and w == 320 * l.scale and h == 200 * l.scale,
+        "his movie is not framed as his picture")
     movies:onMovieOver()
     assert(not movies.playing, "still a movie after the professor came")
+    assert(not movies.frame_rect, "the next movie would be framed as his")
     assert(menu() and class.is(menu(), UIProfessorMenu), "no professor menu after his movie")
-    print("MOVIES OK: the intro, the professor coming to his chart, his menu")
+    print(("MOVIES OK: %sthe professor coming to his chart, his menu"):format(
+        TheApp.config.play_intro and "the intro, " or ""))
   end
   local ui = TheApp.ui
   closeInformation(ui)

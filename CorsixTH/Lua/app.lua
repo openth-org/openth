@@ -456,8 +456,9 @@ function App:init()
   TheApp:saveConfig()
   TheApp:saveHotkeys()
 
-  -- After the intro, the professor comes to his chart (the original's movie,
-  -- MMENU1) when his is the main menu, unless a game is loading at once.
+  -- The professor comes to his chart (the original's movie, MMENU1) when his
+  -- is the main menu, after the intro when that is on (Jan: with the intro
+  -- off, he came no more), unless a game is loading at once.
   local function after_intro()
     if self.config.professor_menu and not self.command_line.load and
         not self.command_line.continue then
@@ -467,11 +468,13 @@ function App:init()
     end
   end
 
-  -- (Not when the game restarted to join a server as another build.)
-  if self.config.play_intro and not corsixth.require("mp_pack").rejoinPending(self) then
+  -- (Neither when the game restarted to join a server as another build.)
+  if corsixth.require("mp_pack").rejoinPending(self) then
+    callback_after_movie()
+  elseif self.config.play_intro then
     self.moviePlayer:playIntro(after_intro)
   else
-    callback_after_movie()
+    after_intro()
   end
   return true
 end
