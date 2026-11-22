@@ -342,7 +342,9 @@ end
 --- strike (TYPING.WAV) at a random pitch, unless sound effects are off.
 function WinLetter:strike()
   if not self.app.config.play_sounds then return end
-  local pitch = 1 + (math.random() * 2 - 1) * LETTER_TYPING_PITCH_SPREAD
+  -- (From the cosmetic stream: the letter types only on the winner's screen,
+  -- and a draw from math.random there would put multiplayer games out of step.)
+  local pitch = 1 + (math.cosmetic_random() * 2 - 1) * LETTER_TYPING_PITCH_SPREAD
   self.app.audio:playSound("TYPING.WAV", nil, false, nil, nil, 0,
       LETTER_TYPING_VOLUME, pitch)
 end
