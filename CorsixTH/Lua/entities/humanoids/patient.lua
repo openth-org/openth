@@ -195,7 +195,7 @@ function Patient:setDiagnosed()
   self.diagnosed = true
   self.treatment_history[#self.treatment_history + 1] = self.disease.name
 
-  self.hospital:recordPatientDiagnosed(self)
+  self.hospital:recordDiagnosis(self)
   local UIPatient = _G["UIPatient"] ---@type UIPatient
   local window = self.world.ui:getWindow(UIPatient)
   if window and window.patient == self then
