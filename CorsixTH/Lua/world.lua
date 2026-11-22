@@ -76,9 +76,10 @@ function World:World(app, free_build_mode)
   self.rooms = {} -- List that can have gaps when a room is deleted, so use pairs to iterate.
   self.entity_map = EntityMap(self.map)
 
-  -- Time
+  -- Time. A new game starts at "Slower" (tick_rates; Argus: Normal is too
+  -- quick for a start); a multiplayer game takes the server's speed.
   self.hours_per_tick = 1
-  self.tick_rate = 3
+  self.tick_rate = 12
   self.tick_timer = 0
   self.game_date = Date() -- Current date in the game.
 

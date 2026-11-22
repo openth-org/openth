@@ -36,7 +36,7 @@ export MP_LUA_CPATH="$LUASOCKET_TREE/lib/lua/$lua_ver/?.so"
 export MP_LUA_PATH="$LUASOCKET_TREE/share/lua/$lua_ver/?.lua"
 
 port=$((47000 + RANDOM % 900))
-PYTHONPATH="$source_dir/mp_server" python3 -m corsixth_mp --host 127.0.0.1 --port "$port" \
+CORSIXTH_MP_START_SPEED="${CORSIXTH_MP_START_SPEED:-Normal}" PYTHONPATH="$source_dir/mp_server" python3 -m corsixth_mp --host 127.0.0.1 --port "$port" \
   --log-level INFO --max-per-address 64 > "$out/server.log" 2>&1 &
 server_pid=$!
 trap 'kill $server_pid 2>/dev/null || true' EXIT

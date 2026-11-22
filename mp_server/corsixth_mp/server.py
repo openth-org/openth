@@ -140,6 +140,9 @@ RECLAIM_SILENT = 5.0
 # CORSIXTH_MP_KEEP_PLACES=0: neither (a room closes once nobody plays, as
 # before; the older test scripts expect that).
 KEEP_PLACES = os.environ.get("CORSIXTH_MP_KEEP_PLACES", "1") != "0"
+# The speed a game starts at (pacing.start_speed: Slower unless set; the test
+# scripts' servers start at Normal).
+START_SPEED = os.environ.get("CORSIXTH_MP_START_SPEED", pacing.DEFAULT_START_SPEED)
 # The game options the room owner may set (OPTION <name>=<value>): land
 # auctions (1 plots near other hospitals, 2 every plot, 0 off), dirty tricks
 # (in a race; 1 on, unlocked month by month in the first year, 2 on from the
@@ -329,7 +332,7 @@ class Room:
     state: str = "lobby"  # lobby | running
     seed: int = 0
     pace: pacing.Pacing | None = None
-    speed: str = pacing.TARGET_SPEED
+    speed: str = START_SPEED
     fingerprints: dict[int, dict[int, str]] = field(default_factory=dict)
     desync_step: int | None = None
     left: dict[int, int] = field(default_factory=dict)  # peer -> last step
@@ -1753,8 +1756,7 @@ class Server:
         room.mode = room.current_mode()
         room.state = "running"
         room.pace = room.current_pacing()
-        room.speed = room.pace.max_speed if pacing.speed_rank(room.pace.max_speed) < \
-            pacing.speed_rank(pacing.TARGET_SPEED) else pacing.TARGET_SPEED
+        room.speed = pacing.start_speed(room.pace.max_speed, START_SPEED)
         room.seed = random.SystemRandom().randrange(1, 2**31 - 1)
         peers = ",".join(str(n) for n in sorted(room.players))
         log.info("room %r starts: seed %d, delay %d, max speed %s, peers %s", room.name,

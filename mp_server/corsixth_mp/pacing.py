@@ -42,6 +42,17 @@ SPEEDS: list[tuple[str, int]] = [
 ]
 SPEED_NAMES = [name for name, _ in SPEEDS]
 TARGET_SPEED = "Normal"
+# The speed a game starts at (Argus: Normal is too quick for a start), up to
+# the room's fastest; the tests' servers start at Normal
+# (CORSIXTH_MP_START_SPEED), as their game-hour counts expect.
+DEFAULT_START_SPEED = "Slower"
+
+
+def start_speed(max_speed: str, wanted: str = DEFAULT_START_SPEED) -> str:
+    """``wanted`` (a known speed, else the default), capped at ``max_speed``."""
+    if wanted not in SPEED_NAMES:
+        wanted = DEFAULT_START_SPEED
+    return max_speed if speed_rank(max_speed) < speed_rank(wanted) else wanted
 
 
 def speed_rank(name: str) -> int:

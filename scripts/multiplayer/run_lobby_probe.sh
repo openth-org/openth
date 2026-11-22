@@ -164,7 +164,7 @@ else
     export CORSIXTH_MP_REFEREE_LUA_CPATH="$MP_LUA_CPATH" CORSIXTH_MP_REFEREE_LUA_PATH="$MP_LUA_PATH"
     export MP_REFEREE_PROBE_SCENARIO="crowd=busy;staff=busy;edit=busy;cardio=none;epi=busy;wreck=none;lang=busy;assist=none" # the probes' own start, see below
   fi
-  PYTHONPATH="$source_dir/mp_server" python3 -m corsixth_mp --host 127.0.0.1 --port "$port" \
+  CORSIXTH_MP_START_SPEED="${CORSIXTH_MP_START_SPEED:-Normal}" PYTHONPATH="$source_dir/mp_server" python3 -m corsixth_mp --host 127.0.0.1 --port "$port" \
     --log-level INFO --max-per-address 96 --max-connections 128 > "$out/server.log" 2>&1 &
   server_pid=$!
   trap 'kill $server_pid 2>/dev/null || true' EXIT

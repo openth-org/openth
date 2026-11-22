@@ -112,7 +112,7 @@ export MP_REFEREE_PROBE_SCENARIO="team=none;race=none;trio=none;duel=none;lab=no
 export CORSIXTH_MP_MAX_BOTS=9 # (nine bots in all the rooms)
 # (MP_BOT_AWAY_SECONDS: kay in "afk" counts as away after a game week; the
 # bots' games run faster than real time.)
-MP_BOT_PACE=20 MP_BOT_FAST=1 MP_BOT_SEED=7 MP_BOT_TESTS=1 MP_BOT_LEARN=20 MP_BOT_AWAY_SECONDS=3 MP_BOT_GIVE_LIMITS=1000:2000 MP_BOT_TEST_LACK=5:Surgeon:operating_theatre MP_BOT_TEST_WIN="1:10;2:12;3:12;lab/2:5" MP_BOT_TEST_FAIL=20 PYTHONPATH="$source_dir/mp_server" \
+MP_BOT_PACE=20 MP_BOT_FAST=1 MP_BOT_SEED=7 MP_BOT_TESTS=1 MP_BOT_LEARN=20 MP_BOT_AWAY_SECONDS=3 MP_BOT_GIVE_LIMITS=1000:2000 MP_BOT_TEST_LACK=5:Surgeon:operating_theatre MP_BOT_TEST_WIN="1:10;2:12;3:12;lab/2:5" MP_BOT_TEST_FAIL=20 CORSIXTH_MP_START_SPEED="${CORSIXTH_MP_START_SPEED:-Normal}" PYTHONPATH="$source_dir/mp_server" \
   python3 -m corsixth_mp --host 127.0.0.1 --port "$port" \
   --log-level INFO --max-per-address 64 > "$out/server.log" 2>&1 &
 server_pid=$!

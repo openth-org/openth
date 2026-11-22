@@ -201,6 +201,15 @@ def test_relay_and_fingerprint_check(run):
     run(body)
 
 
+def test_game_starts_at_start_speed(run):
+    # Argus: Slower, not Normal, for a start (both players get the same).
+    async def body(server, port):
+        a, b = await two_players_in_room(port)
+        sa, sb = await start(a, b)
+        assert sa["speed"] == sb["speed"] == srv.START_SPEED == "Slower"
+    run(body)
+
+
 def test_speed_is_shared_and_capped(run):
     async def body(server, port):
         a, b = await two_players_in_room(port)
