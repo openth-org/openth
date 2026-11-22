@@ -85,7 +85,6 @@ local ok, err = pcall(function()
   local w, h = TheApp.video:getRenderSize()
   size = ("%dx%d"):format(w, h)
   -- His movies (coming to the chart, leaving it) found in the game files.
-  local movies = TheApp.moviePlayer
   print(("MOVIES: in %s, out %s"):format(tostring(movies.menu_in_movie), tostring(movies.menu_out_movie)))
   local l = UIProfessorMenu.layout(w, h)
   shot("menu")
