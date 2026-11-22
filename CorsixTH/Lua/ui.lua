@@ -570,6 +570,24 @@ function UI:openMainMenu()
   return menu
 end
 
+--! Leaves the main menu for a game or the map editor: when the professor's
+--! chart is the menu, he walks off first (the original's movie, MMENU2, as
+--! the original did each time a level started, Jan), then `start` runs; any
+--! other way at once. A second start while he walks off is ignored.
+--!param start (function) what starts the game
+function UI:leaveMainMenu(start)
+  if self.leaving_menu then return end
+  if self.app.world or not self.professor_background then
+    start()
+    return
+  end
+  self.leaving_menu = true
+  self.app.moviePlayer:playMenuMovie(true, function()
+    self.leaving_menu = nil
+    start()
+  end)
+end
+
 function UI:onChangeResolution()
   TheApp.gfx:onChangeResolution()
 

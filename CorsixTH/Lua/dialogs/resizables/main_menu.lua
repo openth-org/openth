@@ -209,12 +209,14 @@ function UIMainMenu:buttonContinueGame()
   if most_recent_saved_game then
     local path = most_recent_saved_game.path
     local app = self.ui.app
-    local status, err = pcall(app.load, app, path)
-    if not status then
-      err = _S.errors.load_prefix .. err
-      print(err)
-      app.ui:addWindow(UIInformation(self.ui, {err}))
-    end
+    self.ui:leaveMainMenu(function()
+      local status, err = pcall(app.load, app, path)
+      if not status then
+        err = _S.errors.load_prefix .. err
+        print(err)
+        app.ui:addWindow(UIInformation(self.ui, {err}))
+      end
+    end)
   else
     local error = _S.errors.load_prefix .. _S.errors.no_games_to_contine
     print(error)
@@ -235,7 +237,8 @@ function UIMainMenu:buttonOptions()
 end
 
 function UIMainMenu:buttonMapEdit()
-  self.ui.app:mapEdit()
+  local app = self.ui.app
+  self.ui:leaveMainMenu(function() app:mapEdit() end)
 end
 
 function UIMainMenu:buttonExit()

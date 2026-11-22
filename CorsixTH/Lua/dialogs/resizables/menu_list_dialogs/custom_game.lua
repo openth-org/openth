@@ -138,8 +138,11 @@ function UICustomGame:buttonLoadLevel()
       self.ui:addWindow(UIInformation(self.ui, {errors}))
       return
     end
-    app:loadLevel(item.level_file, nil, self.chosen_level_name, item.map_file,
-        self.chosen_level_description, nil, _S.errors.load_level_prefix, nil)
+    local name, description = self.chosen_level_name, self.chosen_level_description
+    self.ui:leaveMainMenu(function()
+      app:loadLevel(item.level_file, nil, name, item.map_file, description,
+          nil, _S.errors.load_level_prefix, nil)
+    end)
   end
 end
 

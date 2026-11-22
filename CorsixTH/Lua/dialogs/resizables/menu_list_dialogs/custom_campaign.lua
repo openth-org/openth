@@ -137,7 +137,8 @@ end
 
 function UICustomCampaign:buttonStartCampaign()
   if self.chosen_item then
-    TheApp:loadCampaign(self.chosen_item.path)
+    local path = self.chosen_item.path
+    self.ui:leaveMainMenu(function() TheApp:loadCampaign(path) end)
   end
 end
 

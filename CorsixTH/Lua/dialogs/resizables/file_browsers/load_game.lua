@@ -45,11 +45,13 @@ function UILoadGame:choiceMade(name)
   -- Make sure there is no blue filter active.
   app.video:setBlueFilterActive(false)
 
-  local status, err = pcall(app.load, app, name)
-  if not status then
-    err = _S.errors.load_prefix .. err
-    self:loadError(err)
-  end
+  self.ui:leaveMainMenu(function()
+    local status, err = pcall(app.load, app, name)
+    if not status then
+      err = _S.errors.load_prefix .. err
+      self:loadError(err)
+    end
+  end)
 end
 
 --! Output the error when trying to load a game
