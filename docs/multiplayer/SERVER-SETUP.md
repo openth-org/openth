@@ -255,7 +255,10 @@ sudo bash setup-referee-host.sh --release mp-stable-NEWNUMBER --motd "Welcome to
   works for players whose game is a release of 19 November 2026
   (`mp-stable-b56bdcce`) or newer, and only if the release has a game pack
   (all OpenTH releases since then do; the script says `no game pack` if
-  not). Older games are told which release to download, with a link.
+  not). A release that also changes the game's engine (as a new version of
+  CorsixTH underneath can) cannot be fetched this way by games from before
+  it. Players who cannot switch are told which release to download, with a
+  link; they do that once.
 - **Never** pass `--data /opt/corsixth-mp/thdata/...`: the script empties that
   folder first, and your game files would be gone. To change the game files,
   copy them to `~/themehos` again as in step 3 and pass `--data ~/themehos`.
@@ -282,8 +285,9 @@ sudo bash setup-referee-host.sh --release mp-stable-NEWNUMBER --motd "Welcome to
   provider's firewall and `ufw` (step 2), and that the service runs
   (`systemctl status corsixth-mp`).
 - **"Other game version: get ... on GitHub":** the player's game is not the
-  release the server runs, and it is too old to fetch it by itself (step 8).
-  They download the release it names, once.
+  release the server runs, and it cannot fetch it by itself (too old, or the
+  server's release has another engine; step 8). They download the release
+  it names, once.
 - **"Your Theme Hospital files differ from this server's":** only on a
   server without the referee (`CORSIXTH_MP_DATA` set): the player's edition
   differs from the server's. With the referee such players are let in.
