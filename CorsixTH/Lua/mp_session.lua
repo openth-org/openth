@@ -2719,19 +2719,16 @@ end
 
 --! Moves a hospital's reputation by `points` rating points (multiplayer
 --! rewards, dirty tricks, gifts between allies). The reputation is a credit
---! over a weight (ReputationAccount); a point is worth weight / 500 credit,
---! so early in a game a few points are less than one whole credit, which
---! Hospital:changeReputationByPoints drops. What is left over here is kept
---! with the hospital for its next change, so small rewards add up.
+--! over a weight (ReputationAccount); a point is worth weight / 500 credit.
+--! Hospital:changeReputationByPoints moves whole credits only, which early
+--! in a game (weight 20: a credit is 25 points) loses a rat attack's 14
+--! points entirely. These multiplayer events were made in points, so they
+--! move the credit by exactly that much, fractions included.
 function MultiplayerSession.changeReputation(hospital, points)
   local account = hospital.reputation_account
   if not account or points == 0 then return end
   local ReputationAccount = cth_require("reputation")
-  local exact = points * account.weight / ReputationAccount.rating_neutral +
-      (hospital.mp_reputation_rest or 0)
-  local whole = exact >= 0 and math.floor(exact) or -math.floor(-exact)
-  hospital.mp_reputation_rest = exact - whole
-  if whole ~= 0 then account:applyDelta(whole, 0) end
+  account:applyDelta(points * account.weight / ReputationAccount.rating_neutral, 0)
   hospital:updateReputation()
 end
 
