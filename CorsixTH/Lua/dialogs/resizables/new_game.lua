@@ -176,5 +176,5 @@ end
 
 function UINewGame:close()
   UIResizable.close(self)
-  self.ui:addWindow(UIMainMenu(self.ui))
+  self.ui:openMainMenu()
 end

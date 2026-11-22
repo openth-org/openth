@@ -304,7 +304,9 @@ function UI:drawTooltip(canvas)
 end
 
 function UI:draw(canvas)
-  if self.background then
+  if self.professor_background then
+    UIProfessorMenu.drawPicture(canvas)
+  elseif self.background then
     local bg_w, bg_h = self.background_width, self.background_height
     local screen_w, screen_h = canvas:getRenderSize()
     local factor = math.max(screen_w / bg_w, screen_h / bg_h)
@@ -528,6 +530,12 @@ end
 --! set game window is selected. If no image fits that criteria the smallest
 --! available image is used.
 function UI:setMenuBackground()
+  -- The professor's chart, when his is the main menu.
+  self.professor_background = UIProfessorMenu.wanted(self.app) or nil
+  if self.professor_background then
+    self.background = nil
+    return
+  end
   local screen_h = self.app.config.height
   local bg_size_idx = 1
 
@@ -550,6 +558,23 @@ function UI:setMenuBackground()
   self.background_width = bg_size[1]
   self.background_height = bg_size[2]
   self.background = self.app.gfx:loadRaw("mainmenu" .. bg_size[2], bg_size[1], bg_size[2], "Bitmap")
+end
+
+--! Opens the main menu: the professor at his chart (UIProfessorMenu) when
+--! that is on and the game files have it, else the list of buttons.
+--!return (UIMainMenu) the menu window
+function UI:openMainMenu()
+  if UIProfessorMenu.wanted(self.app) then
+    local menu = UIProfessorMenu(self)
+    self:addWindow(menu)
+    -- Under the other windows (the tips): only its spots take the mouse.
+    self:sendToBottom(menu)
+    menu:placeTips()
+    return menu
+  end
+  local menu = UIMainMenu(self)
+  self:addWindow(menu)
+  return menu
 end
 
 function UI:onChangeResolution()

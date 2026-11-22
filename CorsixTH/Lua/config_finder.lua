@@ -155,6 +155,7 @@ local function new_config_defaults()
     movies = true,
     play_intro = true,
     play_demo = true,
+    professor_menu = true,
     allow_user_actions_while_paused = false,
     volume_opens_casebook = false,
     alien_dna_only_by_emergency = true,
@@ -513,6 +514,12 @@ param(config_values, 'play_intro') .. [=[
 -- Demo movie (played on idle at main menu): Enabled by default
 --]=] .. '\n' ..
 param(config_values, 'play_demo') .. [=[
+
+-- Main menu: the original game's professor at his chart (true, the default,
+-- when the game files have his pictures), or the list of buttons (false).
+-- With the intro on, he comes to his chart after it.
+--]=] .. '\n' ..
+param(config_values, 'professor_menu') .. [=[
 
 -------------------------------------------------------------------------------
 -- Allow user actions while game is paused

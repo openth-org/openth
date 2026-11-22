@@ -457,9 +457,20 @@ function App:init()
   TheApp:saveConfig()
   TheApp:saveHotkeys()
 
+  -- After the intro, the professor comes to his chart (the original's movie,
+  -- MMENU1) when his is the main menu, unless a game is loading at once.
+  local function after_intro()
+    if self.config.professor_menu and not self.command_line.load and
+        not self.command_line.continue then
+      self.moviePlayer:playMenuMovie(false, callback_after_movie)
+    else
+      callback_after_movie()
+    end
+  end
+
   -- (Not when the game restarted to join a server as another build.)
   if self.config.play_intro and not corsixth.require("mp_pack").rejoinPending(self) then
-    self.moviePlayer:playIntro(callback_after_movie)
+    self.moviePlayer:playIntro(after_intro)
   else
     callback_after_movie()
   end
@@ -731,14 +742,15 @@ function App:loadMainMenu(message)
   self.map = nil
 
   local UI = _G["UI"] ---@type UI
-  local UIMainMenu = _G["UIMainMenu"] ---@type UIMainMenu
   local UITipOfTheDay = _G["UITipOfTheDay"] ---@type UITipOfTheDay
   local UIInformation = _G["UIInformation"] ---@type UIInformation
 
   self.ui = UI(self, false)
   self.ui:setMenuBackground()
-  self.ui:addWindow(UIMainMenu(self.ui))
+  local menu = self.ui:openMainMenu()
   self.ui:addWindow(UITipOfTheDay(self.ui))
+  -- (On the professor's blackboard, in an empty space.)
+  if menu.placeTips then menu:placeTips() end
 
   -- Show update window if there's an update
   self:checkForUpdates()

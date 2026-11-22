@@ -101,10 +101,11 @@ local destroyMovie = function(me)
   me.typing_sound = nil
   me.playing = false
   me.movie_over = false
-  if me.callback_on_destroy_movie then
-    me.callback_on_destroy_movie()
-    me.callback_on_destroy_movie = nil
-  end
+  -- (Cleared first: the callback may play the next movie, with its own, as
+  -- the professor coming to his chart after the intro.)
+  local callback = me.callback_on_destroy_movie
+  me.callback_on_destroy_movie = nil
+  if callback then callback() end
 end
 
 local loseMovieOverlay = function(me, lose_movie_index)
@@ -380,6 +381,8 @@ function MoviePlayer:MoviePlayer(app, audio, video)
   self.demo_movie = nil
   self.win_game_movie = nil
   self.win_level_movie = nil
+  self.menu_in_movie = nil
+  self.menu_out_movie = nil
   self.wait_for_stop = false
   self.wait_for_over = false
   self.movie_over = false
@@ -425,6 +428,13 @@ function MoviePlayer:init()
       if movie:upper():match(pathsep .. "WINLEVEL%.[^" .. pathsep .. "]+$") then
         self.win_level_movie = fs:fileUri(movie)
       end
+
+      --the professor coming to his chart and leaving it (UIProfessorMenu)
+      if movie:upper():match(pathsep .. "MMENU1%-0%.[^" .. pathsep .. "]+$") then
+        self.menu_in_movie = fs:fileUri(movie)
+      elseif movie:upper():match(pathsep .. "MMENU2%-0%.[^" .. pathsep .. "]+$") then
+        self.menu_out_movie = fs:fileUri(movie)
+      end
     end
   end
 
@@ -445,6 +455,14 @@ end
 --!param callback_after_movie (function) What to do once movie ends
 function MoviePlayer:playIntro(callback_after_movie)
   self:playMovie(self.intro_movie, false, callback_after_movie)
+end
+
+--! Plays the professor coming to his chart (before the professor's main
+--! menu), or leaving it (when the game ends from it); a click skips it.
+--!param leaving (boolean) leaving rather than coming
+--!param callback (function) what to do after it (or at once without it)
+function MoviePlayer:playMenuMovie(leaving, callback)
+  self:playMovie(leaving and self.menu_out_movie or self.menu_in_movie, false, callback)
 end
 
 --! Plays the demo gameplay footage movie from TH

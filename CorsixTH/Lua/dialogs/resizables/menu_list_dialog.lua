@@ -133,7 +133,7 @@ end
 function UIMenuList:close()
   UIResizable.close(self)
   if self.mode == "menu" then
-    self.ui:addWindow(UIMainMenu(self.ui))
+    self.ui:openMainMenu()
   end
 end
 

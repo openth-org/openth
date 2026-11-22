@@ -63,7 +63,7 @@ globals = { -- Globals
             "UILoadMap", "UILuaConsole", "UIMachine", "UIMakeDebugPatient",
             "UIMainMenu", "UIMapEditor", "UIMenu", "UIMenuBar", "UIMenuList", "UIMultiplayer", "UIMultiplayerChooseHospital", "UIMultiplayerDownload", "UIMultiplayerSave", "UIMultiplayerOffer", "UIMultiplayerAskMoney", "UIMultiplayerChat", "UIMultiplayerChatInput", "UIMultiplayerGivePlot", "UIMultiplayerPlayers", "UIMultiplayerResearch", "UIMultiplayerSabotage", "UIMultiplayerSpy", "UIMultiplayerLitterBomb", "UIMultiplayerTrade",
             "UIMessage", "UINewGame", "UIOptions", "UIPatient", "UIMachineMenu",
-            "UIPlaceObjects", "UIPlaceStaff", "UIPolicy", "UIProgressReport",
+            "UIPlaceObjects", "UIPlaceStaff", "UIPolicy", "UIProfessorMenu", "UIProgressReport",
             "UIQueue", "UIQueuePopup", "UIResizable", "UIResearch",
             "UISaveGame", "UISaveMap", "UIScrollSpeed",
             "UIShiftScrollSpeed", "UISoundSettings", "UIStaff",

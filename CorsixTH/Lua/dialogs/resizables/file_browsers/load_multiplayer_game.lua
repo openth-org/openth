@@ -57,6 +57,6 @@ function UILoadMultiplayerGame:close()
   if TheApp.mp_lobby and TheApp.mp_lobby.state == "connected" then
     self.ui:addWindow(UIMultiplayer(self.ui))
   else
-    self.ui:addWindow(UIMainMenu(self.ui))
+    self.ui:openMainMenu()
   end
 end

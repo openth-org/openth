@@ -276,7 +276,7 @@ function UIMultiplayerLevels:close()
   if TheApp.mp_lobby and (TheApp.mp_lobby.state == "connected" or TheApp.mp_lobby.state == "in_room") then
     self.ui:addWindow(UIMultiplayer(self.ui))
   else
-    self.ui:addWindow(UIMainMenu(self.ui))
+    self.ui:openMainMenu()
   end
 end
 

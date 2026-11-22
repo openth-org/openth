@@ -46,6 +46,8 @@ function UICustomise:UICustomise(ui, mode)
     { name = "movies" },
     -- Intro movie
     { name = "play_intro" },
+    -- The professor's main menu (or the list of buttons)
+    { name = "professor_menu", func = self.buttonProfessorMenu },
     -- Allow user actions when paused
     { name = "allow_user_actions_while_paused" },
     -- Alien DNA from emergencies only/must stand/can knock on doors
@@ -72,6 +74,12 @@ function UICustomise:buttonAliens(app)
   app.config.alien_dna_can_knock_on_doors = not app.config.alien_dna_can_knock_on_doors
 end
 
+function UICustomise:buttonProfessorMenu(app)
+  app.config.professor_menu = not app.config.professor_menu
+  -- The menu's background changes at once, the menu when this window closes.
+  if not app.world then self.ui:setMenuBackground() end
+end
+
 function UICustomise:buttonBack()
   self:close()
   local window = UIOptions(self.ui, "menu")
@@ -87,6 +95,6 @@ end
 function UICustomise:close()
   UIResizable.close(self)
   if self.mode == "menu" then
-    self.ui:addWindow(UIMainMenu(self.ui))
+    self.ui:openMainMenu()
   end
 end

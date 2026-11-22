@@ -1249,7 +1249,7 @@ function UIMultiplayer:close()
   -- This window took the main menu's place; give it back (not when a game
   -- has just started and replaced the whole screen).
   if not self.rebuilding and not TheApp.world and not (self.lobby and self.lobby.state == "in_game") then
-    self.ui:addWindow(UIMainMenu(self.ui))
+    self.ui:openMainMenu()
   end
 end
 
