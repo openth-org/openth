@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Build a portable Linux x86_64 package of CorsixTH multiplayer: a folder
+# Build a portable Linux x86_64 package of OpenTH (CorsixTH with network
+# multiplayer): a folder
 # (and a .tar.gz of it) that runs without installing anything, on the
 # distribution it was built on and newer ones (build it on Ubuntu 24.04 for
 # Linux Mint 22 and later).
@@ -13,7 +14,8 @@
 #
 # Needs the build packages listed in .github/workflows/LinuxPackage.yml.
 # Usage: bash scripts/multiplayer/build_linux_package.sh [VERSION_LABEL]
-# Result: dist/CorsixTH-Multiplayer/ and dist/CorsixTH-Multiplayer-<label>-linux-x86_64.tar.gz
+# Result: dist/OpenTH/ (the program is openth, started by OpenTH.sh) and
+# dist/OpenTH-<label>-linux-x86_64.tar.gz
 set -euo pipefail
 src=$(cd "$(dirname "$0")/../.." && pwd)
 label=${1:-$(git -C "$src" rev-parse --short=8 HEAD 2>/dev/null || echo dev)}
@@ -93,11 +95,12 @@ cmake --install "$work/build"
 
 # 4. The package: the game's files with the program next to CorsixTH.lua
 # (where it looks first), libraries in lib/, Lua modules in lua/.
-pkg=$dist/CorsixTH-Multiplayer
+pkg=$dist/OpenTH
 rm -rf "$pkg"
 mkdir -p "$pkg/lib" "$pkg/lua"
 cp -a "$work/stage/share/corsix-th/." "$pkg/"
-cp "$work/stage/bin/corsix-th" "$pkg/corsix-th"
+# (corsix-th, as CMake installs it, is called openth in the package)
+cp "$work/stage/bin/corsix-th" "$pkg/openth"
 cp -a "$mods/." "$pkg/lua/"
 cp -a "$lmods/." "$pkg/lua/"
 cp "$src/LICENSE.txt" "$pkg/" 2>/dev/null || true
@@ -120,43 +123,43 @@ copy_deps() {
   done
 }
 export LD_LIBRARY_PATH="$P/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-copy_deps "$pkg/corsix-th"
+copy_deps "$pkg/openth"
 find "$pkg/lua" -name '*.so' | while read -r so; do copy_deps "$so"; done
-patchelf --set-rpath '$ORIGIN/lib' "$pkg/corsix-th"
+patchelf --set-rpath '$ORIGIN/lib' "$pkg/openth"
 for so in "$pkg"/lib/*.so*; do patchelf --set-rpath '$ORIGIN' "$so" 2>/dev/null || true; done
 
-cat > "$pkg/CorsixTH-Multiplayer.sh" <<'EOF'
+cat > "$pkg/OpenTH.sh" <<'EOF'
 #!/bin/sh
-# Start CorsixTH multiplayer from this folder, with its own config.txt (and
+# Start OpenTH from this folder, with its own config.txt (and
 # saves in a Saves folder here), like "Play multiplayer.bat" on Windows.
 here=$(cd "$(dirname "$0")" && pwd)
 export LD_LIBRARY_PATH="$here/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export LUA_CPATH_5_5="$here/lua/?.so;;"
 export LUA_PATH_5_5="$here/lua/?.lua;$here/lua/?/init.lua;;"
 cd "$here" || exit 1
-exec ./corsix-th --config-file="$here/config.txt" "$@"
+exec ./openth --config-file="$here/config.txt" "$@"
 EOF
-chmod +x "$pkg/CorsixTH-Multiplayer.sh" "$pkg/corsix-th"
+chmod +x "$pkg/OpenTH.sh" "$pkg/openth"
 
 cat > "$pkg/README-MULTIPLAYER.txt" <<EOF
-CorsixTH-Multiplayer test build (Linux x86_64)
+OpenTH (CorsixTH with network multiplayer) for Linux x86_64
 Commit $label of https://github.com/openth-org/openth
 
-Start it with ./CorsixTH-Multiplayer.sh (the first time it asks for your
+Start it with ./OpenTH.sh (the first time it asks for your
 Theme Hospital folder; the game data is not included). Settings and saves
 stay in this folder (config.txt, Saves), so the folder can be copied.
 
-Everybody in a game must use the same build of the same commit, on Windows
-or Linux. Main menu > Multiplayer, server address (host:port) and your name.
-Keep the game language English.
+Everybody in a game needs the same build (Windows, Linux and macOS play
+together); a server gives you its build in the game. Main menu >
+Multiplayer, click a server and enter your name.
 
 Full guide: docs/multiplayer/PLAYING.md in the repository.
-CorsixTH is MIT licensed (LICENSE.txt). Theme Hospital is a trademark of
+OpenTH and CorsixTH are MIT licensed (LICENSE.txt). Theme Hospital is a trademark of
 Electronic Arts; this build contains none of its data.
 EOF
 
-tarball=$dist/CorsixTH-Multiplayer-$label-linux-x86_64.tar.gz
-tar -C "$dist" -czf "$tarball" CorsixTH-Multiplayer
+tarball=$dist/OpenTH-$label-linux-x86_64.tar.gz
+tar -C "$dist" -czf "$tarball" OpenTH
 echo "Bundled libraries:"; ls "$pkg/lib"
 echo "Package: $pkg"
 echo "Archive: $tarball"

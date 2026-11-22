@@ -1,4 +1,4 @@
-"""CorsixTH multiplayer relay and lobby.
+"""OpenTH multiplayer relay and lobby (CorsixTH with network multiplayer).
 
 The server never simulates the game. It
   * keeps password-protected rooms and checks that everyone runs the same
@@ -2446,7 +2446,7 @@ class Server:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="CorsixTH multiplayer relay and lobby")
+    parser = argparse.ArgumentParser(description="OpenTH multiplayer relay and lobby")
     parser.add_argument("--host", default=os.environ.get("CORSIXTH_MP_HOST", "0.0.0.0"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("CORSIXTH_MP_PORT", "47800")))
     parser.add_argument("--motd", default=os.environ.get("CORSIXTH_MP_MOTD", ""))

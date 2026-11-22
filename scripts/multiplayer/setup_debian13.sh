@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prepare a Debian 13 (trixie) machine to build and test CorsixTH multiplayer
+# Prepare a Debian 13 (trixie) machine to build and test OpenTH (CorsixTH with network multiplayer)
 # headlessly. Installs packages with sudo, builds SDL 3.4 and SDL3_mixer into
 # $RUNTIME_ROOT/prefix (Debian 13 has SDL 3.2, which SDL3_mixer 3.2.4 cannot
 # use), and writes $HOME/mp-env.sh with the variables the probe scripts need.

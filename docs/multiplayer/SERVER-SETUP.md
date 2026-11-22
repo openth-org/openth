@@ -218,7 +218,7 @@ sudo journalctl -u corsixth-mp -n 30
 You should see these lines (the numbers differ):
 
 ```
-headless referee enabled: /opt/corsixth-mp/referee/18d0554f/game/corsix-th
+headless referee enabled: /opt/corsixth-mp/referee/<commit>/game/openth
 players must have build 60acf5b8 (mp-stable-18d0554f)
 players must have Theme Hospital data 899c66d0
 ```

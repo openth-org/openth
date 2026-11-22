@@ -32,25 +32,24 @@ rough edges in those); please report what you find.
    and download the newest stable release's `...-win64.zip` (or the newest
    test build's, for EU2; no GitHub account needed). Unzip it into a new
    folder.
-2. Start `CorsixTH.exe`. The first time it asks for your Theme Hospital
-   folder.
+2. Start `OpenTH.exe` (`CorsixTH.exe` in downloads from before November
+   2026). The first time it asks for your Theme Hospital folder.
 3. Any game language works: players in different languages play together
    (from the test build after 174c9927).
 
 **Linux** (x86_64; Linux Mint 22, Ubuntu 24.04 or newer): download the
 `...-linux-x86_64.tar.gz` of the same release, unpack it
-(`tar xzf CorsixTH-Multiplayer-*-linux-x86_64.tar.gz`) and start
-`CorsixTH-Multiplayer/CorsixTH-Multiplayer.sh`. Settings and saves stay in
+(`tar xzf OpenTH-*-linux-x86_64.tar.gz`) and start `OpenTH/OpenTH.sh`. Settings and saves stay in
 that folder. It brings its own libraries; the usual desktop ones (graphics,
 sound) come from your system.
 
 **macOS** (Apple Silicon, the macOS version the release names): download the
 `...-macos-arm64.zip` of the same release, unzip it and move
-`CorsixTH.app` to Applications. The app is not notarized by Apple, so the
+`OpenTH.app` to Applications. The app is not notarized by Apple, so the
 first time macOS refuses to open it: open **System Settings > Privacy &
-Security**, scroll down to the note about CorsixTH and click **Open
+Security**, scroll down to the note about OpenTH and click **Open
 Anyway** (once). (Or in Terminal:
-`xattr -dr com.apple.quarantine /Applications/CorsixTH.app`.) Settings
+`xattr -dr com.apple.quarantine /Applications/OpenTH.app`.) Settings
 and saves are in the hidden folder `~/.config/CorsixTH`.
 
 Everybody in a game must use the same release, and the server must run the
@@ -698,6 +697,6 @@ Please tell us, in an [issue on GitHub](https://github.com/openth-org/openth/iss
 or on [Discord](https://openth.org/discord): the server address, the room
 name, roughly when it happened, and what you were doing, and attach the
 newest file from the game's `Logs` folder (in
-`%APPDATA%\CorsixTH`, or next to `CorsixTH.exe` if `config.txt` is there).
+`%APPDATA%\CorsixTH`, or next to `OpenTH.exe` if `config.txt` is there).
 After an out-of-sync, a game error or a game that stopped, the server's log
 also says what happened, which helps a lot.

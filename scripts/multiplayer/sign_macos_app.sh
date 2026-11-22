@@ -89,7 +89,7 @@ if [[ $id != - && -n ${NOTARY_KEY:-} ]]; then
   # The note for players no longer needs Open Anyway.
   readme=$top/README-MULTIPLAYER.txt
   if [[ -f "$readme" ]]; then
-    perl -0pi -e 's/The app is not\nnotarized by Apple:.*?CorsixTH\.app\n/The app is signed and notarized by Apple: it opens with a double click.\n/s' "$readme"
+    perl -0pi -e 's/The app is not\nnotarized by Apple:.*?(?:CorsixTH|OpenTH)\.app\n/The app is signed and notarized by Apple: it opens with a double click.\n/s' "$readme"
   fi
 else
   echo "Not notarized (ad hoc signature or no NOTARY_KEY)"

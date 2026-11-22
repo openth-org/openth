@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the CorsixTH multiplayer server natively (a systemd service) with the
+# Run the OpenTH multiplayer server natively (a systemd service) with the
 # headless referee, which repairs desyncs and lets a dropped player rejoin
 # (docs/multiplayer/referee.md). Ubuntu or Debian; run as root (sudo).
 #
@@ -58,7 +58,7 @@ RELEASE=""
 CODE=""
 DATA=""
 PORT=47800
-MOTD="CorsixTH multiplayer server (with referee)"
+MOTD="OpenTH server (with referee)"
 NAME=""
 EXPERTS="-"
 REPO=openth-org/openth
@@ -126,9 +126,18 @@ if [[ ! -x "$BASE/venv/bin/python" ]]; then python3 -m venv "$BASE/venv"; fi
 say "Referee: the Linux package of $RELEASE"
 R="$BASE/referee/$SHA"
 rm -rf "$R" && mkdir -p "$R/scripts/multiplayer"
-url="https://github.com/$REPO/releases/download/$RELEASE/CorsixTH-Multiplayer-$SHA-linux-x86_64.tar.gz"
-curl -fsSL "$url" | tar xz -C "$R"
-mv "$R/CorsixTH-Multiplayer" "$R/game"
+# OpenTH-<sha>-linux-x86_64.tar.gz (folder OpenTH, program openth) since the
+# rename; older releases have CorsixTH-Multiplayer-<sha>-... (folder
+# CorsixTH-Multiplayer, program corsix-th).
+pkg=""
+for name in OpenTH CorsixTH-Multiplayer; do
+  url="https://github.com/$REPO/releases/download/$RELEASE/$name-$SHA-linux-x86_64.tar.gz"
+  if curl -fsSL "$url" | tar xz -C "$R"; then pkg=$name; break; fi
+done
+[[ -n "$pkg" ]] || die "no Linux package in $RELEASE"
+mv "$R/$pkg" "$R/game"
+BIN=$R/game/openth
+[[ -x "$BIN" ]] || BIN=$R/game/corsix-th
 ln -s game "$R/CorsixTH" # referee.lua loads <source>/CorsixTH/CorsixTH.lua
 # The referee, and the bots (computer players) a room owner adds, if this
 # release has them, and what the bots learn with (bot_learned.lua; the
@@ -138,7 +147,7 @@ for f in referee.lua probe_builder.lua bot.lua bot_manager.lua bot_learned.lua b
   if [[ -f "$BASE/src/scripts/multiplayer/$f" ]]; then cp "$BASE/src/scripts/multiplayer/$f" "$R/scripts/multiplayer/"; fi
 done
 chown -R root:corsixth "$BASE/referee" "$BASE/src" && chmod -R g+rX,o= "$BASE/referee"
-missing=$(LD_LIBRARY_PATH="$R/game/lib" ldd "$R/game/corsix-th" | grep "not found" || true)
+missing=$(LD_LIBRARY_PATH="$R/game/lib" ldd "$BIN" | grep "not found" || true)
 [[ -z "$missing" ]] || die "the game binary misses libraries: $missing"
 
 say "Game pack of $RELEASE, if it has one"
@@ -184,7 +193,7 @@ CORSIXTH_MP_MOTD=$MOTD
 CORSIXTH_MP_RELEASE=$RELEASE
 # Signed game pack of this build, downloaded by players of other builds.
 CORSIXTH_MP_PACKS=$PACKS
-CORSIXTH_MP_REFEREE_BINARY=$R/game/corsix-th
+CORSIXTH_MP_REFEREE_BINARY=$BIN
 CORSIXTH_MP_REFEREE_SOURCE=$R
 CORSIXTH_MP_REFEREE_DATA=$BASE/thdata/themehos
 CORSIXTH_MP_REFEREE_LUA_CPATH=$R/game/lua/?.so
@@ -199,7 +208,7 @@ EOF
 chmod 644 /etc/corsixth-mp.env
 cat > /etc/systemd/system/corsixth-mp.service <<EOF
 [Unit]
-Description=CorsixTH multiplayer server (with the headless referee)
+Description=OpenTH multiplayer server (with the headless referee)
 After=network-online.target
 Wants=network-online.target
 
@@ -238,7 +247,7 @@ fi
 # The daily report (posted only if DISCORD_WEBHOOK_URL is in the secrets).
 cat > /etc/systemd/system/corsixth-mp-report.service <<EOF
 [Unit]
-Description=CorsixTH multiplayer: yesterday's games to Discord
+Description=OpenTH: yesterday's games to Discord
 
 [Service]
 Type=oneshot
@@ -255,7 +264,7 @@ PrivateTmp=yes
 EOF
 cat > /etc/systemd/system/corsixth-mp-report.timer <<EOF
 [Unit]
-Description=CorsixTH multiplayer: the daily report at 7:00 Prague time
+Description=OpenTH: the daily report at 7:00 Prague time
 
 [Timer]
 OnCalendar=*-*-* 07:00:00 Europe/Prague
@@ -267,7 +276,7 @@ EOF
 # The bots learn from the night's saves of expert players, before the report.
 cat > /etc/systemd/system/corsixth-mp-learn.service <<EOF
 [Unit]
-Description=CorsixTH multiplayer: the bots learn from expert players' saved games
+Description=OpenTH: the bots learn from expert players' saved games
 
 [Service]
 Type=oneshot
@@ -286,7 +295,7 @@ PrivateTmp=yes
 EOF
 cat > /etc/systemd/system/corsixth-mp-learn.timer <<EOF
 [Unit]
-Description=CorsixTH multiplayer: the bots learn at 6:30 Prague time
+Description=OpenTH: the bots learn at 6:30 Prague time
 
 [Timer]
 OnCalendar=*-*-* 06:30:00 Europe/Prague

@@ -104,6 +104,11 @@ target_link_libraries(CorsixTH PRIVATE CorsixTH_lib)
 
 if(UNIX AND NOT APPLE)
   set_target_properties(CorsixTH PROPERTIES OUTPUT_NAME corsix-th)
+elseif(WIN32)
+  # OpenTH (CorsixTH with network multiplayer): OpenTH.exe. The macOS app and
+  # the Linux package get the name when they are packed
+  # (scripts/multiplayer/build_macos_app.sh, build_linux_package.sh).
+  set_target_properties(CorsixTH PROPERTIES OUTPUT_NAME OpenTH)
 endif()
 
 if(NOT ATOMIC_BUILTIN)

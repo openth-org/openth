@@ -46,7 +46,7 @@ level loads and restores the original order when the session ends.
 ## LuaSocket on Windows
 
 `vcpkg.json` now pulls the `luasocket` port on Windows, and the CMake build
-copies `socket/core.dll` and `socket.lua` next to `CorsixTH.exe`; the Windows
+copies `socket/core.dll` and `socket.lua` next to `OpenTH.exe`; the Windows
 install rule (and so the CI artifact) includes them. Lua's default Windows
 search paths find them there.
 
@@ -68,7 +68,7 @@ search paths find them there.
 . ~/mp-env.sh; bash scripts/multiplayer/setup_lua55_linux.sh; . ~/lua55-env.sh
 bash scripts/multiplayer/run_s0_fingerprints.sh $BIN55 $THDATA ~/s0-linux.txt 80000
 # Windows (Git Bash), CI artifact unpacked
-bash scripts/multiplayer/run_s0_fingerprints.sh /c/path/CorsixTH/CorsixTH.exe /c/path/themehos s0-windows.txt 80000
+bash scripts/multiplayer/run_s0_fingerprints.sh /c/path/CorsixTH/OpenTH.exe /c/path/themehos s0-windows.txt 80000
 python scripts/multiplayer/compare_fingerprints.py s0-linux.txt s0-windows.txt
 ```
 

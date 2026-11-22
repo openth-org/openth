@@ -4,7 +4,7 @@
 # Cross-platform determinism check (milestone S0), one side: run the busy
 # single-player scenario of sync_probe.lua (seed 12345, no network) headless
 # and write one fingerprint line per game hour to OUT_FILE. Run it on Windows
-# (Git Bash, with the CI-built CorsixTH.exe) and on Linux with the same
+# (Git Bash, with the CI-built OpenTH.exe) and on Linux with the same
 # checkout, then compare the two files (compare_fingerprints.py). The two
 # builds must use the same Lua version (Windows: Lua 5.5; on Linux see
 # setup_lua55_linux.sh).

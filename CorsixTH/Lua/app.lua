@@ -185,7 +185,9 @@ function App:init()
   self.video:setBlueFilterActive(false)
   SDL.wm.setIconWin32()
 
-  self.caption = "CorsixTH"
+  -- (The engine names the window CorsixTH when it makes it.)
+  self.caption = "OpenTH"
+  self.video:setCaption(self.caption)
   if self.config.track_fps then
     SDL.trackFPS(true)
     SDL.limitFPS(false)

@@ -28,7 +28,7 @@ Hospital data and LuaSocket.
 
 | Variable | Meaning |
 |---|---|
-| `CORSIXTH_MP_REFEREE_BINARY` | the `corsix-th` executable |
+| `CORSIXTH_MP_REFEREE_BINARY` | the game program: `openth` in the Linux package (`corsix-th` in older ones and in a source build) |
 | `CORSIXTH_MP_REFEREE_SOURCE` | OpenTH checkout (for `CorsixTH/` and `scripts/multiplayer/referee.lua`) |
 | `CORSIXTH_MP_REFEREE_DATA` | Theme Hospital data folder (read only is enough) |
 | `CORSIXTH_MP_REFEREE_LUA_CPATH`, `..._LUA_PATH` | where LuaSocket is, if not in the standard paths |

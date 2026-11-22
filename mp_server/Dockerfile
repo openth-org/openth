@@ -1,4 +1,4 @@
-# Relay and lobby server for CorsixTH multiplayer (mp_server/).
+# Relay and lobby server for OpenTH multiplayer (mp_server/).
 # Standard library only; no game code and no Theme Hospital data in the image.
 #
 #   docker build -t corsixth-mp-server mp_server
@@ -6,7 +6,7 @@
 FROM python:3.13-slim
 
 LABEL org.opencontainers.image.title="corsixth-mp-server" \
-      org.opencontainers.image.description="Relay and lobby server for the experimental CorsixTH multiplayer mode" \
+      org.opencontainers.image.description="Relay and lobby server for OpenTH, CorsixTH with network multiplayer" \
       org.opencontainers.image.source="https://github.com/openth-org/openth" \
       org.opencontainers.image.licenses="MIT"
 
