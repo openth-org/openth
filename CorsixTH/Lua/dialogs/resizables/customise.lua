@@ -46,8 +46,9 @@ function UICustomise:UICustomise(ui, mode)
     { name = "movies" },
     -- Intro movie
     { name = "play_intro" },
-    -- The professor's main menu (or the list of buttons)
-    { name = "professor_menu", func = self.buttonProfessorMenu },
+    -- Main menu: the professor's (the original game's) or the list of
+    -- buttons (CorsixTH's)
+    { name = "professor_menu", func = self.buttonProfessorMenu, custom_labels = true },
     -- Allow user actions when paused
     { name = "allow_user_actions_while_paused" },
     -- Alien DNA from emergencies only/must stand/can knock on doors

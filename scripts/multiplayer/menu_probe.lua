@@ -174,7 +174,29 @@ local ok, err = pcall(function()
   options:buttonCustomise()
   local customise = assert(ui:getWindow(UICustomise), "no customise window")
   assert(customise.buttons.professor_menu, "no professor menu switch")
+  -- It says which menu: Professor, then List after a press (the window is
+  -- made again), with the list's background at once; a press back.
+  local function switchLabel()
+    local window = assert(ui:getWindow(UICustomise), "the customise window went")
+    return window.buttons.professor_menu.panel_for_sprite.label, window
+  end
+  if switchLabel() ~= _S.customise_window.professor_menu_on then
+    fail("the switch says " .. tostring(switchLabel()) .. ", not Professor")
+  end
   shot("customise-window")
+  customise.buttons.professor_menu:handleClick("left")
+  local label, window = switchLabel()
+  if label ~= _S.customise_window.professor_menu_off or TheApp.config.professor_menu
+      or ui.professor_background then
+    fail("the switch did not choose the list: " .. tostring(label))
+  end
+  shot("customise-list")
+  window.buttons.professor_menu:handleClick("left")
+  label, customise = switchLabel()
+  if label ~= _S.customise_window.professor_menu_on or not TheApp.config.professor_menu
+      or not ui.professor_background then
+    fail("the switch did not choose the professor again: " .. tostring(label))
+  end
   -- Closing it goes back to the Options (upstream since November 2026), whose
   -- Back brings the professor back.
   customise:close()
