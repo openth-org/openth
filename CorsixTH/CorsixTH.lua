@@ -84,7 +84,11 @@ _G['corsixth'] = {}
 --   and do not include the .lua file extension.
 --!return The return value of whatever source file is opened.
 corsixth.require = function(name)
-  name = name:gsub("%.", pathsep)
+  -- (A name with dots or with slashes is the same file: App:loadLuaFolder
+  -- names "dialogs/resizables" files with a slash and the system's separator,
+  -- cth_require("dialogs.resizables.x") with dots. On Windows the two did not
+  -- match, so such a file ran twice and its class was made anew.)
+  name = name:gsub("[%./]", pathsep)
   if done_files[name] then
     local results = done_files[name]
     return unpack(results, 1, results.n)
@@ -93,8 +97,10 @@ corsixth.require = function(name)
   return save_results(done_files, name, persist.dofile(code_dir .. name .. ".lua"))
 end
 
+cth_require = corsixth.require
+
 -- Load standard library extensions
-corsixth.require("utility")
+cth_require("utility")
 
 -- Check Lua version
 local support = list_to_set({"Lua 5.1", "Lua 5.2", "Lua 5.3", "Lua 5.4", "Lua 5.5"})
@@ -107,7 +113,7 @@ if _VERSION ~= "Lua 5.1" then
 end
 
 -- Enable strict mode
-corsixth.require("strict")
+cth_require("strict")
 require = destrict(require) -- luacheck: ignore 121
 dofile = destrict(dofile) -- luacheck: ignore 121
 
@@ -115,11 +121,9 @@ dofile = destrict(dofile) -- luacheck: ignore 121
 corsixth.require("class")
 
 -- Load the main App class
-corsixth.require("app")
-
 -- Create an instance of the App class and transfer control to it
 strict_declare_global "TheApp"
-TheApp = App() ---@type App
+TheApp = cth_require("app")()
 TheApp:setCommandLine(
   "--bitmap-dir=" ..base_dir.. "Bitmap",
   "--config-file=" .. corsixth.require("config_finder").config_filename,

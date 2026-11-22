@@ -18,7 +18,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-corsixth.require("announcer")
+cth_require("announcer")
 local AnnouncementPriority = _G["AnnouncementPriority"] --[[@as AnnouncementPriority]]
 local Object = _G['Object'] ---@type Object
 
@@ -101,12 +101,16 @@ function Helicopter:spawnPatient()
   patient.is_emergency = self.spawned_patients
   -- (They keep counting for this hospital's emergency if referred elsewhere.)
   patient.emergency_hospital = hospital
-  patient:setDiagnosed()
   patient:setMood("emergency", "activate")
   hospital.emergency_patients[self.spawned_patients] = patient
   local x, y = hospital:getHeliportSpawnPosition()
   patient:setNextAction(SpawnAction("spawn", {x = x, y = y}):setOffset({y = 1}))
   patient:setHospital(hospital)
+  -- Recorded as diagnosed only once the patient has a hospital: the record is
+  -- kept on the hospital's reputation account, so recording it beforehand
+  -- would find no hospital to apply it to. Skipping the spawn action that
+  -- follows would also leave the patient with no tile at all.
+  patient:setDiagnosed()
   -- TODO: If new combined diseases are added this will not work correctly anymore.
   patient.cure_rooms_visited = #patient.disease.treatment_rooms - 1
   local no_of_rooms = #patient.disease.treatment_rooms

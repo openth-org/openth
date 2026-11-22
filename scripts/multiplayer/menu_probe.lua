@@ -166,9 +166,13 @@ local ok, err = pcall(function()
   local customise = assert(ui:getWindow(UICustomise), "no customise window")
   assert(customise.buttons.professor_menu, "no professor menu switch")
   shot("customise-window")
+  -- Closing it goes back to the Options (upstream since November 2026), whose
+  -- Back brings the professor back.
   customise:close()
+  assert(ui:getWindow(UIOptions), "closing Customise did not go back to the options")
+  ui:getWindow(UIOptions):buttonBack()
   local again = ui:getWindow(UIMainMenu)
-  assert(again and class.is(again, UIProfessorMenu), "closing Customise did not bring the professor back")
+  assert(again and class.is(again, UIProfessorMenu), "Back did not bring the professor back")
   -- Options again, and its Back.
   again:choose(UIProfessorMenu.SPOTS[#UIProfessorMenu.SPOTS])
   assert(ui:getWindow(UIOptions), "no options window the second time")

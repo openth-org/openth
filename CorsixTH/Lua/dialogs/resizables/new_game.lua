@@ -18,7 +18,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-local UIResizable = _G['UIResizable'] ---@type UIResizable
+local UIDropdown = cth_require("dialogs.resizables.dropdown")
+local UIResizable = cth_require("dialogs.resizable")
 
 --! Class for the difficulty choice window.
 class "UINewGame" (UIResizable)
@@ -178,3 +179,5 @@ function UINewGame:close()
   UIResizable.close(self)
   self.ui:openMainMenu()
 end
+
+return UINewGame

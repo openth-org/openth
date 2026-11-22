@@ -18,8 +18,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-corsixth.require("ui")
-corsixth.require("announcer")
+cth_require("ui")
+cth_require("announcer")
+local Window = cth_require("window")
 
 local UI = _G['UI'] ---@type UI
 
@@ -273,10 +274,12 @@ function GameUI:draw(canvas)
   -- colour, drawn by the engine just before each person).
   local markers_by_engine = app.mp_session and MultiplayerSession.setFloorMarkers(self)
   local zoom = self:getEffectiveZoom()
-  local dx = self.screen_offset_x +
-      math.floor((0.5 - math.cosmetic_random()) * self.shake_screen_intensity * shake_screen_max_movement * 2)
-  local dy = self.screen_offset_y +
-      math.floor((0.5 - math.cosmetic_random()) * self.shake_screen_intensity * shake_screen_max_movement * 2)
+  local dx, dy = self.screen_offset_x, self.screen_offset_y
+  if self.shake_screen_intensity > 0 then
+    local shake = self.shake_screen_intensity * shake_screen_max_movement * 2
+    dx = dx + math.floor((0.5 - math.cosmetic_random()) * shake)
+    dy = dy + math.floor((0.5 - math.cosmetic_random()) * shake)
+  end
   if canvas:scale(zoom) then
     app.map:draw(canvas, dx, dy, math.ceil(scr_w / zoom), math.ceil(scr_h / zoom), 0, 0)
     canvas:scale(1)
@@ -504,8 +507,8 @@ function GameUI:onCursorWorldPositionChange()
   local y = math.floor(self.screen_offset_y + self.cursor_y / zoom)
   local entity = nil
   local is_near_rat = false
-  local overwindow = self:hitTest(self.cursor_x, self.cursor_y)
-  if self.do_world_hit_test and not overwindow then
+  local over_window = self:overWindow(self.cursor_x, self.cursor_y)
+  if self.do_world_hit_test and not over_window then
     entity = self.app.map.th:hitTestObjects(x, y)
     if self.do_world_hit_test ~= true then
       -- limit to non-door objects in room
@@ -515,7 +518,7 @@ function GameUI:onCursorWorldPositionChange()
     end
   end
   if entity and self:_isRivals(entity) then entity = nil end
-  if entity == nil and self.do_world_hit_test and not overwindow then
+  if entity == nil and self.do_world_hit_test and not over_window then
     is_near_rat = self.app.world:isNearRat(x, y)
   end
   if entity ~= self.cursor_entity or is_near_rat ~= self.cursor_near_rat then
@@ -568,7 +571,7 @@ function GameUI:onCursorWorldPositionChange()
   wx = math.floor(wx)
   wy = math.floor(wy)
   local room
-  if not overwindow and wx > 0 and wy > 0 and wx < self.app.map.width and wy < self.app.map.height then
+  if not over_window and wx > 0 and wy > 0 and wx < self.app.map.width and wy < self.app.map.height then
     room = self.app.world:getRoom(wx, wy)
   end
   -- Find the room associated with the current entity (Usually only applies to doors)
@@ -634,6 +637,24 @@ function GameUI:onCursorWorldPositionChange()
   return Window.onCursorWorldPositionChange(self, self.cursor_x, self.cursor_y)
 end
 
+function GameUI:overWindow(x, y)
+  if self:hitTest(x, y) then
+    -- Over open window
+    return true
+  end
+  if self.menu_bar:hitTestBar(x, y) then
+    -- Over top menu bar
+    return true
+  end
+  for i = #self.menu_bar.open_menus, 1, -1 do
+    if self.menu_bar.open_menus[i]:hitTest(x, y, 0) then
+      -- Over open top menu
+      return true
+    end
+  end
+  return false
+end
+
 local UpdateCursorPosition = TH.cursor.setPosition
 
 local highlight_x, highlight_y
@@ -655,7 +676,7 @@ function GameUI:onMouseMove(x, y, dx, dy)
 
   local repaint = UpdateCursorPosition(self.app.video, x, y)
   if self.app.moviePlayer.playing then
-    self.app.moviePlayer:mouseMove(x, y) -- (the win letter's buttons light up)
+    self.app.moviePlayer:onMouseMove(x, y)
     return false
   end
 
@@ -753,7 +774,7 @@ function GameUI:onMouseMove(x, y, dx, dy)
 end
 
 function GameUI:onMouseUp(code, x, y)
-  if self.app.moviePlayer.playing then
+  if self.app.moviePlayer.playing or self.movie_click then
     return UI.onMouseUp(self, code, x, y)
   end
 

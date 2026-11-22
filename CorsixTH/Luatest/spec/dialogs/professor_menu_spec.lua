@@ -27,9 +27,9 @@ describe("Professor menu", function()
     require("TH")
     require("utility")
     require("window")
-    require("dialogs/resizable")
-    require("dialogs/resizables/main_menu")
-    require("dialogs/resizables/professor_menu")
+    require("dialogs.resizable")
+    require("dialogs.resizables.main_menu")
+    require("dialogs.resizables.professor_menu")
   end)
 
   local SIZES = {{640, 480}, {800, 600}, {1024, 768}, {1280, 720}, {1280, 800},

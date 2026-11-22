@@ -1142,3 +1142,5 @@ function SideObject:getDrawingLayer()
     end
   end
 end
+
+return Object

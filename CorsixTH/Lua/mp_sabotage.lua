@@ -704,7 +704,7 @@ function sabotage.dailyRats(hospital)
   end
   local count = sabotage.countRats(hospital.world, hospital)
   if count > 0 then
-    hospital:unconditionalChangeReputation(-sabotage.ratPoints(count))
+    MultiplayerSession.changeReputation(hospital, -sabotage.ratPoints(count))
     -- Every two weeks the adviser reminds the player (the attack's notice is
     -- easy to miss: Jan and Argus never saw one), each time in other words.
     local days = (hospital.mp_rat_days or 0) + 1

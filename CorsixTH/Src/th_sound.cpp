@@ -324,12 +324,14 @@ void sound_player::populate_from(sound_archive* pArchive) {
   }
 }
 
-uint32_t sound_player::play(size_t iIndex, double dVolume, int loops) {
+uint32_t sound_player::play(size_t iIndex, double dVolume, int loops,
+                            double pitch) {
   if (iIndex >= sound_count || !sounds[iIndex]) {
     return null_handle;
   }
 
-  return play_raw(sounds[iIndex], static_cast<float>(dVolume), loops);
+  return play_raw(sounds[iIndex], static_cast<float>(dVolume), loops,
+                  static_cast<float>(pitch));
 }
 
 int sound_player::add_extra_sound(const uint8_t* data, size_t length) {
@@ -346,7 +348,7 @@ uint32_t sound_player::play_extra(size_t iIndex, double dVolume) {
   if (iIndex >= extra_sounds.size()) {
     return null_handle;
   }
-  return play_raw(extra_sounds[iIndex], static_cast<float>(dVolume), 0);
+  return play_raw(extra_sounds[iIndex], static_cast<float>(dVolume), 0, 1.0f);
 }
 
 uint32_t sound_player::play_at(size_t iIndex, int iX, int iY, int loops) {
@@ -357,7 +359,7 @@ uint32_t sound_player::play_at(size_t iIndex, int iX, int iY, int loops) {
 }
 
 uint32_t sound_player::play_at(size_t iIndex, double dVolume, int iX, int iY,
-                               int loops) {
+                               int loops, double pitch) {
   if (iIndex >= sound_count || !sounds[iIndex]) {
     return null_handle;
   }
@@ -370,7 +372,8 @@ uint32_t sound_player::play_at(size_t iIndex, double dVolume, int iX, int iY,
 
   double fVolume = (1.0 - fDistance * 0.8) * dVolume;
 
-  return play_raw(sounds[iIndex], static_cast<float>(fVolume), loops);
+  return play_raw(sounds[iIndex], static_cast<float>(fVolume), loops,
+                  static_cast<float>(pitch));
 }
 
 sound_player::toggle_pause_result sound_player::toggle_pause(uint32_t handle) {
@@ -431,7 +434,8 @@ void sound_player::release_channel(int channel) {
   channels[channel].handle = null_handle;
 }
 
-uint32_t sound_player::play_raw(MIX_Audio* audio, float volume, int loops) {
+uint32_t sound_player::play_raw(MIX_Audio* audio, float volume, int loops,
+                                float pitch) {
   int channel = reserve_channel();
   if (channel < 0) {
     return null_handle;
@@ -444,6 +448,7 @@ uint32_t sound_player::play_raw(MIX_Audio* audio, float volume, int loops) {
   volume = th::sound::linear_to_logarithmic_volume(volume);
   success &= MIX_SetTrackAudio(track, audio);
   success &= MIX_SetTrackGain(track, volume);
+  success &= MIX_SetTrackFrequencyRatio(track, pitch);
 
   SDL_PropertiesID playProps = SDL_CreateProperties();
   SDL_SetNumberProperty(playProps, MIX_PROP_PLAY_LOOPS_NUMBER, loops);

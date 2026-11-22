@@ -20,29 +20,29 @@ SOFTWARE. --]]
 
 local TH = require("TH")
 
-corsixth.require("entities.humanoids.patient")
-corsixth.require("entities.humanoids.staff.doctor")
-corsixth.require("entities.humanoids.staff.nurse")
-corsixth.require("entities.humanoids.staff.handyman")
-corsixth.require("entities.humanoids.staff.receptionist")
-corsixth.require("entities.humanoids.vip")
-corsixth.require("entities.humanoids.grim_reaper")
-corsixth.require("entities.humanoids.inspector")
-corsixth.require("entities.rat")
-corsixth.require("staff_profile")
-corsixth.require("hospital")
-corsixth.require("hospitals.player_hospital")
-corsixth.require("hospitals.ai_hospital")
-corsixth.require("cheats")
-corsixth.require("epidemic")
-corsixth.require("calls_dispatcher")
-corsixth.require("mp_session")
-corsixth.require("research_department")
-corsixth.require("entity_map")
-corsixth.require("date")
-corsixth.require("announcer")
-corsixth.require("endconditions")
-corsixth.require("earthquake")
+cth_require("entities.humanoids.patient")
+cth_require("entities.humanoids.staff.doctor")
+cth_require("entities.humanoids.staff.nurse")
+cth_require("entities.humanoids.staff.handyman")
+cth_require("entities.humanoids.staff.receptionist")
+cth_require("entities.humanoids.vip")
+cth_require("entities.humanoids.grim_reaper")
+cth_require("entities.humanoids.inspector")
+cth_require("entities.rat")
+cth_require("staff_profile")
+cth_require("hospital")
+cth_require("hospitals.player_hospital")
+cth_require("hospitals.ai_hospital")
+cth_require("cheats")
+cth_require("epidemic")
+cth_require("calls_dispatcher")
+cth_require("mp_session")
+cth_require("research_department")
+cth_require("entity_map")
+local Date = cth_require("date")
+cth_require("announcer")
+cth_require("endconditions")
+cth_require("earthquake")
 
 --- Manages entities, rooms, and the date.
 class "World"
@@ -56,7 +56,6 @@ local World = _G["World"] ---@type World
 function World:World(app, free_build_mode)
   local CallsDispatcher = _G["CallsDispatcher"] ---@type CallsDispatcher
   local EntityMap = _G["EntityMap"] ---@type EntityMap
-  local Date = _G["Date"] ---@type Date
   local PlayerHospital = _G["PlayerHospital"] ---@type PlayerHospital
   local AIHospital = _G["AIHospital"] ---@type AIHospital
   local Earthquake = _G["Earthquake"] ---@type Earthquake
@@ -1181,7 +1180,6 @@ local outside_temperatures = {
    4.75 / 50, -- December
 }
 
-local Date = _G["Date"] ---@type Date
 local start_date = Date()
 
 --- World ticks (every 18ms) are translated to game ticks (or hours) depending
@@ -1862,8 +1860,7 @@ function World:onEndMonth()
     if hospital and (money > 0 or level == "hard") then
       hospital.balance = hospital.balance + money
       if level == "hard" then
-        hospital.reputation = math.min(hospital.reputation + World.MP_BOT_HARD_REPUTATION,
-            hospital.reputation_max or 1000)
+        MultiplayerSession.changeReputation(hospital, World.MP_BOT_HARD_REPUTATION)
       end
       paid[#paid + 1] = bot_index
     end
@@ -2539,8 +2536,30 @@ function World:winGame(player_no)
     end
     self.hospitals[player_no].game_won = true
     self:previousSpeed()
-    self.ui.bottom_panel:queueMessage("information", message, nil, 0, 2, callback)
-    self.ui.bottom_panel:openLastMessage()
+    local bottom_panel = self.ui.bottom_panel
+    bottom_panel:queueMessage("information", message, nil, 0, 2, callback)
+    local queued = bottom_panel.message_queue[#bottom_panel.message_queue]
+    local icon = queued and queued.message == message and queued.drawer_icon
+    -- As in the original game, the level won movie comes first, ending with
+    -- the letter typed out on its paper and answered there: the tick for the
+    -- first choice, the cross to stay on the level. If the movie is skipped,
+    -- or cannot be played, the letter is the fax.
+    local chosen
+    local function after_movie()
+      -- This fax (others may have come since), unless another game was
+      -- loaded meanwhile.
+      if not icon or self.ui.app.world ~= self or
+          not bottom_panel:showMessageIcon(icon) then
+        return
+      end
+      if chosen then
+        icon:removeMessage(chosen)
+      else
+        icon:openMessage()
+      end
+    end
+    self.ui.app.moviePlayer:playWinLevelMovie(after_movie,
+        {text[1], text[2], text[3]}, function(answer) chosen = answer end)
   end
 end
 
@@ -2550,7 +2569,9 @@ end
 --- Text to show in the fax, text that accompanies the "continue"-choice the player
 --- has, and whether it is the "return_to_main_menu" choice or the "accept_new_level" choice.
 --- @param player_no (integer) Which player that will see the message.
---- @return string, string, string # The texts.
+--- @return string[] choices The strings of the three choices.
+--- @return string next_text The string what to do next.
+--- @return string next_name The name of what to do next.
 function World:getCampaignWinningText(player_no)
   local text = {}
   local choice_text, choice
@@ -2747,7 +2768,7 @@ end
 --- @param y1 (integer) Y-cordinate of first tile's Lua tile coordinates.
 --- @param x2 (integer) X-cordinate of second tile's Lua tile coordinates.
 --- @param y2 (integer) Y-cordinate of second tile's Lua tile coordinates.
---- @return integer, boolean # The distance of the shortest path, or false if there is no path.
+--- @return (integer | boolean) # The distance of the shortest path, or false if there is no path.
 function World:getPathDistance(x1, y1, x2, y2)
   return self.pathfinder:findDistance(x1, y1, x2, y2)
 end
@@ -2847,6 +2868,7 @@ function World:getFreeBench(x, y, distance)
         return true
       end
     end
+    return false
   end)
   return bench, rx, ry, bench_distance
 end
@@ -3928,8 +3950,8 @@ function World:afterLoad(old, new)
   if old < 17 then
     -- Added another object
     local pathsep = package.config:sub(1, 1)
-    local _, shield = pcall(corsixth.require, "objects" .. pathsep .. "radiation_shield")
-    local _, shield_b = pcall(corsixth.require, "objects" .. pathsep .. "radiation_shield_b")
+    local _, shield = pcall(cth_require, "objects" .. pathsep .. "radiation_shield")
+    local _, shield_b = pcall(cth_require, "objects" .. pathsep .. "radiation_shield_b")
     shield.slave_type = shield_b
     shield.slave_type.master_type = shield
 

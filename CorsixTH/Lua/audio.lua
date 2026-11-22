@@ -202,12 +202,13 @@ function Audio:initMidiPlayer()
     self.midi_player = nil
   end
 
-  local midi_ok, midi_player = pcall(
-    TH.midiPlayer,
-    self.app.config.midi_api or "",
-    self.app.config.midi_port,
-    self.app.config.midi_sysex_master_volume,
-    self.app:findSoundFont())
+  local midi_ok, midi_player = pcall(function()
+    return TH.midiPlayer(
+      self.app.config.midi_api or "",
+      self.app.config.midi_port,
+      self.app.config.midi_sysex_master_volume,
+      self.app:findSoundFont())
+    end)
   if midi_ok then
     self.midi_player = midi_player
   else
@@ -316,25 +317,21 @@ end
 local wilcard_cache = permanent "audio_wildcard_cache" {}
 
 
---! Play a sound from the sound archive
---!param name (string) The name of the sound to be played. Can include
---  wildcards (*).
---!param where (Entity) The entity that is the source of the sound, or nil if
---  the audio is not positional.
---!param is_announcement (boolean) Whether the sound is an announcement
---  (affects volume).
---!param played_callback (function) A function to be called when the sound has
---  finished playing. Can be nil.
---!param played_callback_delay (integer) An optional delay in milliseconds
---  before the played_callback is called.
---!param loops (integer) number of times to play the audio. -1 for infinite.
---!param volume (number) [optional] the volume to play it at, instead of the
---  sound or announcement volume setting (1 is as recorded, more is louder).
---!return (table) A `sound` table for passing into functions that act on the
---  playing sound. The fields are an implementation detail that should not be
---  used outside of the Audio class.
+--- Play a sound from the sound archive.
+---
+--- The fields of the returned table are an implementation detail that should
+--- not be used outside of the Audio class.
+--- @param name (string) The name of the sound to be played. Can include wildcards (*).
+--- @param where (Entity?) The entity that is the source of the sound, or nil if the audio is not positional.
+--- @param is_announcement (boolean) Whether the sound is an announcement (affects volume).
+--- @param played_callback (function?) A function to be called when the sound has finished playing. Can be nil.
+--- @param played_callback_delay (integer?) An optional delay in milliseconds before the played_callback is called.
+--- @param loops (integer?) Number of times to play the audio. -1 for infinite.
+--- @param volume (number?) The volume to play it at, instead of the sound or announcement volume setting (1 is as recorded, more is louder).
+--- @param pitch (number?) The frequency ratio to play it at: 1 (the default) as recorded, more is higher and faster, less is lower and slower.
+--- @return (table?) # A sound table for passing into functions that act on the playing sound, or nil if there is no sound effects player.
 function Audio:playSound(name, where, is_announcement, played_callback,
-    played_callback_delay, loops, volume)
+    played_callback_delay, loops, volume, pitch)
   local sound_fx = self.sound_fx
   if sound_fx then
     name = self:resolveFilenameWildcard(name)
@@ -354,7 +351,8 @@ function Audio:playSound(name, where, is_announcement, played_callback,
       x = x + dx - ui.screen_offset_x
       y = y + dy - ui.screen_offset_y
     end
-    local handle, warning = sound_fx:play(name, volume, x, y, played_callback_id, played_callback_delay, loops)
+    local handle, warning = sound_fx:play(name, volume, x, y, played_callback_id, played_callback_delay, loops,
+        pitch)
 
     if warning then
       -- Indicates something happened
@@ -945,7 +943,7 @@ end
 
 -- Load the playlist disabled tracks file
 function Audio:readPlaylistPreferences()
-  local path = corsixth.require("config_finder").config_filename:sub(1, -11) .. "disabledtracks.txt"
+  local path = cth_require("config_finder").config_filename:sub(1, -11) .. "disabledtracks.txt"
   local fi = io.open(path, "r")
   if not fi then return end -- Fail silently
   local disabled_tracks = {}
@@ -958,7 +956,7 @@ end
 
 -- Create a set of playlist filenames that are disabled and write this to file
 function Audio:updatePlaylistPreferences()
-  local path = corsixth.require("config_finder").config_filename:sub(1, -11) .. "disabledtracks.txt"
+  local path = cth_require("config_finder").config_filename:sub(1, -11) .. "disabledtracks.txt"
   local fi, err = io.open(path, "w")
   if err then return end -- Fail silently
   for _, track in pairs(self.background_playlist) do
@@ -966,3 +964,5 @@ function Audio:updatePlaylistPreferences()
   end
   fi:close()
 end
+
+return Audio

@@ -2717,6 +2717,24 @@ function MultiplayerSession.reputationLeft(world, from)
   return math.max(0, MultiplayerSession.REP_MONTH_LIMIT - used)
 end
 
+--! Moves a hospital's reputation by `points` rating points (multiplayer
+--! rewards, dirty tricks, gifts between allies). The reputation is a credit
+--! over a weight (ReputationAccount); a point is worth weight / 500 credit,
+--! so early in a game a few points are less than one whole credit, which
+--! Hospital:changeReputationByPoints drops. What is left over here is kept
+--! with the hospital for its next change, so small rewards add up.
+function MultiplayerSession.changeReputation(hospital, points)
+  local account = hospital.reputation_account
+  if not account or points == 0 then return end
+  local ReputationAccount = cth_require("reputation")
+  local exact = points * account.weight / ReputationAccount.rating_neutral +
+      (hospital.mp_reputation_rest or 0)
+  local whole = exact >= 0 and math.floor(exact) or -math.floor(-exact)
+  hospital.mp_reputation_rest = exact - whole
+  if whole ~= 0 then account:applyDelta(whole, 0) end
+  hospital:updateReputation()
+end
+
 --! How many points `from` can give `to` now (0 to REP_MAX_GIVE), and why not
 --! more: "reputation too low" (the giver's floor), "their reputation is
 --! full" (the receiver's top) or "monthly limit".
@@ -2746,8 +2764,8 @@ function handlers.give_reputation(world, cmd)
   local month = world:date():monthOfGame()
   local given = from.mp_rep_given
   local used = given and given.month == month and given.points or 0
-  from:unconditionalChangeReputation(-amount)
-  to:unconditionalChangeReputation(amount)
+  MultiplayerSession.changeReputation(from, -amount)
+  MultiplayerSession.changeReputation(to, amount)
   from.mp_rep_given = {month = month, points = used + amount}
   cmd.resolved = amount .. " points"
   MultiplayerSession.tellPlayer(world, from, S.rep_given_note:format(to.name, amount))
@@ -3146,8 +3164,8 @@ function MultiplayerSession.referralCured(world, hospital, patient)
   patient.mp_referred_by = nil
   if not by or by == hospital then return end
   local S = _S.multiplayer_window
-  by:changeReputation(nil, nil, MultiplayerSession.REFERRAL_REPUTATION)
-  hospital:changeReputation(nil, nil, MultiplayerSession.REFERRAL_EXTRA)
+  MultiplayerSession.changeReputation(by, MultiplayerSession.REFERRAL_REPUTATION)
+  MultiplayerSession.changeReputation(hospital, MultiplayerSession.REFERRAL_EXTRA)
   MultiplayerSession.tellPlayer(world, by, S.referral_cured_note:format(hospital.name,
       MultiplayerSession.REFERRAL_REPUTATION))
   MultiplayerSession.tellPlayer(world, hospital, S.referral_cured_here_note:format(by.name,

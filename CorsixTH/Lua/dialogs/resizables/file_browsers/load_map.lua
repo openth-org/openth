@@ -18,7 +18,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-local UIFileBrowser = _G['UIFileBrowser'] ---@type UIFileBrowser
+local UIFileBrowser = cth_require("dialogs.resizables.file_browser")
+local UIResizable = cth_require("dialogs.resizable")
+local FilteredFileTreeNode = UIFileBrowser.FilteredFileTreeNode
 
 --! Load Map Window
 class "UILoadMap" (UIFileBrowser)
@@ -51,3 +53,5 @@ function UILoadMap:close()
     self.ui:openMainMenu()
   end
 end
+
+return UILoadMap

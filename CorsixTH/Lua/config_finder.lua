@@ -342,6 +342,7 @@ local function config_contents(config_values)
 --  Russian               / ru / rus
 --  Spanish               / es / spa
 --  Swedish               / sv / swe
+--  Turkish               / tr / tur
 --  Ukrainian             / uk / ukr
 --]=] .. '\n' ..
 param(config_values, 'language') .. [=[

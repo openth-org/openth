@@ -19,12 +19,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
 -- The professor's menu is a kind of the list menu: it has the same buttons,
--- and what looks for the main menu finds it too. (Loaded under the name
--- loadLuaFolder gives that file, so it is not run twice.)
-if not rawget(_G, "UIMainMenu") then
-  corsixth.require("dialogs/resizables" .. package.config:sub(1, 1) .. "main_menu")
-end
-local UIMainMenu = _G["UIMainMenu"] ---@type UIMainMenu
+-- and what looks for the main menu finds it too.
+local UIMainMenu = cth_require("dialogs.resizables.main_menu")
 local TH = require("TH")
 
 --! The original game's main menu: the professor at his blackboard, pointing
@@ -761,3 +757,5 @@ function UIProfessorMenu:draw(canvas, x, y)
     self.label_font:draw(canvas, line, sw - 205 * s, (4 + 15 * (i - 1)) * s, 200, 0, "right")
   end
 end
+
+return UIProfessorMenu

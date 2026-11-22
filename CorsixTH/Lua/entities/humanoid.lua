@@ -1322,3 +1322,5 @@ function Humanoid:isMeandering()
 
   return (idle_is_first or walk_is_first) and meander_is_second
 end
+
+return Humanoid

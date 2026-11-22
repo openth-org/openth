@@ -22,7 +22,7 @@ self = false
 
 globals = { -- Globals
             "_A", "_S",
-            "corsixth",
+            "corsixth", "cth_require",
             "class", "Colours", "compare_tables", "DrawFlags",
             "DrawingLayers", "destrict", "flag_clear", "flag_isset",
             "flag_set", "flag_toggle", "lfs", "list_to_set",
@@ -121,8 +121,8 @@ end
 for _, lng in ipairs({"brazilian_portuguese", "czech", "danish", "developer",
     "dutch", "english", "finnish", "french", "german", "greek", "hungarian",
     "iberic_portuguese", "italian", "japanese", "korean", "norwegian", "original_strings",
-    "polish", "russian", "simplified_chinese", "spanish", "swedish", "ukrainian",
-    "traditional_chinese"}) do
+    "polish", "russian", "simplified_chinese", "spanish", "swedish", "traditional_chinese",
+    "turkish", "ukrainian"}) do
   local filename = "CorsixTH/Lua/languages/" .. lng .. ".lua"
   add_ignore(filename, "111")
   add_ignore(filename, "112")

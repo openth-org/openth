@@ -18,7 +18,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-corsixth.require("announcer")
+cth_require("announcer")
+local Date = cth_require("date")
 
 local AnnouncementPriority = _G["AnnouncementPriority"] --[[@as AnnouncementPriority]]
 local Hospital = _G['Hospital'] ---@type Hospital
@@ -49,6 +50,7 @@ function PlayerHospital:PlayerHospital(world, avail_rooms, name, player_index)
     no_gp_office = nil, -- Whether advice was given about patients and doctors waiting for a GP's office
     no_doctor_no_gp_office = nil, -- Whether advice was given about patients waiting for a doctor and a GP's office
     last_patient_not_paying_month = nil, -- Whether advice was given about a patient leaving the hospital without paying
+    end_conditions = nil, -- The last piece of advice relating to win/lose goal given, not to be repeated this month
   }
 
   self.win_declined = false -- Has not yet declined the level win fax
@@ -83,6 +85,9 @@ function PlayerHospital:dailyAdviceChecks()
   if day == 1 then
     self:_adviseMoney()
   end
+  if day == 2 then
+    self:_adviseEndConditions(true)
+  end
   if day == 3 then
     self:_adviseStaffRoom()
   end
@@ -102,6 +107,9 @@ function PlayerHospital:dailyAdviceChecks()
   if day == 15 then
     self:_adviseHeatingForPatients()
   end
+  if day == 16 then
+    self:_adviseEndConditions()
+  end
   if day == 18 then
     self:advisePlants(false)
   end
@@ -118,6 +126,7 @@ function PlayerHospital:dailyAdviceChecks()
     self.adviser_data.no_gp_office = false
     self.adviser_data.no_doctor_no_gp_office = false
     self.adviser_data.last_patient_not_paying_month = false
+    self.adviser_data.end_conditions = false
   end
 end
 
@@ -282,6 +291,29 @@ function PlayerHospital:_warnForLongQueues()
   end
 end
 
+--! Give advice relating to progress towards winning or losing
+-- The same message cannot be given twice per month
+--!param regular (bool) If the regular advice should be given this time, alongside the priority advice
+function PlayerHospital:_adviseEndConditions(regular)
+  local advice_tbl, priority_advice_tbl = self.world.endconditions:generateAdvice(self)
+  if #priority_advice_tbl > 0 then
+    local selected_advice = getRandomEntryFromArray(priority_advice_tbl)
+    if not self.adviser_data.end_conditions or
+        selected_advice.text ~= self.adviser_data.end_conditions then
+      self:giveAdvice({selected_advice})
+      self.adviser_data.end_conditions = selected_advice.text
+    end
+  end
+  if regular and #advice_tbl > 0 then
+    local selected_advice = getRandomEntryFromArray(advice_tbl)
+    if not self.adviser_data.end_conditions or
+        selected_advice.text ~= self.adviser_data.end_conditions then
+      self:giveAdvice({selected_advice})
+      self.adviser_data.end_conditions = selected_advice.text
+    end
+  end
+end
+
 --! Give advice to the user about maintenance of plants.
 --!param placed (bool) If a plant was placed
 function PlayerHospital:advisePlants(placed)
@@ -382,13 +414,10 @@ end
 --! Show the 'Gates to hell' animation.
 --!param entity (Entity) Gates to hell.
 function PlayerHospital:showGatesToHell(entity)
-  -- (The name on the function's own line: persist_lua.cpp files it under the
-  -- comment's line, and with the function on the next one no save could be
-  -- made while the animation ran; a multiplayer referee died of it, eu2
-  -- 2026-11-13.)
-  local anim_func = --[[persistable:lava_hole_spawn_animation_end]] function(anim_entity)
-    anim_entity:setAnimation(1602)
-  end
+  local anim_func =
+    --[[persistable:lava_hole_spawn_animation_end]] function(anim_entity)
+      anim_entity:setAnimation(1602)
+    end
 
   entity:playEntitySounds("LAVA00*.WAV", {0,1350,1150,950,750,350},
       {0,1450,1250,1050,850,450}, 40)

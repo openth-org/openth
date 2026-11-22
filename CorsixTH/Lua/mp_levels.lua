@@ -918,7 +918,7 @@ function levels.raceEmergencyResolved(hospital, emergency)
   if emergency.cured_emergency_patients < emergency.victims then return end
   race.winner = world:getHospitalIndex(hospital)
   hospital:receiveMoney(RACE_BONUS, _S.multiplayer_window.level7_race_bonus)
-  hospital:changeReputation(nil, nil, RACE_REPUTATION)
+  MultiplayerSession.changeReputation(hospital, RACE_REPUTATION)
   tellAll(world, _S.multiplayer_window.level7_race_won:format(hospital.name, RACE_BONUS))
 end
 
@@ -943,7 +943,7 @@ local function checkBreakthroughs(world, state)
         if state.breakthroughs[id] == "open" and progress and progress.discovered and not spied then
           state.breakthroughs[id] = world:getHospitalIndex(hospital)
           hospital:receiveMoney(BREAKTHROUGH_BONUS, _S.multiplayer_window.level7_breakthrough_bonus)
-          hospital:changeReputation(nil, nil, BREAKTHROUGH_REPUTATION)
+          MultiplayerSession.changeReputation(hospital, BREAKTHROUGH_REPUTATION)
           tellAll(world, _S.multiplayer_window.level7_breakthrough:format(hospital.name,
               object.name, BREAKTHROUGH_BONUS))
         end
@@ -962,7 +962,7 @@ local function quarterRanking(world, state)
     elseif cured == best and cured > 0 then winners[#winners + 1] = hospital end
   end
   for _, hospital in ipairs(winners) do
-    hospital:changeReputation(nil, nil, QUARTER_REPUTATION)
+    MultiplayerSession.changeReputation(hospital, QUARTER_REPUTATION)
     tellAll(world, _S.multiplayer_window.level7_quarter:format(hospital.name, best))
   end
   for index = 1, world.mp_coop.players do
