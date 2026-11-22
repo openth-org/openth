@@ -2383,6 +2383,11 @@ local function run()
           else
             log("UI: no MULTIPLAYER menu")
           end
+        elseif a == "flow" then
+          -- How well patients get from room to room in each hospital
+          -- (flow_metrics.lua: Argus's metrics, 2026-11-22).
+          local Flow = assert(loadfile(source_dir .. "/scripts/multiplayer/flow_metrics.lua"))()
+          for _, line in ipairs(Flow.lines(world)) do log(line) end
         elseif a == "hospitals" then
           -- Every hospital: open or not, balance, its rooms and staff (to
           -- see what a bot built), with the game date.

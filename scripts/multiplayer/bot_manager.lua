@@ -399,6 +399,32 @@ end
 
 local function avg(sum, n) return n > 0 and sum / n or 0 end
 
+-- A staff room this near a research department (tiles between the doors,
+-- along x and y) counts as beside it (Argus, 2026-11-22).
+M.STAFF_NEAR_RESEARCH = 14
+
+--! Has the hospital a research department but no staff room near it?
+function M.staffFarFromResearch(world, hosp)
+  local research, staff = {}, {}
+  for _, r in pairs(world.rooms) do
+    if r.hospital == hosp and r.is_active and r.door and r.door.tile_x and r.getEntranceXY and not r.crashed then
+      local id = r.room_info.id
+      if id == "research" or id == "staff_room" then
+        local x, y = r:getEntranceXY(false)
+        local list = id == "research" and research or staff
+        list[#list + 1] = {x, y}
+      end
+    end
+  end
+  if #research == 0 or #staff == 0 then return false end
+  for _, a in ipairs(research) do
+    for _, b in ipairs(staff) do
+      if math.abs(a[1] - b[1]) + math.abs(a[2] - b[2]) <= M.STAFF_NEAR_RESEARCH then return false end
+    end
+  end
+  return true
+end
+
 --! What a player would see on the screen and in the reports, as numbers.
 function M:assess()
   local bot, world = self.bot, self.bot.world
@@ -481,6 +507,10 @@ function M:assess()
   for room, v in pairs(self.demand) do self.demand[room] = v * 0.9 end
   for room, v in pairs(need) do self.demand[room] = (self.demand[room] or 0) + v end
   for room in pairs(s.rooms) do self.demand[room] = nil end
+
+  -- A research department with no staff room near it (M.STAFF_NEAR_RESEARCH
+  -- tiles from door to door): its researchers walk far for a rest.
+  s.staff_far_from_research = M.staffFarFromResearch(world, hosp)
 
   -- Staff.
   s.staff, s.fatigue, s.staff_happy = {}, 0, 0
@@ -841,6 +871,13 @@ function M:projects(s)
   if not s.rooms.toilets and s.patients >= 6 then room("toilets", 2 + s.toilet * 8) end
   if s.rooms.staff_room and s.fatigue > 0.6 and (s.rooms.staff_room or 0) < COPIES.staff_room then
     room("staff_room", (s.fatigue - 0.5) * 12)
+  end
+  -- A small second staff room beside the research department when the first
+  -- is far from it (Argus, 2026-11-22; Bot:drawRoom puts a staff room beside
+  -- research when it can).
+  if s.staff_far_from_research and (s.rooms.staff_room or 0) < COPIES.staff_room
+      and not (s.building and s.building.staff_room) then
+    room("staff_room", 4 + s.fatigue * 6)
   end
   -- A research room once the basics stand, if diseases wait for rooms it
   -- has not discovered.
@@ -1950,7 +1987,9 @@ function M:doProject(s)
         -- worn machines that then exploded; 2026-11-14.)
         self.failed[p.key] = s.day + math.min(30, 5 * self.no_space_tries[p.key])
       else
-        self.failed[p.key] = s.day + (why == "money" and 3 or 10)
+        -- (A spot being cleared for it: corridor objects sold, Bot:clearSpot;
+        -- the room goes there in two days.)
+        self.failed[p.key] = s.day + (why == "money" and 3 or why == "clearing" and 2 or 10)
         self:note(string.format("day %d: %s failed (%s)", s.day, p.key, tostring(why or "?")))
       end
     elseif self.wishes[p.key] and not self.wishes[p.key].told_money then

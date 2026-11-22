@@ -905,3 +905,19 @@ do
   eq(issued[2] and issued[2].amount, -7000, "what leaves at least $5,000")
 end
 print("assistant loan ok")
+
+-- A staff room beside the research department (Argus, 2026-11-22): a
+-- hospital with research but its staff rooms far away wants another one.
+do
+  local hosp = {}
+  local function room(id, x, y)
+    return {hospital = hosp, is_active = true, door = {tile_x = x}, room_info = {id = id},
+        getEntranceXY = function() return x, y end}
+  end
+  local w = {rooms = {room("research", 50, 50), room("staff_room", 20, 20), room("gp", 52, 50)}}
+  eq(M.staffFarFromResearch(w, hosp), true, "staff room far from research")
+  w.rooms[#w.rooms + 1] = room("staff_room", 58, 55)
+  eq(M.staffFarFromResearch(w, hosp), false, "a staff room beside research")
+  eq(M.staffFarFromResearch({rooms = {room("staff_room", 20, 20)}}, hosp), false, "no research: nothing to say")
+end
+print("staff room by research ok")
