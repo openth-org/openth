@@ -202,6 +202,12 @@ play_intro = true
 --
 play_demo = true
 
+-- Main menu: the original game's professor at his chart (true, the default,
+-- when the game files have his pictures), or the list of buttons (false).
+-- With the intro on, he comes to his chart after it.
+--
+professor_menu = true
+
 -------------------------------------------------------------------------------
 -- Allow user actions while game is paused
 -- In Theme Hospital the player would only be allowed to use the top menu if
