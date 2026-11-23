@@ -280,8 +280,9 @@ function MoviePlayer:playMenuMovie(leaving, callback)
     -- off).
     self.refresh_overlay = function(player, _, _, _, _, _, pts)
       pts = pts or 0
+      local top, low = UIProfessorMenu.lightInMovie(leaving, pts)
       UIProfessorMenu.drawSide(player.video, UIProfessorMenu.chartInMovie(leaving, pts),
-          UIProfessorMenu.lightInMovie(leaving, pts))
+          top, low, UIProfessorMenu.lookInMovie(leaving, pts))
     end
   end
 end
