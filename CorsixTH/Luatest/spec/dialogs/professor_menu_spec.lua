@@ -131,17 +131,48 @@ describe("Professor menu", function()
       end
     end
     local at = UIProfessorMenu.chartInMovie
-    assert.equal(23, at(false, 0))
+    assert.equal(21, at(false, 0))
     assert.equal(120, at(false, 8000))
+    assert.equal(156, at(false, 10000))
     assert.equal(159, at(false, 20000))
     assert.equal(159, at(true, 0))
-    assert.equal(23, at(true, 1800))
+    assert.equal(169, at(true, 1550))
+    assert.equal(21, at(true, 1800))
     assert.is_false(at(true, 2500))
+    -- Rolled up, from the picture's edge to the chart's end, row by row.
+    local rolled = UIProfessorMenu.ROLLED_UP
+    assert.equal(#rolled.left, #rolled.right)
+    for i, colour in ipairs(rolled.left) do
+      assert.equal(3, #colour)
+      assert.equal(3, #rolled.right[i])
+    end
     local light = UIProfessorMenu.lightInMovie
     assert.is_nil(light(false, 5000))
     assert.same({97, 91}, {light(false, 10300)})
     assert.is_nil(light(false, 13000))
     assert.is_nil(light(true, 1000))
+  end)
+
+  it("moves the chart's left end as his movies move the chart", function()
+    local row = UIProfessorMenu.chartRow
+    -- Rolling down or up, the whole chart is higher.
+    for y = 22, 120 do assert.equal(y + 39, row(y, 120)) end
+    -- Springing back, its top stays and its paper is squeezed: each row one
+    -- of the chart's, in order, down to its bottom edge.
+    for _, bottom in ipairs({156, 157, 158}) do
+      for y = 22, 80 do assert.equal(y, row(y, bottom)) end
+      assert.equal(159, row(bottom, bottom))
+      for y = 81, bottom do
+        local r = row(y, bottom)
+        assert.is_true(r > row(y - 1, bottom) and r - y <= 159 - bottom, ("%d at %d"):format(y, bottom))
+      end
+    end
+    for y = 22, 159 do assert.equal(y, row(y, 159)) end
+    -- Tugged, its paper is pulled lower, its top stays and the paper
+    -- between is drawn out.
+    for y = 22, 32 do assert.equal(y, row(y, 164)) end
+    for y = 33, 37 do assert.equal(32, row(y, 164)) end
+    for y = 38, 164 do assert.equal(y - 5, row(y, 164)) end
   end)
 
   it("finds each spot inside its own outline, and none elsewhere", function()

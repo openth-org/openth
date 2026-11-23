@@ -84,18 +84,44 @@ local BOARD_FROM, BOARD_TO, LEDGE_TOP = 180, 200, 192
 -- The roller (down to ROLLER_BOTTOM, its end cap to MOUNT_FROM, where its
 -- mount starts) and the chart's bottom edge (CHART_BOTTOM) when it is down.
 local ROLLER_BOTTOM, MOUNT_FROM, CHART_BOTTOM = 21, 186, 159
+-- In his movies the chart is down (not rolling) with its bottom edge from
+-- DOWN_FROM on. Springing back after he pulls it down, it is squeezed from
+-- STRETCH_FROM down (above it the chart stays where it is); when he tugs at
+-- it as he leaves, the paper from PULL_FROM down is pulled lower and its row
+-- PULL_FROM drawn out over the gap.
+local DOWN_FROM, STRETCH_FROM, PULL_FROM = CHART_BOTTOM - 9, 80, 32
 
 --! Where the chart's bottom edge is in his movies, as they go on: the time
 --! of the frame (in milliseconds, 14 frames a second) and the row from that
---! frame on (false: the chart and its roller have fallen off), measured on
---! the movies' frames. Coming (ANIMS MMENU1), the chart is rolled up, its
---! edge just under the roller, until he pulls it down at 7.7 seconds; it
---! springs back a little and settles. Leaving (MMENU2), he lets it roll up
---! at 1.6 seconds (after tugging at it) and pulls it off its mount at 2.
+--! frame on (ROLLER_BOTTOM: rolled up under its roller; false: the chart and
+--! its roller have fallen off), measured on the movies' frames. Coming (ANIMS
+--! MMENU1), the chart is rolled up until he pulls it down at 7.7 seconds; it
+--! springs back a little and settles. Leaving (MMENU2), he tugs at it, lets it
+--! roll up at 1.6 seconds and pulls it off its mount at 2.
 UIProfessorMenu.MOVIE_CHART = {
-  coming = {0, 23, 7714, 36, 7786, 48, 7857, 71, 7929, 86, 8000, 120, 8071, 145,
-    8143, 158, 8929, 157, 9500, 156, 10714, 157, 11000, 158, 11643, 159},
-  leaving = {0, 159, 1643, 111, 1714, 48, 1786, 23, 2000, false},
+  coming = {0, ROLLER_BOTTOM, 7714, 36, 7786, 48, 7857, 71, 7929, 86, 8000, 120,
+    8071, 145, 8143, 159, 8286, 158, 9071, 157, 9857, 156, 10500, 157, 10786, 158,
+    11214, 159},
+  leaving = {0, 159, 1429, 164, 1500, 169, 1571, 159, 1643, 111, 1714, 48,
+    1786, ROLLER_BOTTOM, 2000, false},
+}
+
+--! The chart rolled up, as his coming movie has it under its roller (from
+--! the row under ROLLER_BOTTOM down): the paper's edge in the roller's
+--! shadow, the blackboard's frame behind the chart and the frame's shadow on
+--! the board, fading out; at the picture's left edge (`left`) and at the
+--! chart's right end (`right`; its left end on the fill is its mirror
+--! image). The colours as the movie shows them (8 bits each): the fill takes
+--! the picture's nearest.
+UIProfessorMenu.ROLLED_UP = {
+  left = {{96, 84, 72}, {129, 112, 100}, {73, 60, 48}, {40, 24, 16}, {40, 24, 16},
+    {40, 24, 16}, {40, 24, 16}, {24, 16, 16}, {12, 12, 16}, {12, 15, 16},
+    {12, 16, 16}, {12, 16, 16}, {12, 16, 16}, {12, 16, 16}, {15, 19, 19},
+    {16, 20, 20}, {16, 20, 20}, {19, 23, 23}, {20, 24, 24}, {20, 24, 24}, {27, 27, 27}},
+  right = {{64, 55, 47}, {161, 149, 108}, {85, 69, 60}, {40, 24, 16}, {24, 16, 16},
+    {16, 19, 19}, {16, 20, 20}, {16, 20, 20}, {16, 20, 20}, {16, 20, 20},
+    {16, 20, 20}, {16, 20, 20}, {16, 20, 20}, {16, 20, 20}, {16, 20, 20},
+    {19, 20, 23}, {20, 23, 24}, {20, 24, 24}, {27, 27, 27}, {28, 28, 28}, {28, 28, 28}},
 }
 
 --! The chart's bottom edge in one of his movies (`leaving` or coming) at
@@ -108,6 +134,23 @@ function UIProfessorMenu.chartInMovie(leaving, pts)
     if pts >= keys[i] then bottom = keys[i + 1] end
   end
   return bottom
+end
+
+--! Which row of the chart as the picture has it is at row `y` (from under
+--! the roller to `bottom`) when its bottom edge is at row `bottom` in his
+--! movies: rolling, the whole chart is higher; springing back, its paper is
+--! squeezed from STRETCH_FROM down; tugged, it is drawn out at PULL_FROM.
+function UIProfessorMenu.chartRow(y, bottom)
+  if bottom > CHART_BOTTOM then
+    if y <= PULL_FROM then return y end
+    return math.max(PULL_FROM, y - (bottom - CHART_BOTTOM))
+  elseif bottom < DOWN_FROM then
+    return y + CHART_BOTTOM - bottom
+  elseif y <= STRETCH_FROM then
+    return y
+  end
+  return STRETCH_FROM + math.floor((y - STRETCH_FROM) * (CHART_BOTTOM - STRETCH_FROM)
+      / (bottom - STRETCH_FROM) + 0.5)
 end
 
 --! How light the chart is in his coming movie while he turns and points,
@@ -595,13 +638,10 @@ local function side(app, loaded, kind, light)
       local p = rgb[c]
       return p[1] + p[2] + p[3]
     end
-    -- The colour of the picture's palette nearest to `w` of `b` mixed into
-    -- `a` (the transparent colour left out).
+    -- The colour of the picture's palette nearest to `w` of `q` mixed into
+    -- `p` ({r, g, b} each; the transparent colour left out).
     local nearest = {}
-    local function mix(a, b, w)
-      if w >= 1 then return b end
-      if a == b or a == 255 or b == 255 then return a end
-      local p, q = rgb[a], rgb[b]
+    local function nearestOf(p, q, w)
       local r = math.floor(p[1] + (q[1] - p[1]) * w + 0.5)
       local g = math.floor(p[2] + (q[2] - p[2]) * w + 0.5)
       local bl = math.floor(p[3] + (q[3] - p[3]) * w + 0.5)
@@ -618,6 +658,13 @@ local function side(app, loaded, kind, light)
       end
       return c
     end
+    -- The same with two of the palette's colours.
+    local function mix(a, b, w)
+      if w >= 1 then return b end
+      if a == b or a == 255 or b == 255 then return a end
+      return nearestOf(rgb[a], rgb[b], w)
+    end
+    local rolled = UIProfessorMenu.ROLLED_UP
     -- (The chart's rows, with its roller and the wall above it.)
     local chart_to = kind == "down" and CHART_BOTTOM or kind == "up" and ROLLER_BOTTOM or -1
     -- The right end's mirror image for fill column `x`, row `y`: on its
@@ -669,6 +716,12 @@ local function side(app, loaded, kind, light)
         -- (The skeleton's lines stay as they are.)
         if w > 0 and not (paper and bright(c) < lightest - 60) then
           c = mix(c, endPaper(x, y), w)
+        end
+        -- Rolled up: under its roller the chart as his movie has it, from
+        -- the picture's edge to its end as the blend at the end goes.
+        local under = kind == "up" and x >= CHART_LEFT and rolled.left[y - ROLLER_BOTTOM]
+        if under then
+          c = nearestOf(under, rolled.right[y - ROLLER_BOTTOM], UIProfessorMenu.endBlend(x))
         end
         n = n + 1
         out[n] = CHARS[c]
@@ -729,31 +782,42 @@ end
 
 --! Draws the fill at the picture's left, on a screen wider than the picture,
 --! with the chart's bottom edge at row `bottom` (CHART_BOTTOM: down, as in
---! the picture), or with the chart and its roller gone (false): what his
---! movies need beside them (MoviePlayer:playMenuMovie). The chart higher than
---! down is its left end moved up, under the roller, as the paper is. `top`
---! and `low` (percent, or nil): how light the chart is (lightInMovie).
+--! the picture; ROLLER_BOTTOM: rolled up), or with the chart and its roller
+--! gone (false): what his movies need beside them (MoviePlayer:playMenuMovie).
+--! Elsewhere the chart's left end is its rows as his movies have them
+--! (UIProfessorMenu.chartRow). `top` and `low` (percent, or nil): how light
+--! the chart is (lightInMovie).
 function UIProfessorMenu.drawSide(canvas, bottom, top, low)
   local app = TheApp
   local loaded = UIProfessorMenu.art(app)
   if not loaded then return end
   local l = UIProfessorMenu.layout(canvas:getRenderSize())
   if l.px <= 0 then return end
-  if bottom then bottom = math.min(bottom, CHART_BOTTOM) end
-  local down = bottom and bottom >= CHART_BOTTOM - 9
+  local down = bottom and bottom >= DOWN_FROM
   local fill = side(app, loaded, not bottom and "gone" or (down and "down" or "up"))
   if canvas:scale(l.scale) then
     local x, y = l.px - SIDE_W, l.py
     fill:draw(canvas, x, y)
     -- (Clipped to the chart's left end, below the roller.)
     local left = math.max(0, l.px + CHART_LEFT)
+    -- Its rows `from` to `to`, a band at a time: rows as far from theirs.
     local function chart(from, to, light)
-      canvas:pushClip(left, y + from, l.px - left, to - from + 1)
-      side(app, loaded, "down", light):draw(canvas, x, y - (CHART_BOTTOM - bottom))
-      canvas:popClip()
+      local picture = side(app, loaded, "down", light)
+      local row = from
+      while row <= to do
+        local off = UIProfessorMenu.chartRow(row, bottom) - row
+        local last = row
+        while last < to and UIProfessorMenu.chartRow(last + 1, bottom) - last - 1 == off do
+          last = last + 1
+        end
+        canvas:pushClip(left, y + row, l.px - left, last - row + 1)
+        picture:draw(canvas, x, y - off)
+        canvas:popClip()
+        row = last + 1
+      end
     end
-    if bottom and bottom < CHART_BOTTOM then
-      if down then
+    if bottom and bottom > ROLLER_BOTTOM and bottom ~= CHART_BOTTOM then
+      if down and bottom < CHART_BOTTOM then
         canvas:pushClip(left, y + ROLLER_BOTTOM + 1, l.px - left, CHART_BOTTOM - ROLLER_BOTTOM)
         side(app, loaded, "up"):draw(canvas, x, y)
         canvas:popClip()
