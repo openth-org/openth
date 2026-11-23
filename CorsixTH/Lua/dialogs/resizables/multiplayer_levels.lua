@@ -224,6 +224,9 @@ function UIMultiplayerLevels:setShared(shared)
 end
 
 function UIMultiplayerLevels:select(i)
+  -- (Only a level the list has: the campaign has more than the multiplayer
+  -- list, whose rows below its last are hidden.)
+  if i < 1 or i > self:count() then return end
   self.level = i
   self.skip = 0
   self.players = math.min(self.wanted_players, self.levels.maxHospitals(i))

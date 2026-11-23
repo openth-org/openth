@@ -1701,7 +1701,8 @@ function Window:onMouseDown(button, x, y)
   if not repaint and (button == "left" or button == "right") then
     for _, btn in ipairs(self.buttons) do
       local bs = btn.panel_for_sprite.apply_ui_scale and TheApp.gfx:getUIScale() or 1
-      if btn.enabled and
+      -- (A hidden button takes no clicks, as it shows no tooltip.)
+      if btn.enabled and btn.panel_for_sprite.visible ~= false and
           btn.x * bs <= x and x < btn.r * bs and btn.y * bs <= y and y < btn.b * bs and
           (button == "left" or btn.on_rightclick ~= nil) then
         btn.panel_for_sprite.sprite_index = btn.sprite_index_active
