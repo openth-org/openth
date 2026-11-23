@@ -91,6 +91,8 @@ describe("Professor menu", function()
     -- The skeleton's other half: its arm, the mirror image of the one there.
     assert.equal(31, UIProfessorMenu.sideColumn(-1, 90))
     assert.equal(38, UIProfessorMenu.sideColumn(-8, 90))
+    -- His feet are whole: beside them no mirrored toe, only paper.
+    for x = -12, -1 do assert.equal(42, UIProfessorMenu.sideColumn(x, 144)) end
   end)
 
   it("turns the chart's left end into its right end's mirror image gradually", function()
@@ -105,6 +107,14 @@ describe("Professor menu", function()
       assert.is_true(w > last and w < 1, ("%d: %s"):format(x, w))
       last = w
     end
+    -- The bottom line thins first, from the picture's edge, before the
+    -- bottom edge darkens.
+    for _, y in ipairs({155, 156}) do
+      assert.equal(0, blend(-1, y))
+      assert.is_true(blend(-6, y) > 0 and blend(-6, y) < 1)
+      for x = -16, -12 do assert.equal(1, blend(x, y)) end
+    end
+    assert.equal(0, blend(-6, 159))
   end)
 
   it("fills beside his movies with the chart as they have it", function()
