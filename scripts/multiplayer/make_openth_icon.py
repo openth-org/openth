@@ -1,6 +1,6 @@
 # OpenTH's mark (the website's mark.svg: viewBox 40, a #0b7a62 square at
 # 2..38 with radius 10, the white cross M16 9h8v7h7v8h-7v7h-8v-7H9v-8h7z) as
-# the program icon: CorsixTH.ico (Windows) and Icon.icns (macOS).
+# the program icon: OpenTH.ico (Windows) and Icon.icns (macOS).
 import sys
 from PIL import Image, ImageDraw
 out = sys.argv[1]
@@ -15,7 +15,7 @@ big = img.resize((1024, 1024), Image.LANCZOS)
 big.save(out + "/openth-icon-1024.png")
 sizes = [16, 24, 32, 48, 64, 128, 256]
 frames = [img.resize((s, s), Image.LANCZOS) for s in sizes]
-frames[-1].save(out + "/CorsixTH.ico", sizes=[(s, s) for s in sizes], append_images=frames[:-1])
+frames[-1].save(out + "/OpenTH.ico", sizes=[(s, s) for s in sizes], append_images=frames[:-1])
 big.save(out + "/Icon.icns")
 sheet = Image.new("RGBA", (sum(sizes) + 10 * len(sizes), 256), (240, 240, 240, 255))
 x = 0
