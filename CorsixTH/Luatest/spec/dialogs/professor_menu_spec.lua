@@ -63,6 +63,36 @@ describe("Professor menu", function()
     end
   end)
 
+  it("keeps to the right of a wider screen, with the fill at its left", function()
+    for _, size in ipairs({{2560, 1080}, {3440, 1440}, {3840, 1600}, {5120, 1440}}) do
+      local w, h = size[1], size[2]
+      local l = UIProfessorMenu.layout(w, h)
+      local f = l.scale
+      local what = ("%dx%d"):format(w, h)
+      -- No black at the right; at most a picture pixel of his back cut off.
+      assert.is_true(l.x + 320 * f >= w - 0.001 and l.x + 320 * f < w + f, what .. " right")
+      -- The fill reaches the screen's left edge (up to 32:9).
+      assert.is_true(l.px > 0 and l.px <= UIProfessorMenu.SIDE_W, what .. " fill")
+    end
+  end)
+
+  it("fills the side from the chart and the blackboard, not the professor", function()
+    for y = 0, 199 do
+      for x = -UIProfessorMenu.SIDE_W, -1 do
+        local c = UIProfessorMenu.sideColumn(x, y)
+        local what = ("%d,%d from %s"):format(x, y, tostring(c))
+        assert.is_true(c >= 0 and c < 320 and c == math.floor(c), what)
+        -- Below the blackboard's frame he is from column 203 on.
+        assert.is_true(y <= 24 or c <= 202, what)
+        -- The chart's left end (22 columns) is made from the chart.
+        if x >= -22 and y >= 5 and y <= 159 then assert.is_true(c <= 177, what) end
+      end
+    end
+    -- The skeleton's other half: its arm, the mirror image of the one there.
+    assert.equal(31, UIProfessorMenu.sideColumn(-1, 90))
+    assert.equal(38, UIProfessorMenu.sideColumn(-8, 90))
+  end)
+
   it("finds each spot inside its own outline, and none elsewhere", function()
     for _, spot in ipairs(UIProfessorMenu.SPOTS) do
       local sx, sy, n = 0, 0, 0
