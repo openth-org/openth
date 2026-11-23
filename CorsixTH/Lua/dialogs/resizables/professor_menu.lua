@@ -55,16 +55,25 @@ local SIDE_W = 320
 -- The chart's paper ends at CHART_RIGHT; its left end is at CHART_LEFT (on
 -- the fill), as wide as the right end's edge and red line (EDGE_W). The
 -- skeleton (rows SKELETON_TOP to SKELETON_BOTTOM) has its middle at half
--- SKELETON_2X; past its other half the paper is PAPER_COLUMN's. The paper's
--- colour beside it is found in the picture's first EDGE_PAPER columns (the
--- paper beyond the skeleton has other blotches).
+-- SKELETON_2X; past its other half the paper is PAPER_COLUMN's. His feet
+-- (from SKELETON_FEET) are whole in the picture: only paper beside them. The
+-- paper's colour beside it is found in the picture's first EDGE_PAPER columns
+-- (the paper beyond the skeleton has other blotches).
 local CHART_RIGHT, CHART_LEFT, EDGE_W = 177, -22, 6
 -- The right end yellows, its bottom edge darkens and the roller's top drops a
 -- row over its last columns, so from BLEND_FROM to the edge the left end goes
 -- over from what goes on from the picture's edge to the right end's mirror
--- image little by little (UIProfessorMenu.endBlend).
+-- image little by little (UIProfessorMenu.endBlend). The chart's bottom line
+-- (rows LINE_TOP and LINE_LOW) is two rows thick on its left and one on its
+-- right: it thins first, from the picture's edge (to LINE_TO), so that the
+-- paper under it keeps its width where the bottom edge darkens. Of the right
+-- end's paper between the roller's shadow and the bottom line (rows
+-- END_PAPER_TOP to END_PAPER_LOW) only the paper is taken, not what is drawn
+-- on it (the back of the side skull's head).
 local BLEND_FROM = -6
-local SKELETON_2X, SKELETON_TOP, SKELETON_BOTTOM = 30, 31, 151
+local LINE_TOP, LINE_LOW, LINE_TO = 155, 156, -11
+local END_PAPER_TOP, END_PAPER_LOW = 23, 154
+local SKELETON_2X, SKELETON_TOP, SKELETON_BOTTOM, SKELETON_FEET = 30, 31, 151, 141
 local PAPER_COLUMN, EDGE_PAPER = 42, 12
 -- Beside the chart's right end, clear of the professor: the roller's end, its
 -- cap and mount (to MOUNT_TO), the frame above the blackboard (down to
@@ -272,6 +281,7 @@ function UIProfessorMenu.sideColumn(x, y, kind)
     return reflect(mirror, BOARD_FROM, BOARD_TO)
   elseif x >= CHART_LEFT + EDGE_W then
     if y >= SKELETON_TOP and y <= SKELETON_BOTTOM then
+      if y >= SKELETON_FEET then return PAPER_COLUMN end
       return math.min(SKELETON_2X - x, PAPER_COLUMN)
     end
     return -x - 1
@@ -283,14 +293,20 @@ function UIProfessorMenu.sideColumn(x, y, kind)
   return reflect(mirror, BOARD_FROM, BOARD_TO)
 end
 
+--! 0 for `x` from `from` on, 1 left of `to`, and in between more each column.
+local function ramp(x, from, to)
+  if x >= from then return 0 end
+  if x < to then return 1 end
+  return (from - x) / (from - to + 1)
+end
+
 --! How much of the chart's right end (its mirror image) the fill's column
---! `x` at the chart's left end has: 0 up to BLEND_FROM (only what goes on
---! from the picture's edge), then more each column until its edge (1).
-function UIProfessorMenu.endBlend(x)
-  local edge = CHART_LEFT + EDGE_W
-  if x >= BLEND_FROM then return 0 end
-  if x < edge then return 1 end
-  return (BLEND_FROM - x) / (BLEND_FROM - edge + 1)
+--! `x` at the chart's left end has in row `y`: 0 up to BLEND_FROM (only what
+--! goes on from the picture's edge), then more each column until its edge
+--! (1); in the bottom line's rows from the picture's edge to LINE_TO.
+function UIProfessorMenu.endBlend(x, y)
+  if y and y >= LINE_TOP and y <= LINE_LOW then return ramp(x, -1, LINE_TO) end
+  return ramp(x, BLEND_FROM, CHART_LEFT + EDGE_W)
 end
 
 --! Decodes a sprite of "complex" chunks as the engine does (chunk_renderer):
@@ -583,6 +599,7 @@ local function side(app, loaded, kind, light)
     -- `a` (the transparent colour left out).
     local nearest = {}
     local function mix(a, b, w)
+      if w >= 1 then return b end
       if a == b or a == 255 or b == 255 then return a end
       local p, q = rgb[a], rgb[b]
       local r = math.floor(p[1] + (q[1] - p[1]) * w + 0.5)
@@ -603,6 +620,25 @@ local function side(app, loaded, kind, light)
     end
     -- (The chart's rows, with its roller and the wall above it.)
     local chart_to = kind == "down" and CHART_BOTTOM or kind == "up" and ROLLER_BOTTOM or -1
+    -- The right end's mirror image for fill column `x`, row `y`: on its
+    -- paper, where something is drawn (darker than the row's lightest there),
+    -- the nearest paper beside it in the row.
+    local from = CHART_LEFT + CHART_RIGHT - (BLEND_FROM - 1)
+    local to = CHART_RIGHT - EDGE_W
+    local function endPaper(x, y)
+      local col = CHART_LEFT + CHART_RIGHT - x
+      local b = at(col, y)
+      if y < END_PAPER_TOP or y > END_PAPER_LOW then return b end
+      local paper = 0
+      for c = from, to do paper = math.max(paper, bright(at(c, y))) end
+      if bright(b) >= paper - 60 then return b end
+      for d = 1, to - from do
+        for _, c in ipairs({col - d, col + d}) do
+          if c >= from and c <= to and bright(at(c, y)) >= paper - 60 then return at(c, y) end
+        end
+      end
+      return b
+    end
     local out, n = {}, 0
     for y = 0, PIC_H - 1 do
       local paper, lightest
@@ -628,10 +664,11 @@ local function side(app, loaded, kind, light)
           c = at(-x - 1, y)
           if bright(c) < lightest - 30 then c = paper end
         end
-        local w = y <= chart_to and UIProfessorMenu.endBlend(x) or 0
+        -- (Left of CHART_LEFT + EDGE_W the fill is the mirror image already.)
+        local w = y <= chart_to and x >= CHART_LEFT + EDGE_W and UIProfessorMenu.endBlend(x, y) or 0
         -- (The skeleton's lines stay as they are.)
-        if w > 0 and w < 1 and not (paper and bright(c) < lightest - 60) then
-          c = mix(c, at(CHART_LEFT + CHART_RIGHT - x, y), w)
+        if w > 0 and not (paper and bright(c) < lightest - 60) then
+          c = mix(c, endPaper(x, y), w)
         end
         n = n + 1
         out[n] = CHARS[c]
