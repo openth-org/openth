@@ -47,6 +47,26 @@ local PIC_W, PIC_H = 320, 200
 -- What stays on the screen when the picture is scaled to fill it: all but
 -- the professor's back and the edges of the wall above and below.
 local KEEP_W, KEEP_TOP, KEEP_BOTTOM = 300, 2, 182
+-- On a screen wider than the picture, the picture keeps to the right (the
+-- screen's edge cuts the professor's back, as the original's did) and what
+-- is left of it at the left is filled (as much as a 32:9 screen needs), from
+-- the picture itself: the chart's left end and the blackboard beside it.
+local SIDE_W = 320
+-- The chart's paper ends at CHART_RIGHT; its left end is at CHART_LEFT (on
+-- the fill), as wide as the right end's edge and red line (EDGE_W). The
+-- skeleton (rows SKELETON_TOP to SKELETON_BOTTOM) has its middle at half
+-- SKELETON_2X; past its other half the paper is PAPER_COLUMN's. The paper's
+-- colour beside it is found in the picture's first EDGE_PAPER columns (the
+-- paper beyond the skeleton has other blotches).
+local CHART_RIGHT, CHART_LEFT, EDGE_W = 177, -22, 6
+local SKELETON_2X, SKELETON_TOP, SKELETON_BOTTOM = 30, 31, 151
+local PAPER_COLUMN, EDGE_PAPER = 42, 12
+-- Beside the chart's right end, clear of the professor: the roller's end, its
+-- cap and mount (to MOUNT_TO), the frame above the blackboard (down to
+-- FRAME_BOTTOM, from FRAME_FROM to the picture's edge), the blackboard
+-- (BOARD_FROM to BOARD_TO) and the ledge under it (from LEDGE_TOP).
+local MOUNT_TO, FRAME_FROM, FRAME_BOTTOM = 202, 196, 24
+local BOARD_FROM, BOARD_TO, LEDGE_TOP = 180, 200, 192
 -- Where each picture of his arm (Main02M 1 to 5) goes on the picture. They
 -- do not share a corner: each is a pixel or two off the others (found by
 -- matching each one's lines with the picture's).
@@ -116,6 +136,8 @@ UIProfessorMenu.TEXT = {WIDE_X, TEXT_TOP, WIDE_W, TEXT_BOTTOM - TEXT_TOP}
 UIProfessorMenu.WRITING = {WRITING[1], WRITING[2], WRITING[3] - WRITING[1] + 1,
     WRITING[4] - WRITING[2] + 1}
 UIProfessorMenu.CHALK = {CHALK_X, CHALK_TOP, 90, CHALK_BOTTOM - CHALK_TOP}
+--! How wide the fill at the picture's left is, in picture pixels.
+UIProfessorMenu.SIDE_W = SIDE_W
 
 --! Whether the point is inside an outline (x, y pairs).
 local function inside(outline, x, y)
@@ -141,22 +163,56 @@ end
 
 --! Where the picture goes on a screen `w` by `h` pixels: as big as fills the
 --! screen, cutting off at most the professor's back (the chart stays at the
---! left) and the edges of the wall, with black bars where the screen's shape
---! needs more. The corner is a whole number of picture pixels from the
---! screen's.
+--! left) and the edges of the wall, with black bars above and below where the
+--! screen's shape needs more. On a wider screen the picture keeps to the
+--! right and the fill (SIDE_W) is at its left. The corner is a whole number
+--! of picture pixels from the screen's.
 --!return (table) `scale` (screen pixels to each picture pixel), the corner
 --! in picture pixels (`px`, `py`) and in screen pixels (`x`, `y`)
 function UIProfessorMenu.layout(w, h)
   local f = math.min(math.max(w / PIC_W, h / PIC_H), w / KEEP_W,
       h / (KEEP_BOTTOM - KEEP_TOP))
-  local x = PIC_W * f <= w and (w - PIC_W * f) / 2 or 0
+  local x = PIC_W * f <= w and w - PIC_W * f or 0
   local y = (h - PIC_H * f) / 2
   if PIC_H * f > h then
     y = math.max(math.min(y, h - KEEP_BOTTOM * f), -KEEP_TOP * f)
   end
-  local px, py = math.floor(x / f + 0.5), math.floor(y / f + 0.5)
+  -- (Up, not to the nearest, so that no black is left at the right.)
+  local px, py = math.ceil(x / f - 1e-6), math.floor(y / f + 0.5)
   if py < -KEEP_TOP then py = -KEEP_TOP end
   return {scale = f, px = px, py = py, x = px * f, y = py * f}
+end
+
+--! Reflects `s` back and forth between `lo` and `hi`.
+local function reflect(s, lo, hi)
+  local period = 2 * (hi - lo)
+  local t = (s - lo) % period
+  return lo + (t <= hi - lo and t or period - t)
+end
+
+--! Which column of the picture the fill at the picture's left (x from
+--! -SIDE_W to -1) takes its row `y`'s pixel from: inside the chart, beside
+--! the skeleton its other half (it is cut at the picture's edge) and then
+--! plain paper, above and below it (the roller, the paper's top and bottom,
+--! the blackboard under the chart) the mirror image of the picture's edge; at
+--! the chart's left end, the mirror image of its right end, the roller's
+--! mount with it; then the blackboard and its frame as they are beside the
+--! chart, there and back again.
+function UIProfessorMenu.sideColumn(x, y)
+  local mirror = CHART_LEFT + CHART_RIGHT - x
+  if y >= LEDGE_TOP then
+    return reflect(x < CHART_LEFT and mirror or -x - 1, 0, BOARD_TO)
+  elseif x >= CHART_LEFT + EDGE_W then
+    if y >= SKELETON_TOP and y <= SKELETON_BOTTOM then
+      return math.min(SKELETON_2X - x, PAPER_COLUMN)
+    end
+    return -x - 1
+  elseif mirror <= MOUNT_TO then
+    return mirror
+  elseif y <= FRAME_BOTTOM then
+    return reflect(mirror, FRAME_FROM, PIC_W - 1)
+  end
+  return reflect(mirror, BOARD_FROM, BOARD_TO)
 end
 
 --! Decodes a sprite of "complex" chunks as the engine does (chunk_renderer):
@@ -337,8 +393,9 @@ local art -- false once known that the game files do not have it
 --!return (table) `picture` (the bitmap), `base` (its colours by position,
 --! from 1), `arms` (his arm's pictures: `pixels` as decodeChunks gives them,
 --! `w`), `pink` (each skeleton spot's paper runs, by item), `pink_of` (the
---! pink of each colour), `rubbed` (rubOut's changes) and `views` (the
---! pictures made for the items pointed at, by item)
+--! pink of each colour), `rgb` (the palette's colours), `rubbed` (rubOut's
+--! changes), `views` (the pictures made for the items pointed at, by item)
+--! and `side` (the fill at the picture's left, once made)
 function UIProfessorMenu.art(app)
   if art == nil then
     local ok, result = pcall(function()
@@ -355,6 +412,7 @@ function UIProfessorMenu.art(app)
       }
       for i = 1, PIC_W * PIC_H do loaded.base[i] = pixels:byte(i) end
       local rgb = colourTable(colours)
+      loaded.rgb = rgb
       loaded.pink_of = pinkMap(rgb)
       loaded.rubbed = rubOut(loaded.base, rgb)
       -- His arm: the sheet's table has the start (4 bytes), width and height
@@ -402,6 +460,74 @@ end
 local CHARS = {}
 for c = 0, 255 do CHARS[c] = string.char(c) end
 
+--! A bitmap of the picture's palette from its colours (a string, a byte for
+--! each pixel, `width` pixels a row).
+local function bitmapOf(app, data, width)
+  local gfx = app.gfx
+  local palette = gfx:getPalette("Main01M.pal")
+  local bitmap = TH.bitmap()
+  -- (Made again when the renderer is, as the game's pictures are.)
+  local function load(bm)
+    bm:setPalette(palette)
+    assert(bm:load(data, width, gfx.target))
+  end
+  load(bitmap)
+  gfx.reload_functions[bitmap] = load
+  return bitmap
+end
+
+--! The fill at the picture's left (SIDE_W wide), made the first time it is
+--! needed, from the picture with the chart's writing rubbed out (the end of
+--! his speech mark is over the chart's right end). Beside the skeleton only
+--! its lines are taken (what is darker than the paper); its paper there is
+--! the mirror image of the paper at the picture's edge, which goes on from
+--! it, with the paper's commonest colour (in the rows around) where that
+--! has the skeleton's lines.
+local function side(app, loaded)
+  if not loaded.side then
+    local base, rubbed, rgb = loaded.base, loaded.rubbed, loaded.rgb
+    local function at(x, y)
+      local i = y * PIC_W + x + 1
+      return rubbed[i] or base[i]
+    end
+    local function light(c)
+      local p = rgb[c]
+      return p[1] + p[2] + p[3]
+    end
+    local out, n = {}, 0
+    for y = 0, PIC_H - 1 do
+      local paper, lightest
+      if y >= SKELETON_TOP and y <= SKELETON_BOTTOM then
+        lightest = 0
+        for yy = y - 3, y + 3 do
+          for x = 0, EDGE_PAPER - 1 do lightest = math.max(lightest, light(at(x, yy))) end
+        end
+        local counts, most = {}, 0
+        for yy = y - 3, y + 3 do
+          for x = 0, EDGE_PAPER - 1 do
+            local c = at(x, yy)
+            if light(c) >= lightest - 30 then
+              counts[c] = (counts[c] or 0) + 1
+              if counts[c] > most then most, paper = counts[c], c end
+            end
+          end
+        end
+      end
+      for x = -SIDE_W, -1 do
+        local c = at(UIProfessorMenu.sideColumn(x, y), y)
+        if paper and x >= CHART_LEFT + EDGE_W and light(c) >= lightest - 60 then
+          c = at(-x - 1, y)
+          if light(c) < lightest - 30 then c = paper end
+        end
+        n = n + 1
+        out[n] = CHARS[c]
+      end
+    end
+    loaded.side = bitmapOf(app, table.concat(out), SIDE_W)
+  end
+  return loaded.side
+end
+
 --! The picture with a spot pointed at, made the first time (Argus: drawn as
 --! one picture, his arm and the pink are as smooth as the rest and line up
 --! with it): the chart's writing rubbed out, then his arm pointing at the
@@ -429,35 +555,31 @@ local function view(app, loaded, spot)
   end
   local out = {}
   for i, c in ipairs(px) do out[i] = CHARS[c] end
-  local data = table.concat(out)
-  local gfx = app.gfx
-  local palette = gfx:getPalette("Main01M.pal")
-  local bitmap = TH.bitmap()
-  -- (Made again when the renderer is, as the game's pictures are.)
-  local function load(bm)
-    bm:setPalette(palette)
-    assert(bm:load(data, PIC_W, gfx.target))
-  end
-  load(bitmap)
-  gfx.reload_functions[bitmap] = load
+  local bitmap = bitmapOf(app, table.concat(out), PIC_W)
   loaded.views[spot.item] = bitmap
   return bitmap
 end
 
---! Draws the picture (or `picture`, one made for a spot) to fill the screen:
---! the menu's background (UI:draw), and what is pointed at.
+--! Draws the picture (or `picture`, one made for a spot) to fill the screen,
+--! with the fill at its left on a wider screen: the menu's background
+--! (UI:draw), and what is pointed at.
 function UIProfessorMenu.drawPicture(canvas, picture)
-  local loaded = UIProfessorMenu.art(TheApp)
+  local app = TheApp
+  local loaded = UIProfessorMenu.art(app)
   if not loaded then return end
   picture = picture or loaded.picture
   local l = UIProfessorMenu.layout(canvas:getRenderSize())
+  local fill = l.px > 0 and side(app, loaded)
   if canvas:scale(l.scale) then
+    if fill then fill:draw(canvas, l.px - SIDE_W, l.py) end
     picture:draw(canvas, l.px, l.py)
     canvas:scale(1)
   elseif canvas:scale(l.scale, "bitmap") then
+    if fill then fill:draw(canvas, l.x - SIDE_W * l.scale, l.y) end
     picture:draw(canvas, l.x, l.y)
     canvas:scale(1)
   else
+    if fill then fill:draw(canvas, l.x - SIDE_W, l.y) end
     picture:draw(canvas, l.x, l.y)
   end
 end
@@ -744,7 +866,8 @@ function UIProfessorMenu:draw(canvas, x, y)
     canvas:scale(1)
   end
   -- The version lines, at the top right (on the wall and the blackboard's
-  -- frame, clear of the chart).
+  -- frame, clear of the chart), each ending a little before the screen's
+  -- edge whatever its length.
   local s = TheApp.gfx:getUIScale()
   local lines = {_S.main_menu.version .. self.release_string}
   if TheApp.config.debug then
@@ -754,7 +877,8 @@ function UIProfessorMenu:draw(canvas, x, y)
     lines[#lines + 1] = _S.main_menu.updates_off
   end
   for i, line in ipairs(lines) do
-    self.label_font:draw(canvas, line, sw - 205 * s, (4 + 15 * (i - 1)) * s, 200, 0, "right")
+    local lw = self.label_font:sizeOf(line)
+    self.label_font:draw(canvas, line, sw - 5 * s - lw, (4 + 15 * (i - 1)) * s)
   end
 end
 
