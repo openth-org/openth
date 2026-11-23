@@ -275,6 +275,14 @@ function MoviePlayer:playMenuMovie(leaving, callback)
       local l = UIProfessorMenu.layout(screen_w, screen_h)
       return l.x, l.y, 320 * l.scale, 200 * l.scale, l.scale
     end
+    -- On a wider screen, the fill at its left as the menu has it, with the
+    -- chart where the movie has it and as light (Jan: the left part was cut
+    -- off).
+    self.refresh_overlay = function(player, _, _, _, _, _, pts)
+      pts = pts or 0
+      UIProfessorMenu.drawSide(player.video, UIProfessorMenu.chartInMovie(leaving, pts),
+          UIProfessorMenu.lightInMovie(leaving, pts))
+    end
   end
 end
 

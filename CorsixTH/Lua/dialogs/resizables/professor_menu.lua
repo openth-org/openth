@@ -67,6 +67,63 @@ local PAPER_COLUMN, EDGE_PAPER = 42, 12
 -- (BOARD_FROM to BOARD_TO) and the ledge under it (from LEDGE_TOP).
 local MOUNT_TO, FRAME_FROM, FRAME_BOTTOM = 202, 196, 24
 local BOARD_FROM, BOARD_TO, LEDGE_TOP = 180, 200, 192
+-- The roller (down to ROLLER_BOTTOM, its end cap to MOUNT_FROM, where its
+-- mount starts) and the chart's bottom edge (CHART_BOTTOM) when it is down.
+local ROLLER_BOTTOM, MOUNT_FROM, CHART_BOTTOM = 21, 186, 159
+
+--! Where the chart's bottom edge is in his movies, as they go on: the time
+--! of the frame (in milliseconds, 14 frames a second) and the row from that
+--! frame on (false: the chart and its roller have fallen off), measured on
+--! the movies' frames. Coming (ANIMS MMENU1), the chart is rolled up, its
+--! edge just under the roller, until he pulls it down at 7.7 seconds; it
+--! springs back a little and settles. Leaving (MMENU2), he lets it roll up
+--! at 1.6 seconds (after tugging at it) and pulls it off its mount at 2.
+UIProfessorMenu.MOVIE_CHART = {
+  coming = {0, 23, 7714, 36, 7786, 48, 7857, 71, 7929, 86, 8000, 120, 8071, 145,
+    8143, 158, 8929, 157, 9500, 156, 10714, 157, 11000, 158, 11643, 159},
+  leaving = {0, 159, 1643, 111, 1714, 48, 1786, 23, 2000, false},
+}
+
+--! The chart's bottom edge in one of his movies (`leaving` or coming) at
+--! `pts` (milliseconds; the movie's clock, which shows the frame of that
+--! time when the screen is drawn often): its row, or false when it is gone.
+function UIProfessorMenu.chartInMovie(leaving, pts)
+  local keys = UIProfessorMenu.MOVIE_CHART[leaving and "leaving" or "coming"]
+  local bottom = keys[2]
+  for i = 3, #keys - 1, 2 do
+    if pts >= keys[i] then bottom = keys[i + 1] end
+  end
+  return bottom
+end
+
+--! How light the chart is in his coming movie while he turns and points,
+--! against the picture (the movie's light changes as he moves): the time of
+--! the frame (milliseconds) and, from then on, the percent at the chart's
+--! upper part (LIGHT_TOP_ROW) and at its lower part (LIGHT_LOW_ROW), measured
+--! on the movie's frames beside the picture's edge. Elsewhere it is as light.
+UIProfessorMenu.MOVIE_LIGHT = {
+  coming = {8143, 100, 103, 8286, 100, 108, 8857, 100, 106, 8929, 100, 103,
+    9000, 99, 103, 9071, 99, 102, 9286, 98, 100, 9357, 98, 99, 9500, 98, 97,
+    9571, 98, 96, 9643, 98, 95, 9714, 97, 95, 9786, 97, 93, 9857, 97, 92,
+    10286, 97, 91, 10429, 98, 92, 10714, 100, 92, 10786, 100, 93, 10857, 100, 95,
+    11000, 101, 98, 11071, 103, 100, 11143, 104, 100, 11286, 105, 102,
+    11357, 105, 103, 11643, 105, 105, 11857, 105, 104, 11929, 105, 103,
+    12071, 104, 103, 12143, 101, 102, 12214, 100, 100, 12357, 100, 99, 12643, 100, 100},
+}
+local LIGHT_TOP_ROW, LIGHT_LOW_ROW, LIGHT_BAND, LIGHT_STEP = 57, 120, 8, 2
+
+--! How light the chart is in one of his movies at `pts` (milliseconds): the
+--! percent at its upper and its lower part, or nil when as in the picture.
+function UIProfessorMenu.lightInMovie(leaving, pts)
+  local keys = UIProfessorMenu.MOVIE_LIGHT[leaving and "leaving" or "coming"]
+  if not keys or pts < keys[1] then return nil end
+  local top, low = 100, 100
+  for i = 1, #keys - 2, 3 do
+    if pts >= keys[i] then top, low = keys[i + 1], keys[i + 2] end
+  end
+  if top == 100 and low == 100 then return nil end
+  return top, low
+end
 -- Where each picture of his arm (Main02M 1 to 5) goes on the picture. They
 -- do not share a corner: each is a pixel or two off the others (found by
 -- matching each one's lines with the picture's).
@@ -197,11 +254,17 @@ end
 --! the blackboard under the chart) the mirror image of the picture's edge; at
 --! the chart's left end, the mirror image of its right end, the roller's
 --! mount with it; then the blackboard and its frame as they are beside the
---! chart, there and back again.
-function UIProfessorMenu.sideColumn(x, y)
+--! chart, there and back again. With the chart rolled up (`kind` "up") the
+--! blackboard is behind it; with it and its roller gone ("gone"), also the
+--! frame behind the roller (its mount stays). The chart down: "down" or nil.
+function UIProfessorMenu.sideColumn(x, y, kind)
   local mirror = CHART_LEFT + CHART_RIGHT - x
   if y >= LEDGE_TOP then
     return reflect(x < CHART_LEFT and mirror or -x - 1, 0, BOARD_TO)
+  elseif kind == "gone" and y <= FRAME_BOTTOM and mirror < MOUNT_FROM then
+    return reflect(mirror, FRAME_FROM, PIC_W - 1)
+  elseif kind and kind ~= "down" and y > ROLLER_BOTTOM and x >= CHART_LEFT then
+    return reflect(mirror, BOARD_FROM, BOARD_TO)
   elseif x >= CHART_LEFT + EDGE_W then
     if y >= SKELETON_TOP and y <= SKELETON_BOTTOM then
       return math.min(SKELETON_2X - x, PAPER_COLUMN)
@@ -395,7 +458,7 @@ local art -- false once known that the game files do not have it
 --! `w`), `pink` (each skeleton spot's paper runs, by item), `pink_of` (the
 --! pink of each colour), `rgb` (the palette's colours), `rubbed` (rubOut's
 --! changes), `views` (the pictures made for the items pointed at, by item)
---! and `side` (the fill at the picture's left, once made)
+--! and `sides` (the fills at the picture's left, once made, by kind)
 function UIProfessorMenu.art(app)
   if art == nil then
     local ok, result = pcall(function()
@@ -409,10 +472,14 @@ function UIProfessorMenu.art(app)
         arms = {},
         pink = {},
         views = {},
+        sides = {},
+        side_data = {},
+        palettes = {},
       }
       for i = 1, PIC_W * PIC_H do loaded.base[i] = pixels:byte(i) end
       local rgb = colourTable(colours)
       loaded.rgb = rgb
+      loaded.pal_data = colours
       loaded.pink_of = pinkMap(rgb)
       loaded.rubbed = rubOut(loaded.base, rgb)
       -- His arm: the sheet's table has the start (4 bytes), width and height
@@ -461,10 +528,10 @@ local CHARS = {}
 for c = 0, 255 do CHARS[c] = string.char(c) end
 
 --! A bitmap of the picture's palette from its colours (a string, a byte for
---! each pixel, `width` pixels a row).
-local function bitmapOf(app, data, width)
+--! each pixel, `width` pixels a row), or of `palette`.
+local function bitmapOf(app, data, width, palette)
   local gfx = app.gfx
-  local palette = gfx:getPalette("Main01M.pal")
+  palette = palette or gfx:getPalette("Main01M.pal")
   local bitmap = TH.bitmap()
   -- (Made again when the renderer is, as the game's pictures are.)
   local function load(bm)
@@ -482,31 +549,34 @@ end
 --! its lines are taken (what is darker than the paper); its paper there is
 --! the mirror image of the paper at the picture's edge, which goes on from
 --! it, with the paper's commonest colour (in the rows around) where that
---! has the skeleton's lines.
-local function side(app, loaded)
-  if not loaded.side then
+--! has the skeleton's lines. `kind` as UIProfessorMenu.sideColumn's ("down",
+--! "up" or "gone"); `light`, a percent, makes it that light (made once each).
+local function side(app, loaded, kind, light)
+  local key = light and kind .. light or kind
+  if loaded.sides[key] then return loaded.sides[key] end
+  if not loaded.side_data[kind] then
     local base, rubbed, rgb = loaded.base, loaded.rubbed, loaded.rgb
     local function at(x, y)
       local i = y * PIC_W + x + 1
       return rubbed[i] or base[i]
     end
-    local function light(c)
+    local function bright(c)
       local p = rgb[c]
       return p[1] + p[2] + p[3]
     end
     local out, n = {}, 0
     for y = 0, PIC_H - 1 do
       local paper, lightest
-      if y >= SKELETON_TOP and y <= SKELETON_BOTTOM then
+      if kind == "down" and y >= SKELETON_TOP and y <= SKELETON_BOTTOM then
         lightest = 0
         for yy = y - 3, y + 3 do
-          for x = 0, EDGE_PAPER - 1 do lightest = math.max(lightest, light(at(x, yy))) end
+          for x = 0, EDGE_PAPER - 1 do lightest = math.max(lightest, bright(at(x, yy))) end
         end
         local counts, most = {}, 0
         for yy = y - 3, y + 3 do
           for x = 0, EDGE_PAPER - 1 do
             local c = at(x, yy)
-            if light(c) >= lightest - 30 then
+            if bright(c) >= lightest - 30 then
               counts[c] = (counts[c] or 0) + 1
               if counts[c] > most then most, paper = counts[c], c end
             end
@@ -514,18 +584,34 @@ local function side(app, loaded)
         end
       end
       for x = -SIDE_W, -1 do
-        local c = at(UIProfessorMenu.sideColumn(x, y), y)
-        if paper and x >= CHART_LEFT + EDGE_W and light(c) >= lightest - 60 then
+        local c = at(UIProfessorMenu.sideColumn(x, y, kind), y)
+        if paper and x >= CHART_LEFT + EDGE_W and bright(c) >= lightest - 60 then
           c = at(-x - 1, y)
-          if light(c) < lightest - 30 then c = paper end
+          if bright(c) < lightest - 30 then c = paper end
         end
         n = n + 1
         out[n] = CHARS[c]
       end
     end
-    loaded.side = bitmapOf(app, table.concat(out), SIDE_W)
+    loaded.side_data[kind] = table.concat(out)
   end
-  return loaded.side
+  local palette = nil
+  if light then
+    palette = loaded.palettes[light]
+    if not palette then
+      palette = TH.palette(loaded.pal_data)
+      for c = 0, 254 do
+        local p = loaded.rgb[c]
+        local function lit(v) return math.min(255, math.floor(v * light / 100 + 0.5)) end
+        palette:setEntry(c, lit(p[1]), lit(p[2]), lit(p[3]))
+      end
+      -- (Transparent, as the picture's own palette has it.)
+      palette:setEntry(255, 0xFF, 0x00, 0xFF)
+      loaded.palettes[light] = palette
+    end
+  end
+  loaded.sides[key] = bitmapOf(app, loaded.side_data[kind], SIDE_W, palette)
+  return loaded.sides[key]
 end
 
 --! The picture with a spot pointed at, made the first time (Argus: drawn as
@@ -560,26 +646,73 @@ local function view(app, loaded, spot)
   return bitmap
 end
 
+--! Draws the fill at the picture's left, on a screen wider than the picture,
+--! with the chart's bottom edge at row `bottom` (CHART_BOTTOM: down, as in
+--! the picture), or with the chart and its roller gone (false): what his
+--! movies need beside them (MoviePlayer:playMenuMovie). The chart higher than
+--! down is its left end moved up, under the roller, as the paper is. `top`
+--! and `low` (percent, or nil): how light the chart is (lightInMovie).
+function UIProfessorMenu.drawSide(canvas, bottom, top, low)
+  local app = TheApp
+  local loaded = UIProfessorMenu.art(app)
+  if not loaded then return end
+  local l = UIProfessorMenu.layout(canvas:getRenderSize())
+  if l.px <= 0 then return end
+  if bottom then bottom = math.min(bottom, CHART_BOTTOM) end
+  local down = bottom and bottom >= CHART_BOTTOM - 9
+  local fill = side(app, loaded, not bottom and "gone" or (down and "down" or "up"))
+  if canvas:scale(l.scale) then
+    local x, y = l.px - SIDE_W, l.py
+    fill:draw(canvas, x, y)
+    -- (Clipped to the chart's left end, below the roller.)
+    local left = math.max(0, l.px + CHART_LEFT)
+    local function chart(from, to, light)
+      canvas:pushClip(left, y + from, l.px - left, to - from + 1)
+      side(app, loaded, "down", light):draw(canvas, x, y - (CHART_BOTTOM - bottom))
+      canvas:popClip()
+    end
+    if bottom and bottom < CHART_BOTTOM then
+      if down then
+        canvas:pushClip(left, y + ROLLER_BOTTOM + 1, l.px - left, CHART_BOTTOM - ROLLER_BOTTOM)
+        side(app, loaded, "up"):draw(canvas, x, y)
+        canvas:popClip()
+      end
+      chart(ROLLER_BOTTOM + 1, bottom)
+    end
+    if down and top then
+      -- In bands, each as light as the movie has the chart there.
+      for row = ROLLER_BOTTOM + 1, bottom, LIGHT_BAND do
+        local t = (row + LIGHT_BAND / 2 - LIGHT_TOP_ROW) / (LIGHT_LOW_ROW - LIGHT_TOP_ROW)
+        t = math.max(0, math.min(1, t))
+        local light = LIGHT_STEP * math.floor((top + (low - top) * t) / LIGHT_STEP + 0.5)
+        if light ~= 100 then chart(row, math.min(row + LIGHT_BAND - 1, bottom), light) end
+      end
+    end
+    canvas:scale(1)
+  elseif canvas:scale(l.scale, "bitmap") then
+    fill:draw(canvas, l.x - SIDE_W * l.scale, l.y)
+    canvas:scale(1)
+  else
+    fill:draw(canvas, l.x - SIDE_W, l.y)
+  end
+end
+
 --! Draws the picture (or `picture`, one made for a spot) to fill the screen,
 --! with the fill at its left on a wider screen: the menu's background
 --! (UI:draw), and what is pointed at.
 function UIProfessorMenu.drawPicture(canvas, picture)
-  local app = TheApp
-  local loaded = UIProfessorMenu.art(app)
+  local loaded = UIProfessorMenu.art(TheApp)
   if not loaded then return end
   picture = picture or loaded.picture
+  UIProfessorMenu.drawSide(canvas, CHART_BOTTOM)
   local l = UIProfessorMenu.layout(canvas:getRenderSize())
-  local fill = l.px > 0 and side(app, loaded)
   if canvas:scale(l.scale) then
-    if fill then fill:draw(canvas, l.px - SIDE_W, l.py) end
     picture:draw(canvas, l.px, l.py)
     canvas:scale(1)
   elseif canvas:scale(l.scale, "bitmap") then
-    if fill then fill:draw(canvas, l.x - SIDE_W * l.scale, l.y) end
     picture:draw(canvas, l.x, l.y)
     canvas:scale(1)
   else
-    if fill then fill:draw(canvas, l.x - SIDE_W, l.y) end
     picture:draw(canvas, l.x, l.y)
   end
 end

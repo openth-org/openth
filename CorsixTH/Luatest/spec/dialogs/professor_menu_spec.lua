@@ -93,6 +93,33 @@ describe("Professor menu", function()
     assert.equal(38, UIProfessorMenu.sideColumn(-8, 90))
   end)
 
+  it("fills beside his movies with the chart as they have it", function()
+    for y = 0, 199 do
+      for x = -UIProfessorMenu.SIDE_W, -1 do
+        local up = UIProfessorMenu.sideColumn(x, y, "up")
+        local gone = UIProfessorMenu.sideColumn(x, y, "gone")
+        local what = ("%d,%d: %s %s"):format(x, y, tostring(up), tostring(gone))
+        -- Rolled up, the blackboard is behind the chart (below the roller).
+        if x >= -22 and y > 21 and y < 192 then assert.is_true(up >= 180 and up <= 200, what) end
+        -- Gone, nothing of the roller is left (its mount from column 186 on).
+        if y <= 24 then assert.is_true(gone >= 186, what) end
+        assert.is_true(y <= 24 or y >= 192 or gone <= 202, what)
+      end
+    end
+    local at = UIProfessorMenu.chartInMovie
+    assert.equal(23, at(false, 0))
+    assert.equal(120, at(false, 8000))
+    assert.equal(159, at(false, 20000))
+    assert.equal(159, at(true, 0))
+    assert.equal(23, at(true, 1800))
+    assert.is_false(at(true, 2500))
+    local light = UIProfessorMenu.lightInMovie
+    assert.is_nil(light(false, 5000))
+    assert.same({97, 91}, {light(false, 10300)})
+    assert.is_nil(light(false, 13000))
+    assert.is_nil(light(true, 1000))
+  end)
+
   it("finds each spot inside its own outline, and none elsewhere", function()
     for _, spot in ipairs(UIProfessorMenu.SPOTS) do
       local sx, sy, n = 0, 0, 0
