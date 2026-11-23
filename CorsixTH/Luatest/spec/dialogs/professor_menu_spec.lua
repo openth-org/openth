@@ -139,12 +139,29 @@ describe("Professor menu", function()
     assert.equal(169, at(true, 1550))
     assert.equal(21, at(true, 1800))
     assert.is_false(at(true, 2500))
-    -- Rolled up, from the picture's edge to the chart's end, row by row.
-    local rolled = UIProfessorMenu.ROLLED_UP
-    assert.equal(#rolled.left, #rolled.right)
-    for i, colour in ipairs(rolled.left) do
-      assert.equal(3, #colour)
-      assert.equal(3, #rolled.right[i])
+    -- What the movies show behind and under the chart: rolled up as he
+    -- comes, the board while it rolls, then nothing more; the board while it
+    -- rolls up, wound up, springing up and gone as he leaves.
+    local look = UIProfessorMenu.lookInMovie
+    assert.equal("up", look(false, 0))
+    assert.equal("board", look(false, 8000))
+    assert.is_nil(look(false, 8200))
+    assert.is_nil(look(true, 0))
+    assert.equal("board", look(true, 1700))
+    assert.equal("rolled", look(true, 1800))
+    assert.equal("rolled_high", look(true, 1950))
+    assert.equal("gone", look(true, 2500))
+    -- Row by row, from the picture's edge to the chart's end.
+    for name, rows in pairs(UIProfessorMenu.MOVIE_ROWS) do
+      assert.equal(#rows.left, #rows.right, name)
+      for i, colour in ipairs(rows.left) do
+        assert.equal(3, #colour, name)
+        assert.equal(3, #rows.right[i], name)
+      end
+      assert.is_true(rows.from + #rows.left <= 192 and rows.reach < 0, name)
+      -- The board's light: a row and a percent each, the rows in order.
+      assert.equal(0, #rows.board % 2, name)
+      for i = 3, #rows.board - 1, 2 do assert.is_true(rows.board[i] > rows.board[i - 2], name) end
     end
     local light = UIProfessorMenu.lightInMovie
     assert.is_nil(light(false, 5000))
@@ -155,8 +172,10 @@ describe("Professor menu", function()
 
   it("moves the chart's left end as his movies move the chart", function()
     local row = UIProfessorMenu.chartRow
-    -- Rolling down or up, the whole chart is higher.
-    for y = 22, 120 do assert.equal(y + 39, row(y, 120)) end
+    -- Rolling down or up, the whole chart is higher, under the roller's
+    -- shadow on its paper (which stays).
+    for y = 22, 29 do assert.equal(y, row(y, 120)) end
+    for y = 30, 120 do assert.equal(y + 39, row(y, 120)) end
     -- Springing back, its top stays and its paper is squeezed: each row one
     -- of the chart's, in order, down to its bottom edge.
     for _, bottom in ipairs({156, 157, 158}) do
