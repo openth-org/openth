@@ -59,6 +59,11 @@ local SIDE_W = 320
 -- colour beside it is found in the picture's first EDGE_PAPER columns (the
 -- paper beyond the skeleton has other blotches).
 local CHART_RIGHT, CHART_LEFT, EDGE_W = 177, -22, 6
+-- The right end yellows, its bottom edge darkens and the roller's top drops a
+-- row over its last columns, so from BLEND_FROM to the edge the left end goes
+-- over from what goes on from the picture's edge to the right end's mirror
+-- image little by little (UIProfessorMenu.endBlend).
+local BLEND_FROM = -6
 local SKELETON_2X, SKELETON_TOP, SKELETON_BOTTOM = 30, 31, 151
 local PAPER_COLUMN, EDGE_PAPER = 42, 12
 -- Beside the chart's right end, clear of the professor: the roller's end, its
@@ -276,6 +281,16 @@ function UIProfessorMenu.sideColumn(x, y, kind)
     return reflect(mirror, FRAME_FROM, PIC_W - 1)
   end
   return reflect(mirror, BOARD_FROM, BOARD_TO)
+end
+
+--! How much of the chart's right end (its mirror image) the fill's column
+--! `x` at the chart's left end has: 0 up to BLEND_FROM (only what goes on
+--! from the picture's edge), then more each column until its edge (1).
+function UIProfessorMenu.endBlend(x)
+  local edge = CHART_LEFT + EDGE_W
+  if x >= BLEND_FROM then return 0 end
+  if x < edge then return 1 end
+  return (BLEND_FROM - x) / (BLEND_FROM - edge + 1)
 end
 
 --! Decodes a sprite of "complex" chunks as the engine does (chunk_renderer):
@@ -564,6 +579,30 @@ local function side(app, loaded, kind, light)
       local p = rgb[c]
       return p[1] + p[2] + p[3]
     end
+    -- The colour of the picture's palette nearest to `w` of `b` mixed into
+    -- `a` (the transparent colour left out).
+    local nearest = {}
+    local function mix(a, b, w)
+      if a == b or a == 255 or b == 255 then return a end
+      local p, q = rgb[a], rgb[b]
+      local r = math.floor(p[1] + (q[1] - p[1]) * w + 0.5)
+      local g = math.floor(p[2] + (q[2] - p[2]) * w + 0.5)
+      local bl = math.floor(p[3] + (q[3] - p[3]) * w + 0.5)
+      local colour = (r * 256 + g) * 256 + bl
+      local c = nearest[colour]
+      if not c then
+        local best = math.huge
+        for i = 0, 254 do
+          local e = rgb[i]
+          local d = (e[1] - r) * (e[1] - r) + (e[2] - g) * (e[2] - g) + (e[3] - bl) * (e[3] - bl)
+          if d < best then best, c = d, i end
+        end
+        nearest[colour] = c
+      end
+      return c
+    end
+    -- (The chart's rows, with its roller and the wall above it.)
+    local chart_to = kind == "down" and CHART_BOTTOM or kind == "up" and ROLLER_BOTTOM or -1
     local out, n = {}, 0
     for y = 0, PIC_H - 1 do
       local paper, lightest
@@ -588,6 +627,11 @@ local function side(app, loaded, kind, light)
         if paper and x >= CHART_LEFT + EDGE_W and bright(c) >= lightest - 60 then
           c = at(-x - 1, y)
           if bright(c) < lightest - 30 then c = paper end
+        end
+        local w = y <= chart_to and UIProfessorMenu.endBlend(x) or 0
+        -- (The skeleton's lines stay as they are.)
+        if w > 0 and w < 1 and not (paper and bright(c) < lightest - 60) then
+          c = mix(c, at(CHART_LEFT + CHART_RIGHT - x, y), w)
         end
         n = n + 1
         out[n] = CHARS[c]
