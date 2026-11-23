@@ -93,6 +93,20 @@ describe("Professor menu", function()
     assert.equal(38, UIProfessorMenu.sideColumn(-8, 90))
   end)
 
+  it("turns the chart's left end into its right end's mirror image gradually", function()
+    local blend = UIProfessorMenu.endBlend
+    -- At the picture's edge only what goes on from it, at the chart's edge
+    -- (the right end's red line and on) only the mirror image.
+    for x = -6, -1 do assert.equal(0, blend(x)) end
+    for x = -UIProfessorMenu.SIDE_W, -17 do assert.equal(1, blend(x)) end
+    local last = 0
+    for x = -7, -16, -1 do
+      local w = blend(x)
+      assert.is_true(w > last and w < 1, ("%d: %s"):format(x, w))
+      last = w
+    end
+  end)
+
   it("fills beside his movies with the chart as they have it", function()
     for y = 0, 199 do
       for x = -UIProfessorMenu.SIDE_W, -1 do
