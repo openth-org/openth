@@ -1731,6 +1731,29 @@ totd_window = {
   previous = "Previous Tip",
   next = "Next Tip",
 }
+-- Multiplayer tips, shown beside the multiplayer windows of the main menu
+-- (dialogs/resizables/tip_of_the_day.lua, UITipOfTheDay "multiplayer")
+multiplayer_tips = {
+  title = "Multiplayer tip",
+  tips = {
+    "Press N to look at the next hospital, your own included, and Shift+N to jump straight back to your own.",
+    "Press Y to chat. Press Tab or click the \"To\" box to choose who reads it: everybody, your team or allies, or one player.",
+    "Press M to open the first message waiting at the bottom of the screen, and M again to close it.",
+    "On the research screen each click moves 5 points in multiplayer. Hold Shift for 25 at once, or Ctrl for 100.",
+    "To sell a bench or another corridor object, right-click it to pick it up, then press Delete or Q: you get its full price back. Esc puts it back.",
+    "In a staff member's window, right-click their name to go to the next one of the same kind. The view follows.",
+    "In a machine's window, right-click its name at the top to go to your next machine. Its strength and uses show at the bottom of the screen.",
+    "Dirty tricks are for races: MULTIPLAYER, DIRTY TRICKS. Click a level once to read what it does and again to buy it. You pay only when it happens, and your rival never learns who sent it.",
+    "The dirty tricks: evil handyman, epidemic, emergency, rat attack, headhunter, broken boiler, smear campaign, espionage and litter bomb. Most of their stronger levels unlock month by month.",
+    "A litter bomb in your corridor? Click it to pick it up, then click a corridor in a rival's hospital to throw it there. Hold it too long and it goes off in your own hospital.",
+    "An evil handyman looks like one of yours but is not on your staff list and does no work. Stronger ones drop litter and wreck machines. Click him and press Sack: he goes back to whoever sent him.",
+    "Rats sent by a rival cost you reputation every day they live. Click them to shoot them.",
+    "A headhunter makes one of your best staff ask for a big pay rise. Pay it within 10 days, or they leave you.",
+    "A broken boiler makes your hospital too cold or too hot until your handymen mend it. The more handymen, the sooner.",
+    "A smear campaign sends part of your new patients to your rivals for one to three months.",
+    "Espionage copies a rival's research: an improvement, a discovery, or two of them. The strongest also sets their current research back.",
+  },
+}
 
 tooltip.totd_window = {
   previous = "Display the previous tip",
