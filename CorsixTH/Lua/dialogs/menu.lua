@@ -121,6 +121,8 @@ function UIMenuBar:onChangeLanguage()
   for _, menu in ipairs(self.menus) do
     check_size(menu.menu)
   end
+  -- (Also called after a game is loaded: that game's hospitals.)
+  self:refreshPlayAs()
 end
 
 local function assign_menu_levels(menu, level)
@@ -870,7 +872,7 @@ function UIMenuBar:makeGameMenu(app)
     local UIMakeDebugPatient = cth_require("dialogs.resizables.menu_list_dialogs.make_debug_patient")
     local UILuaConsole = cth_require("dialogs.resizables.lua_console")
     local UICallsDispatcher = cth_require("dialogs.resizables.calls_dispatcher")
-    self:addMenu(_S.menu.debug, UIMenu() -- Debug
+    self:addMenu(_S.menu.debug, self:withPlayAs(app, UIMenu() -- Debug
       :appendMenu(_S.menu_debug.jump_to_level, levels_menu)
       :appendMenu(_S.menu_debug.allow_blocking_off_areas, UIMenu()
         :appendCheckItem(_S.menu_debug_overlay_blocking_off_areas.choice_1, allowBlockingAreas(1))
@@ -905,9 +907,41 @@ function UIMenuBar:makeGameMenu(app)
         :appendCheckItem(_S.menu_debug_overlay.parcel,      false, overlay("parcel"), "")
       )
       :appendItem(_S.menu_debug.sprite_viewer, function() cth_require("sprite_viewer")() end)
-    )
+    ))
   end
   self:unlockCheats()
+end
+
+--! The debug menu of a multiplayer game: PLAY AS HOSPITAL, every hospital
+--! (MultiplayerLobby.playAsHospital: a saved game opened on its own, to see
+--! a bot's hospital from its side). Made again for each game loaded
+--! (UIMenuBar:refreshPlayAs).
+function UIMenuBar:withPlayAs(app, menu)
+  self.debug_menu = menu
+  local world = app.world
+  if not (world and world.mp_coop and #world.hospitals > 1) then return menu end
+  local hospitals = UIMenu()
+  for index, hospital in ipairs(world.hospitals) do
+    hospitals:appendCheckItem("  " .. tostring(hospital.name) .. "  ", false, function()
+      MultiplayerLobby.playAsHospital(app, index)
+    end, "play_as", function() return app.ui.hospital == world.hospitals[index] end)
+  end
+  menu:appendMenu(_S.menu_debug.play_as_hospital, hospitals)
+  menu.items[#menu.items].play_as = true
+  return menu
+end
+
+--! The menu bar stays from game to game: after a game is loaded (and when the
+--! language changes) PLAY AS HOSPITAL lists that game's hospitals.
+function UIMenuBar:refreshPlayAs()
+  local menu = self.debug_menu
+  if not menu then return end
+  for i = #menu.items, 1, -1 do
+    if menu.items[i].play_as then table.remove(menu.items, i) end
+  end
+  self:withPlayAs(self.ui.app, menu)
+  assign_menu_levels(menu, 1)
+  menu.has_size = false
 end
 
 function UIMenuBar:unlockCheats()

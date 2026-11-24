@@ -1523,6 +1523,37 @@ function MultiplayerLobby:serviceSaves(session)
   end
 end
 
+--! Developers (debug menu, PLAY AS HOSPITAL): go on from another hospital's
+--! side of a multiplayer game opened on its own, a bot's say, to see how it
+--! grew, what it did and how it stands (Argus, 2026-11-22: to work out new
+--! advice for the bots). Its messages, countdowns and camera become this
+--! screen's; windows of the hospital before are closed. Refused while
+--! playing online: every computer and the server go by the hospital each
+--! player has.
+--!return true when it switched
+function MultiplayerLobby.playAsHospital(app, index)
+  local ui, world = app.ui, app.world
+  local hospital = world and world.mp_coop and world.hospitals[index]
+  if not hospital then return false end
+  if TheApp.mp_session then
+    ui:playSound("wrong2.wav")
+    if ui.adviser then ui.adviser:say({text = _S.multiplayer_window.play_as_online, priority = 10}) end
+    return false
+  end
+  if hospital == ui.hospital then return true end
+  -- (The other hospital's windows: staff, patients, rooms, reports.)
+  for i = #(ui.windows or {}), 1, -1 do
+    local window = ui.windows[i]
+    if window ~= ui.bottom_panel and window ~= ui.menu_bar and not class.is(window, UIWatch) then window:close() end
+  end
+  world.mp_local_index = index
+  ui.hospital = world:getUIHospital()
+  if ui.bottom_panel then ui.bottom_panel:showOwnMessages() end
+  MultiplayerLobby.showOwnWatches(world, ui)
+  MultiplayerSession.lookAtHospital(ui, ui.hospital)
+  return true
+end
+
 --! Multiplayer co-op, after loading a shared save: the countdown watches on
 --! the screen are the ones of the computer that saved it (the referee's),
 --! for its player's hospital. Close the other hospitals' watches and show

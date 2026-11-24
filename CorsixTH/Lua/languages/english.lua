@@ -233,6 +233,7 @@ menu_debug = {
   dump_gamelog                = "  (%1%) DUMP GAME LOG  ",
   map_overlay                 = "  MAP OVERLAY  ",
   sprite_viewer               = "  SPRITE VIEWER  ",
+  play_as_hospital            = "  PLAY AS HOSPITAL  ",
 }
 menu_debug_overlay_blocking_off_areas = {
   choice_1 = "  TOTALLY FORBIDDEN  ",
@@ -1017,6 +1018,7 @@ multiplayer_window = {
   menu_research = "  SHARE RESEARCH  ",
   player_away_note = "%s has left: their hospital does not count for the team's goals until they rejoin (same room, same name).",
   player_back_note = "%s is back: their hospital counts for the team's goals again.",
+  play_as_online = "Only in a multiplayer game opened on its own, not while playing online.",
   player_joined_game = "%s has joined the game.",
   player_rejoined_game = "%s is back in the game.",
   server_eu1 = "EU1: stable",

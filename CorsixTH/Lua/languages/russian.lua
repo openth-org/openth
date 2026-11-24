@@ -3687,6 +3687,7 @@ menu_debug = {
   make_debug_patient =       "  Создать тестового пациента  ",
   lua_console =              "  (%1%) Консоль Lua  ",
   allow_falling =            "  Позволить падать пациентам  ",
+  play_as_hospital =         "  Играть за больницу  ",
 }
 menu_debug_overlay = {
   heat        = "  Температура  ",
@@ -4231,6 +4232,7 @@ multiplayer_window.places[7] = "7-е"
 multiplayer_window.places[8] = "8-е"
 multiplayer_window.player_away_note = "%s вышел: его больница не учитывается в целях команды, пока он не вернётся (та же комната, то же имя)."
 multiplayer_window.player_back_note = "%s вернулся: его больница снова учитывается в целях команды."
+multiplayer_window.play_as_online = "Только в сетевой игре, открытой отдельно, а не во время игры онлайн."
 multiplayer_window.player_joined_game = "%s присоединился к игре."
 multiplayer_window.player_rejoined_game = "%s вернулся в игру."
 multiplayer_window.player_line = "%s%s   %s мс   %s"
