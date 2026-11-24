@@ -1069,15 +1069,16 @@ multiplayer_window = {
   players_waiting = "Waiting for the server's list...",
   players_note = "Ping: average of the last 10 seconds. Value: the hospital value (a level goal).",
   looking_at = "Looking at %s",
-  -- Progress Report tooltips for another player's hospital: name, current
-  -- value, goal_target or goal_limit, the goal's value
+  -- Progress Report tooltips for another player's hospital: name, goal_target
+  -- or goal_limit, the goal's value, then the current value (goal first, as
+  -- in your own hospital's tooltips)
   goal_other = {
-    reputation = "%s: reputation %d (%s %d)",
-    balance = "%s: balance $%d (%s $%d)",
-    percentage_cured = "%s: %d%% of patients cured (%s %d%%)",
-    num_cured = "%s: %d patients cured (%s %d)",
-    percentage_killed = "%s: %d%% of patients died (%s %d%%)",
-    value = "%s: hospital value $%d (%s $%d)",
+    reputation = "%s: reputation (%s %d), now %d",
+    balance = "%s: balance (%s $%d), now $%d",
+    percentage_cured = "%s: patients cured (%s %d%%), now %d%%",
+    num_cured = "%s: patients cured (%s %d), so far %d",
+    percentage_killed = "%s: patients who died (%s %d%%), now %d%%",
+    value = "%s: hospital value (%s $%d), now $%d",
   },
   goal_target = "goal:",
   goal_limit = "limit:",

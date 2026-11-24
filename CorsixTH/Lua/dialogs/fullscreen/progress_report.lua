@@ -149,9 +149,12 @@ function UIProgressReport:criterionTooltip(crit_table)
   local S = _S.multiplayer_window
   if self.selected ~= self.own and S.goal_other[crit_name] then
     -- Another player's hospital (multiplayer): the original texts say "you".
+    -- The goal first, then where they are, as in the original texts (Argus,
+    -- 2026-11-22: "The objective is to cure 450 people. So far you've cured
+    -- 470" for oneself, but "Jan: 470 patients cured (goal: 450)" for others).
     local kind = crit_table.lose_value and S.goal_limit or S.goal_target
-    return S.goal_other[crit_name]:format(hospital.name, math.floor(cur_value), kind,
-        math.floor(res_value))
+    return S.goal_other[crit_name]:format(hospital.name, kind, math.floor(res_value),
+        math.floor(cur_value))
   end
   -- FIXME: res_value and cur_value are depersisted as floating points, using
   -- string.format("%.0f", x) is not suitable due to %d (num) param in _S string
