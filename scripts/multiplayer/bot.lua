@@ -1715,7 +1715,7 @@ function Bot:planSlot(id, refused)
     if ok and self:keepsCorridor(slot.x, slot.y, slot.w, slot.h) and
         self:roomKeepsFloor(slot.x, slot.y, slot.w, slot.h) then
       -- (The expert's other rooms may stand elsewhere in this game.)
-      local short, why = self:keepsWalksShort(slot.x, slot.y, slot.w, slot.h)
+      local short, why = self:keepsWalksShort(slot.x, slot.y, slot.w, slot.h, slot.wall)
       if short then return slot end
       log(string.format("not the expert's spot for the %s at %d,%d: %s", id, slot.x, slot.y, why))
     end
@@ -1895,7 +1895,7 @@ function Bot:layoutSpot(min, size, near, shapes)
         return nil
       end
       -- (Patients' walks between the rooms around it stay short: Bot:keepsWalksShort.)
-      local short, why = self:keepsWalksShort(spot[2], spot[3], spot[4], spot[5])
+      local short, why = self:keepsWalksShort(spot[2], spot[3], spot[4], spot[5], spot[6])
       if not short then
         detours, detour_why = detours + 1, detour_why or why
       elseif self:roomKeepsFloor(spot[2], spot[3], spot[4], spot[5]) then
@@ -1962,15 +1962,278 @@ function Bot:corridorWalks(x, y, blocked)
   return dist
 end
 
---! Would a w x h room at x, y keep the walks between the rooms near it
---! short? For the tiles outside the doors of this hospital's rooms within
---! WALK_NEAR tiles of the spot, the walk between each two of them through the
---! corridor may get at most DETOUR_TILES and DETOUR_SHARE longer with the
---! room there, none may be cut off, and the room may not stand on one.
+-- Two doors this near each other (tiles along x and y together) ...
+local GUARD_NEAR = 12
+-- ... may never be a walk this many times as far apart (flow_metrics.lua's
+-- "blocked" pairs). Unlike DETOUR_TILES and DETOUR_SHARE this does not add
+-- up room after room: Argus, 2026-11-24, after a night on MOUNT EVEREST, bots
+-- had still built rooms and put benches that made a walk of 6 tiles between
+-- two doors 68 (a GP's office to a general diagnosis room), and their door
+-- to door walks averaged 67-103 tiles against his 29.
+local GUARD_DETOUR = 3
+
+--! The guard's walks, kept while nothing changes: for one room search
+--! (Bot.walk_cache) or one game step (corridor objects put down).
+function Bot:guardCache()
+  if self.walk_cache then
+    self.walk_cache.guard = self.walk_cache.guard or {tiles = {}, walks = {}}
+    return self.walk_cache.guard
+  end
+  local session = TheApp.mp_session
+  local step = session and session.step
+  local c = self.object_walks
+  if not (c and step and c.step == step and c.world == self.world) then
+    c = {step = step, world = self.world, tiles = {}, walks = {}}
+    self.object_walks = c
+  end
+  return c
+end
+
+--! Walking distances from x, y through its hospital's corridor as a patient
+--! walks it (in the building, in no room, no object in the way, through no
+--! wall), up to `limit` tiles: key y * 1000 + x -> tiles. `blocked(tx, ty)`
+--! tiles count as wall (a room or an object not there yet); `goal` (a key,
+--! optional) ends the search when reached; `opened` (optional, keys) tiles
+--! an object stands on count as free (the object sold).
+function Bot:guardWalks(x, y, limit, blocked, goal, opened)
+  local world, hosp = self.world, self.world.ui.hospital
+  local th = world.map.th
+  local tiles = self:guardCache().tiles
+  local flags = {}
+  -- (Per tile: 0 when it is no corridor, else the sides one may leave it by,
+  -- 1 north, 2 east, 4 south, 8 west, + 16 when one may walk there, + 32
+  -- when an object stands in the way.)
+  local function bits(tx, ty)
+    local k = ty * 1000 + tx
+    local v = tiles[k]
+    if v == nil then
+      v = 0
+      if world:isOnMap(tx, ty) and hosp:isInHospital(tx, ty) and not world:getRoom(tx, ty) then
+        th:getCellFlags(tx, ty, flags)
+        v = (flags.passable and 16 or 32) + (flags.travelNorth and 1 or 0) + (flags.travelEast and 2 or 0) +
+            (flags.travelSouth and 4 or 0) + (flags.travelWest and 8 or 0)
+      end
+      tiles[k] = v
+    end
+    if v >= 32 then return opened and opened[k] and v - 16 or 0 end
+    if v ~= 0 and blocked and blocked(tx, ty) then return 0 end
+    return v
+  end
+  local dist = {}
+  if bits(x, y) == 0 then return dist end
+  local start = y * 1000 + x
+  dist[start] = 0
+  if goal == start then return dist end
+  local steps = {{0, -1, 1, 4}, {1, 0, 2, 8}, {0, 1, 4, 1}, {-1, 0, 8, 2}}
+  local queue, head = {{x, y}}, 1
+  while head <= #queue do
+    local cx, cy = queue[head][1], queue[head][2]
+    head = head + 1
+    local d = dist[cy * 1000 + cx] + 1
+    if d > limit then break end
+    local here = bits(cx, cy)
+    for _, s in ipairs(steps) do
+      local nx, ny = cx + s[1], cy + s[2]
+      local k = ny * 1000 + nx
+      if not dist[k] and here % (s[3] * 2) >= s[3] then
+        local there = bits(nx, ny)
+        if there ~= 0 and there % (s[4] * 2) >= s[4] then
+          dist[k] = d
+          if k == goal then return dist end
+          queue[#queue + 1] = {nx, ny}
+        end
+      end
+    end
+  end
+  return dist
+end
+
+--! The tiles outside the doors of its rooms (a room being built may have
+--! no door yet): {x, y, room id}, in a fixed order.
+function Bot:doorPoints()
+  local cache = self:guardCache()
+  if cache.points then return cache.points end
+  local world, hosp = self.world, self.world.ui.hospital
+  local points = {}
+  for _, rm in pairs(world.rooms) do
+    if rm.hospital == hosp and rm.door and rm.door.tile_x and not rm.crashed then
+      local ok, ex, ey = pcall(rm.getEntranceXY, rm, false)
+      if ok and ex then points[#points + 1] = {ex, ey, rm.room_info.id} end
+    end
+  end
+  table.sort(points, function(a, b) return a[2] * 1000 + a[1] < b[2] * 1000 + b[1] end)
+  cache.points = points
+  return points
+end
+
+--! Would the tiles `blocked(tx, ty)` within x0, y0 - x1, y1 (a room, an
+--! object) keep every two doors GUARD_NEAR tiles apart or nearer a short walk
+--! (less than GUARD_DETOUR times as far as they are apart) where it is one
+--! now? `extra` (optional): more points, {x, y, name}: where a new room's
+--! door opens. Walks only measured where the tiles lie on the shortest way
+--! between the two doors, so it is quick.
 --!return true, or false and why (for the log)
-function Bot:keepsWalksShort(x, y, w, h)
+function Bot:keepsDoorsNear(x0, y0, x1, y1, blocked, extra)
+  local cache = self:guardCache()
+  local points = {}
+  for _, p in ipairs(self:doorPoints()) do points[#points + 1] = p end
+  for _, p in ipairs(extra or {}) do points[#points + 1] = p end
+  if #points < 2 then return true end
+  local limit = GUARD_NEAR * GUARD_DETOUR
+  local function gap(p) return math.max(0, x0 - p[1], p[1] - x1) + math.max(0, y0 - p[2], p[2] - y1) end
+  local function before(p)
+    local key = p[2] * 1000 + p[1]
+    local d = cache.walks[key]
+    if not d then
+      d = self:guardWalks(p[1], p[2], limit)
+      cache.walks[key] = d
+    end
+    return d
+  end
+  for i = 1, #points do
+    local p = points[i]
+    local gp = gap(p)
+    if gp < limit then
+      for j = i + 1, #points do
+        local q = points[j]
+        local apart = math.abs(p[1] - q[1]) + math.abs(p[2] - q[2])
+        local most = GUARD_DETOUR * math.max(apart, 2)
+        if apart > 0 and apart <= GUARD_NEAR and gp + gap(q) < most then
+          local qk = q[2] * 1000 + q[1]
+          local bp = before(p)
+          local d0 = bp[qk]
+          if d0 and d0 < most then
+            -- (Only if the tiles lie on a shortest way between the two.)
+            local bq = before(q)
+            local touched = false
+            for ty = y0, y1 do
+              for tx = x0, x1 do
+                local k = ty * 1000 + tx
+                if not touched and bp[k] and bq[k] and bp[k] + bq[k] <= d0 and blocked(tx, ty) then
+                  touched = true
+                end
+              end
+            end
+            if touched and not self:guardWalks(p[1], p[2], most - 1, blocked, qk)[qk] then
+              return false, string.format("%s to %s, %d tiles apart: %d tiles on foot now, %d or more then",
+                  p[3], q[3], apart, d0, most)
+            end
+          end
+        end
+      end
+    end
+  end
+  return true
+end
+
+--! Where the door of a w x h room at x, y opens with its door in the `side`
+--! wall (the middle of that wall; the corridor tile in front of it), as a
+--! point for Bot:keepsDoorsNear, or nil.
+local function doorOut(x, y, w, h, side)
+  if side == "south" then return {x + math.floor((w - 1) / 2), y + h, "new room"}
+  elseif side == "north" then return {x + math.floor((w - 1) / 2), y - 1, "new room"}
+  elseif side == "east" then return {x + w, y + math.floor((h - 1) / 2), "new room"}
+  elseif side == "west" then return {x - 1, y + math.floor((h - 1) / 2), "new room"} end
+end
+
+--! Would a corridor object (`object_type` facing `facing` at x, y) keep the
+--! walks between the doors near it short (Bot:keepsDoorsNear)? A bench that
+--! closed the last way out of a door made a walk of 6 tiles 68 (Bot Edna on
+--! MOUNT EVEREST, 2026-11-23).
+function Bot:objectKeepsWalks(object_type, x, y, facing)
+  local o = object_type.orientations and object_type.orientations[facing]
+  if not o then return true end
+  local solid = {}
+  local x0, y0, x1, y1
+  for _, t in ipairs(o.footprint or {}) do
+    if not t.only_passable and not t.only_side then
+      local tx, ty = x + t[1], y + t[2]
+      solid[ty * 1000 + tx] = true
+      x0, y0 = math.min(x0 or tx, tx), math.min(y0 or ty, ty)
+      x1, y1 = math.max(x1 or tx, tx), math.max(y1 or ty, ty)
+    end
+  end
+  if not x0 then return true end
+  return self:keepsDoorsNear(x0, y0, x1, y1, function(tx, ty) return solid[ty * 1000 + tx] end)
+end
+
+--! Two doors near each other a long walk apart because of a corridor object
+--! (put down before the bot checked, Bot:objectKeepsWalks, or by an older
+--! bot): the first object in the box between them that, sold, makes the walk
+--! short again is sold (the waiting-area rules buy what is missing again
+--! where it fits). One object a call (Manager:daily, with Bot:repairFloor).
+--!return a line for the log when it sold something, else nil
+function Bot:repairWalks()
+  local session = TheApp.mp_session
+  if not session or session.held or not MultiplayerSession.default_handlers.sell_object then return nil end
+  local world, hosp = self.world, self.world.ui.hospital
+  local points = self:doorPoints()
+  local objects
+  local limit = GUARD_NEAR * GUARD_DETOUR
+  for i = 1, #points do
+    local p = points[i]
+    local walks
+    for j = i + 1, #points do
+      local q = points[j]
+      local apart = math.abs(p[1] - q[1]) + math.abs(p[2] - q[2])
+      local most = GUARD_DETOUR * math.max(apart, 2)
+      local qk = q[2] * 1000 + q[1]
+      if apart > 0 and apart <= GUARD_NEAR then
+        walks = walks or self:guardWalks(p[1], p[2], limit)
+        local d = walks[qk]
+        if not d or d >= most then
+          if not objects then
+            objects = {}
+            for _, e in ipairs(world.entities) do
+              local ot = e.object_type
+              local o = ot and Bot.SELLABLE[ot.id] and e.tile_x and e.mp_id and e.direction and
+                  ot.orientations and ot.orientations[e.direction]
+              if o and hosp:isInHospital(e.tile_x, e.tile_y) and not world:getRoom(e.tile_x, e.tile_y) then
+                local keys = {}
+                for _, t in ipairs(o.footprint or {}) do
+                  if not t.only_passable and not t.only_side then
+                    keys[(e.tile_y + t[2]) * 1000 + e.tile_x + t[1]] = true
+                  end
+                end
+                objects[#objects + 1] = {e = e, keys = keys}
+              end
+            end
+            table.sort(objects, function(a, b) return a.e.mp_id < b.e.mp_id end)
+          end
+          local bx0, by0 = math.min(p[1], q[1]) - 3, math.min(p[2], q[2]) - 3
+          local bx1, by1 = math.max(p[1], q[1]) + 3, math.max(p[2], q[2]) + 3
+          for _, ob in ipairs(objects) do
+            local e = ob.e
+            if e.tile_x >= bx0 and e.tile_x <= bx1 and e.tile_y >= by0 and e.tile_y <= by1 and
+                self:guardWalks(p[1], p[2], most - 1, nil, qk, ob.keys)[qk] then
+              session:issue({kind = "sell_object", object = e.mp_id})
+              return string.format("sold the %s at %d,%d: the %s and the %s, %d tiles apart, were %s on foot",
+                  e.object_type.id, e.tile_x, e.tile_y, p[3], q[3], apart,
+                  d and (d .. " tiles") or "more than " .. limit .. " tiles")
+            end
+          end
+        end
+      end
+    end
+  end
+  return nil
+end
+
+--! Would a w x h room at x, y keep the walks between the rooms near it
+--! short? No two doors near each other may become a long walk apart
+--! (Bot:keepsDoorsNear; with `side`, the wall its door goes in, its own door
+--! counts too). And for the tiles outside the doors of this hospital's rooms
+--! within WALK_NEAR tiles of the spot, the walk between each two of them
+--! through the corridor may get at most DETOUR_TILES and DETOUR_SHARE longer
+--! with the room there, none may be cut off, and the room may not stand on
+--! one.
+--!return true, or false and why (for the log)
+function Bot:keepsWalksShort(x, y, w, h, side)
   local world, hosp = self.world, self.world.ui.hospital
   local function inside(tx, ty) return tx >= x and tx < x + w and ty >= y and ty < y + h end
+  local out = side and doorOut(x, y, w, h, side)
+  local near, near_why = self:keepsDoorsNear(x, y, x + w - 1, y + h - 1, inside, out and {out} or nil)
+  if not near then return false, near_why end
   local points = {}
   for _, rm in pairs(world.rooms) do
     -- (A room still being built may have its door, not yet on the map.)
@@ -3134,7 +3397,7 @@ function Bot:buyCorridor(object_id, near_x, near_y)
   -- machines had cut a bot's hospital in two). A new desk's two sides
   -- (patients, receptionist) must be reached too.
   local object_type = place.objects[1].object
-  local floor, cuts = nil, 0
+  local floor, cuts, long_walks = nil, 0, 0
   local function keeps_floor(tx, ty, facing)
     floor = floor or self:floorMap()
     local o = object_type.orientations[facing]
@@ -3146,6 +3409,11 @@ function Bot:buyCorridor(object_id, near_x, near_y)
       end
     end
     local ok = self:floorKept(floor, Manager.objectChange(object_type, tx, ty, facing), extra)
+    -- (And no two doors near each other a long walk apart because of it.)
+    if ok and not self:objectKeepsWalks(object_type, tx, ty, facing) then
+      ok = false
+      long_walks = long_walks + 1
+    end
     if not ok then cuts = cuts + 1 end
     return ok
   end
@@ -3382,7 +3650,8 @@ function Bot:buyCorridor(object_id, near_x, near_y)
     -- Tiles with free floor all around (so nothing blocks a corridor).
     x, y = builder.find_free_rect(world, ax, ay, 1, 1, 40, fits)
   end
-  local refused = cuts > 0 and string.format(" (%d spot(s) refused: they would cut its floor in two)", cuts) or ""
+  local refused = cuts > 0 and string.format(" (%d spot(s) refused: they would cut its floor in two%s)", cuts,
+      long_walks > 0 and string.format(" or make %d long walks between doors", long_walks) or "") or ""
   if x then
     place.object_cell_x, place.object_cell_y = x, y
     if world:anyHumanoidObscuringArea(x, y) then

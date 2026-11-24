@@ -2075,8 +2075,11 @@ function M:daily(s)
   -- Its floor in pieces (Bot:repairFloor): looked at once a game week, every
   -- 2 days while it is being mended. (Not when it leaves the building to the
   -- person it shares with: those are their things.)
+  -- Then two doors near each other a long walk apart because of a corridor
+  -- object (Bot:repairWalks).
   if s.day >= (self.floor_check or 0) and not bot:leavesBuilding() then
     local sold = bot:repairFloor()
+    if not sold and bot.repairWalks then sold = bot:repairWalks() end
     self.floor_check = s.day + (sold and 2 or 7)
     if sold then self:note(string.format("day %d: %s", s.day, sold)) end
   end
