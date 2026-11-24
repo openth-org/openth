@@ -143,10 +143,42 @@ function Audio:init()
       midi_txt = file
     end
   end
+  -- OpenTH's own songs (Sounds/Music: written for it in the style of the
+  -- originals; Jan, 2026-11-24: everybody should hear them), after the
+  -- game's, unless the player plays their own music folder instead
+  -- (audio_music). Titles from that folder's names.txt.
+  local own_dir, own_txt
+  if not music_dir then
+    own_dir = self.app:getFullPath({"Sounds", "Music"}, true)
+    local ok_dir, iter, state = pcall(lfs.dir, own_dir)
+    if ok_dir then
+      for file in iter, state do
+        local filename, ext = file:match("^(.+)%.([^.]+)$")
+        ext = ext and ext:upper()
+        if waveform[ext] or instructional[ext] then
+          local info = musicFileTable(filename)
+          -- (A game track of the same name stays as it is.)
+          if not info.filename and not info.filename_music then
+            info.title = filename
+            info.is_xmi = ext == "XMI"
+            info.filename_music = own_dir .. file
+            -- (Remembered when switched off by this name, not by its full
+            -- path: a build downloaded in the game is in another folder.)
+            info.key = "Sounds/Music/" .. file
+            info.bundled = true
+          end
+        elseif ext == "TXT" and file:sub(1, 5):upper() == "NAMES" then
+          own_txt = file
+        end
+      end
+    end
+  end
+
   -- Add music files to the playlist and set their enabled state based on previous preferences
   local disabled_tracks = self:readPlaylistPreferences()
   for _, info in pairs(music_array) do
-    if not (disabled_tracks and (disabled_tracks[info.filename] or disabled_tracks[info.filename_music])) then
+    if not (disabled_tracks and (disabled_tracks[info.key] or disabled_tracks[info.filename] or
+        disabled_tracks[info.filename_music])) then
       info.enabled = true
     end
     self.background_playlist[#self.background_playlist + 1] = info
@@ -172,11 +204,27 @@ function Audio:init()
               'but it does not exist.')
       end
     end
-    -- Sort by midi.txt order if there is one, or by filename.
-    table.sort(self.background_playlist, function(a,b) return a.index < b.index end)
-  else
-    table.sort(self.background_playlist, function(a,b) return a.title < b.title end)
   end
+  if own_txt then
+    local data = GetFileData(own_dir .. own_txt) or ""
+    local i = 1
+    for file, title in data:gmatch("([^\r\n\26]+).-([^\r\n\26]+)") do
+      local info = music_array[(file:match("^(.*)%.") or file):upper()]
+      if info and info.bundled then
+        info.title = title
+        info.index = i
+        i = i + 1
+      end
+    end
+  end
+  -- The game's tracks first, then OpenTH's own; each in its list file's
+  -- order if there is one, else by name.
+  table.sort(self.background_playlist, function(a, b)
+    if (a.bundled or false) ~= (b.bundled or false) then return not a.bundled end
+    if a.index and b.index then return a.index < b.index end
+    if a.index or b.index then return a.index ~= nil end
+    return tostring(a.title) < tostring(b.title)
+  end)
   if #self.background_playlist == 0 and self.app.good_install_folder then
     print("Notice: Audio system loaded, but found no background tracks")
     self.has_bg_music = false
@@ -960,7 +1008,7 @@ function Audio:updatePlaylistPreferences()
   local fi, err = io.open(path, "w")
   if err then return end -- Fail silently
   for _, track in pairs(self.background_playlist) do
-    if not track.enabled then fi:write(track.filename or track.filename_music, '\n') end
+    if not track.enabled then fi:write(track.key or track.filename or track.filename_music, '\n') end
   end
   fi:close()
 end
