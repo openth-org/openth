@@ -5063,13 +5063,63 @@ function handlers.move_staff(world, cmd)
   return true
 end
 
---! Which plot a handyman looks after: {staff, parcel} (0 = all).
+--! Does `plot` belong to `hospital`'s player on the map?
+local function plot_of(world, hospital, plot)
+  local th = world.map.th
+  return plot >= 1 and plot <= th:getPlotCount() and th:getPlotOwner(plot) == hospital:getPlayerIndex()
+end
+
+--! The plots `hospital`'s player owns on the map, in plot order. (Every
+--! hospital starts with ownedPlots = {1}, the single player's plot: in
+--! multiplayer that is hospital 1's, and the hospital's own plot was missing.
+--! A handyman of another hospital given plot 1 found no tile to go to and
+--! froze the game, Argus 2026-11-23.)
+function MultiplayerSession.ownedPlots(world, hospital)
+  local plots = {}
+  for plot = 1, world.map.th:getPlotCount() do
+    if plot_of(world, hospital, plot) then plots[#plots + 1] = plot end
+  end
+  return plots
+end
+
+--! After a load (games saved before 2026-11-24): each hospital's list of
+--! plots holds just its own (in the order it has them, missing ones after),
+--! and a handyman looking after a plot that is not his hospital's looks after
+--! all its land. A game that is already so stays as it is, so a repair (the
+--! referee's game loaded on some peers only) leaves every peer the same.
+function MultiplayerSession.checkPlots(world)
+  for _, hospital in ipairs(world.hospitals) do
+    if hospital.ownedPlots then
+      local plots, have = {}, {}
+      for _, plot in ipairs(hospital.ownedPlots) do
+        if not have[plot] and plot_of(world, hospital, plot) then
+          plots[#plots + 1], have[plot] = plot, true
+        end
+      end
+      for _, plot in ipairs(MultiplayerSession.ownedPlots(world, hospital)) do
+        if not have[plot] then plots[#plots + 1] = plot end
+      end
+      hospital.ownedPlots = plots
+    end
+  end
+  for _, entity in ipairs(world.entities) do
+    local plot = entity.parcelNr
+    if plot and plot ~= 0 and entity.hospital and class.is(entity, Handyman) and
+        not plot_of(world, entity.hospital, plot) then
+      entity.parcelNr = 0
+    end
+  end
+end
+
+--! Which plot a handyman looks after: {staff, parcel} (0 = all). Only land of
+--! his hospital: on another's he finds no tile to go to (an endless meander,
+--! humanoid_actions/meander.lua).
 function handlers.handyman_parcel(world, cmd)
   local staff = entity_of(world, cmd.staff, Handyman)
   if staff and not ours(world, cmd, staff) then return false, "not ours" end
   local parcel = math.floor(tonumber(cmd.parcel) or -1)
-  if not staff or staff.fired or parcel < 0 then return false, "no such handyman" end
-  if parcel ~= 0 and not table_contains(staff.hospital.ownedPlots, parcel) then
+  if not staff or staff.fired or parcel < 0 or not staff.hospital then return false, "no such handyman" end
+  if parcel ~= 0 and not plot_of(world, staff.hospital, parcel) then
     return false, "not our plot"
   end
   staff.parcelNr = parcel

@@ -563,6 +563,12 @@ end
 -- Sets the Hospital for a member of staff
 --!param hospital (Hospital) - hospital to assign to member of staff
 function Staff:setHospital(hospital)
+  -- A handyman's plot is his hospital's land: one who moves to another
+  -- hospital (multiplayer) looks after all of its land. (He kept the old
+  -- plot, found no tile to go to there and froze the game, Argus 2026-11-23.)
+  if self.parcelNr and self.parcelNr ~= 0 and hospital ~= self.hospital then
+    self.parcelNr = 0
+  end
   Humanoid.setHospital(self, hospital)
   self:updateDynamicInfo()
 end

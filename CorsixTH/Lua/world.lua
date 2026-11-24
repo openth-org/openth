@@ -141,6 +141,8 @@ function World:World(app, free_build_mode)
       -- way as the watch window (dialogs/watch.lua), which only one peer has.
       local rate = math.floor((100 * Date.hoursPerDay()) / 13)
       hospital.mp_opening = {tick_rate = rate, tick_timer = rate, open_timer = 12}
+      -- Its own plots (the map gives player i plot i), not single player's {1}.
+      hospital.ownedPlots = MultiplayerSession.ownedPlots(self, hospital)
       self.hospitals[i] = hospital
     end
   else
@@ -4327,6 +4329,10 @@ function World:afterLoad(old, new)
     -- Deferred entity destruction queue (added in #1467 fix)
     self.entities_to_destroy = {}
   end
+
+  -- Multiplayer: each hospital's own plots, and no handyman on another's
+  -- land (games saved before 2026-11-24 had plot 1 in every hospital's list).
+  if self.mp_coop then MultiplayerSession.checkPlots(self) end
 
   -- Savegame version housekeeping
   if not self.original_savegame_version then
