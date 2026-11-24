@@ -752,3 +752,39 @@ describe("world.lua VIP visits: ", function()
     end
   end)
 end)
+
+-- Multiplayer: the crosshair shows only over rats the player may shoot (the
+-- shoot_rat command's rule), not over rats on other hospitals' land (Argus,
+-- 2026-11-22).
+describe("world.lua: rats the player may shoot", function()
+  local function hospital(tiles)
+    return {isInHospital = function(_, x, y) return tiles[x .. "," .. y] == true end}
+  end
+  local mine = hospital({["5,5"] = true})
+  local theirs = hospital({["9,9"] = true})
+
+  it("are the player's own or on their land", function()
+    local world = setmetatable({}, {__index = World})
+    assert.is_true(world:mayShootRat(mine, {tile_x = 5, tile_y = 5}))
+    assert.is_false(world:mayShootRat(mine, {tile_x = 9, tile_y = 9}))
+    -- (A rat sent to a hospital is that hospital's, wherever it runs.)
+    assert.is_true(world:mayShootRat(mine, {hospital = mine, tile_x = 9, tile_y = 9}))
+    assert.is_false(world:mayShootRat(mine, {hospital = theirs, tile_x = 5, tile_y = 5}))
+    assert.is_false(world:mayShootRat(mine, {mp_in_transit = true, tile_x = 5, tile_y = 5}))
+  end)
+
+  it("are the only ones near the cursor when a hospital is given", function()
+    local rat = {tile_x = 9, tile_y = 9, th = {getPosition = function() return 0, 0 end}}
+    local world = setmetatable({
+      map = {
+        ScreenToWorld = function(_, x, y) return x, y end,
+        WorldToScreen = function(_, x, y) return x, y end,
+      },
+      entity_map = {getRatsAtCoordinate = function(_, x, y) return x == 9 and y == 9 and {rat} or {} end},
+      isOnMap = function() return true end,
+    }, {__index = World})
+    assert.is_true(world:isNearRat(9, 9))
+    assert.is_false(world:isNearRat(9, 9, mine))
+    assert.is_true(world:isNearRat(9, 9, theirs))
+  end)
+end)

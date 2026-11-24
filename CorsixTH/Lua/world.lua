@@ -4519,10 +4519,28 @@ local near_rat_pixel_radius = 24
 --- map origin). Compares against each nearby rat's drawn pixel position rather
 --- than the tile it is anchored to, which can be up to a tile away while it
 --- scurries.
+--- May the player of `hospital` shoot this rat? Their own rat (one sent to
+--- them is theirs), else one on their land: the rule of the multiplayer
+--- shoot_rat command (mp_session.lua, ours()).
+--- @param hospital (Hospital) the player's hospital
+--- @param rat (Rat) the rat
+--- @return (boolean)
+function World:mayShootRat(hospital, rat)
+  if rat.mp_in_transit then return false end
+  if rat.hospital then return rat.hospital == hospital end
+  if rat.tile_x then return hospital:isInHospital(rat.tile_x, rat.tile_y) and true or false end
+  return false
+end
+
+--- In multiplayer only rats the player may shoot count (`hospital`, their
+--- own: a rat of theirs, or one on their land), as the shoot_rat command
+--- allows (Argus, 2026-11-22: the cursor turned into a crosshair over rats on
+--- other hospitals' land too, and the shot did nothing).
 --- @param x (number) x-coordinate on the screen
 --- @param y (number) y-coordinate on the screen
+--- @param hospital (Hospital) optional: only rats this hospital may shoot
 --- @return (boolean) Whether a rat is near the cursor.
-function World:isNearRat(x, y)
+function World:isNearRat(x, y, hospital)
   local tile_x, tile_y = self.map:ScreenToWorld(x, y)
   tile_x, tile_y = math.floor(tile_x), math.floor(tile_y)
   local radius_sq = near_rat_pixel_radius * near_rat_pixel_radius
@@ -4535,7 +4553,7 @@ function World:isNearRat(x, y)
           local rx, ry = self.map:WorldToScreen(rat.tile_x, rat.tile_y)
           local px, py = rat.th:getPosition()
           local ddx, ddy = x - (rx + px), y - (ry + py)
-          if ddx * ddx + ddy * ddy <= radius_sq then
+          if ddx * ddx + ddy * ddy <= radius_sq and (not hospital or self:mayShootRat(hospital, rat)) then
             return true
           end
         end

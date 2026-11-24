@@ -518,8 +518,16 @@ function GameUI:onCursorWorldPositionChange()
     end
   end
   if entity and self:_isRivals(entity) then entity = nil end
+  -- (Multiplayer: another player's rat is theirs to shoot, in co-op too; no
+  -- crosshair, no shot sound, no refused command.)
+  if entity and class.is(entity, Rat) and self.app.world.mp_coop and
+      not self.app.world:mayShootRat(self.hospital, entity) then
+    entity = nil
+  end
   if entity == nil and self.do_world_hit_test and not over_window then
-    is_near_rat = self.app.world:isNearRat(x, y)
+    -- (Multiplayer: only rats this player may shoot.)
+    local world = self.app.world
+    is_near_rat = world:isNearRat(x, y, world.mp_coop and self.hospital or nil)
   end
   if entity ~= self.cursor_entity or is_near_rat ~= self.cursor_near_rat then
     -- Stop displaying hoverable moods for the old entity
