@@ -3510,7 +3510,9 @@ local function hospital_of(world, cmd)
   return world.hospitals[cmd.hospital or 1]
 end
 
---! Take (amount > 0) or repay (amount < 0) a bank loan: {amount}.
+--! Take (amount > 0) or repay (amount < 0) a bank loan: {amount}, in steps
+--! of $5000 as the bank manager does (or the whole loan, when it repays an
+--! odd sum owed from an older game).
 --! The most `hospital` may owe the bank (a third of its value and $10000;
 --! nothing in free build mode).
 function MultiplayerSession.maxLoan(world, hospital)
@@ -3522,6 +3524,8 @@ function handlers.loan(world, cmd)
   local hospital = hospital_of(world, cmd)
   local amount = math.floor(tonumber(cmd.amount) or 0)
   if not hospital or amount == 0 then return false, "nothing to do" end
+  -- (Argus, 2026-11-24: owed the bank $9,000; bots repaid in steps of $1000.)
+  if amount % 5000 ~= 0 and amount ~= -hospital.loan then return false, "not in steps of $5000" end
   if amount > 0 then
     if hospital.loan + amount > MultiplayerSession.maxLoan(world, hospital) then return false, "loan limit" end
     hospital.loan = hospital.loan + amount

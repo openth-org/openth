@@ -902,7 +902,7 @@ do
   m:assistantLoan({loan = 8000, balance = 10000, day = 235})
   eq(#issued, 1, "not with $10,000 or less")
   m:assistantLoan({loan = 8000, balance = 12345, day = 235})
-  eq(issued[2] and issued[2].amount, -7000, "what leaves at least $5,000")
+  eq(issued[2] and issued[2].amount, -5000, "in steps of $5000, leaving at least $5,000 (Argus, 2026-11-24)")
 end
 print("assistant loan ok")
 

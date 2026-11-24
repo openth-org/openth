@@ -707,13 +707,36 @@ describe("MultiplayerSession game options", function()
       local loan = MultiplayerSession.default_handlers.loan
       local ok1, why1 = loan(world, {hospital = 1, amount = -5000})
       local ok2 = loan(world, {hospital = 2, amount = -5000})
-      local ok3 = loan(world, {hospital = 1, amount = -2000})
       world.mp_auction = nil
       local ok4 = loan(world, {hospital = 1, amount = -5000})
       assert.is_false(ok1)
       assert.equal("leading an auction", why1)
-      assert.is_true(ok2 and ok3 and ok4)
-      assert.same({1000, 3000}, {world.hospitals[1].balance, world.hospitals[2].balance})
+      assert.is_true(ok2 and ok4)
+      assert.same({3000, 3000}, {world.hospitals[1].balance, world.hospitals[2].balance})
+    end)
+  end)
+
+  -- Argus, 2026-11-24: owed the bank $9,000; bots repaid in steps of $1000.
+  it("moves a loan in steps of $5000, or repays an odd sum owed at once", function()
+    with_texts(function()
+      local world = money_world({20000, 20000}, {9000, 10000})
+      local loan = MultiplayerSession.default_handlers.loan
+      local h1, h2 = world.hospitals[1], world.hospitals[2]
+      local ok1, why1 = loan(world, {hospital = 2, amount = -2000})
+      local ok2, why2 = loan(world, {hospital = 2, amount = 3000})
+      assert.is_false(ok1)
+      assert.equal("not in steps of $5000", why1)
+      assert.is_false(ok2)
+      assert.equal("not in steps of $5000", why2)
+      assert.is_true(loan(world, {hospital = 2, amount = -5000}))
+      assert.is_true(loan(world, {hospital = 2, amount = 10000}))
+      assert.same({15000, 25000}, {h2.loan, h2.balance})
+      -- An odd sum from an older game: a step of $5000, then the rest at once.
+      assert.is_true(loan(world, {hospital = 1, amount = -5000}))
+      assert.equal(4000, h1.loan)
+      assert.is_false(loan(world, {hospital = 1, amount = -1000}))
+      assert.is_true(loan(world, {hospital = 1, amount = -4000}))
+      assert.same({0, 11000}, {h1.loan, h1.balance})
     end)
   end)
 

@@ -2113,7 +2113,8 @@ function M:assistantLoan(s)
   if date:dayOfMonth() <= date:lastDayOfMonth() - ASSIST_LOAN_DAYS then return end
   local month = date:monthOfGame()
   if self.loan_repaid_month == month then return end
-  local amount = math.min(s.loan, math.floor((s.balance - ASSIST_LOAN_KEEP) / 1000) * 1000)
+  -- (In steps of $5000, like the bank manager: Argus, 2026-11-24, owed $9,000.)
+  local amount = math.min(s.loan, math.floor((s.balance - ASSIST_LOAN_KEEP) / 5000) * 5000)
   if amount > 0 and self:issue({kind = "loan", amount = -amount}) then
     self.loan_repaid_month = month
     self:noteSpent("loan", amount)
@@ -2189,7 +2190,7 @@ function M:monthly(s)
   -- (Not in a hospital a person plays too: M:assistantLoan.)
   if s.loan > 0 and (s.balance > 25000 or (flowing and s.balance > 17000)) and #self.bot:hospitalMates() == 0 then
     local keep = s.balance > 25000 and 20000 or 12000
-    local amount = math.min(s.loan, math.floor((s.balance - keep) / 1000) * 1000)
+    local amount = math.min(s.loan, math.floor((s.balance - keep) / 5000) * 5000)
     if amount > 0 and self:issue({kind = "loan", amount = -amount}) then
       self:noteSpent("loan", amount)
       self:note(string.format("day %d: repaid $%d of the loan ($%d left)", s.day, amount, s.loan - amount))
