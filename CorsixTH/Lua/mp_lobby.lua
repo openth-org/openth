@@ -1952,7 +1952,9 @@ function MultiplayerLobby:_addMultiplayerMenu(ui, mode)
       current:addWindow(UIMultiplayerSabotage(current))
     end)
   end
-  ui.menu_bar:addMenu(_S.multiplayer_window.menu_caption, menu)
+  -- Before Debug and Cheats (Argus, 2026-11-24).
+  ui.menu_bar:addMenu(_S.multiplayer_window.menu_caption, menu,
+      {_S.menu.debug, _S.menu.cheats_title})
 end
 
 --! The server's list of the players in this game (every 2 seconds): name,

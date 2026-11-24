@@ -137,7 +137,9 @@ end
 --! Add a menu to the menu bar.
 --!param title Title of the menu (at the bar).
 --!param menu Menu to add.
-function UIMenuBar:addMenu(title, menu)
+--!param before (optional) Titles of menus to put it in front of: it goes
+--! before the first of them on the bar, else at the end.
+function UIMenuBar:addMenu(title, menu, before)
   assign_menu_levels(menu, 1)
   local menu_item = {
     title = title,
@@ -146,11 +148,23 @@ function UIMenuBar:addMenu(title, menu)
     y = 1,
     height = 16,
   }
-  if self.menus[1] then
-    menu_item.x = self.menus[#self.menus].x + self.menus[#self.menus].width
-  end
   menu_item.width = math.ceil(self.white_font:sizeOf(title) / TheApp.gfx:getUIScale() + 32)
-  self.menus[#self.menus + 1] = menu_item
+  local index = #self.menus + 1
+  if before then
+    for i, other in ipairs(self.menus) do
+      for _, other_title in ipairs(before) do
+        if tostring(other.title) == tostring(other_title) then
+          index = math.min(index, i)
+        end
+      end
+    end
+  end
+  table.insert(self.menus, index, menu_item)
+  local x = 0
+  for _, item in ipairs(self.menus) do
+    item.x = x
+    x = x + item.width
+  end
 end
 
 function UIMenuBar:draw(canvas)
