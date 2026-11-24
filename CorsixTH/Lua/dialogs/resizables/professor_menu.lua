@@ -99,11 +99,15 @@ local DOWN_FROM, STRETCH_FROM, PULL_FROM, ROLLER_SHADOW = CHART_BOTTOM - 9, 80, 
 --! MMENU1), the chart is rolled up until he pulls it down at 7.7 seconds; it
 --! springs back a little and settles. Leaving (MMENU2), he tugs at it, lets it
 --! roll up at 1.6 seconds and pulls it off its mount at 2.
+--! (Each frame's bottom row checked again on 2026-11-24, as the row above the
+--! board under it at three places along the chart's left part: several
+--! changes had come a frame or three late, and Jan saw the chart's left end
+--! jump as it settled.)
 UIProfessorMenu.MOVIE_CHART = {
-  coming = {0, ROLLER_BOTTOM, 7714, 36, 7786, 48, 7857, 71, 7929, 86, 8000, 120,
-    8071, 145, 8143, 159, 8286, 158, 9071, 157, 9857, 156, 10500, 157, 10786, 158,
-    11214, 159},
-  leaving = {0, 159, 1429, 164, 1500, 169, 1571, 159, 1643, 111, 1714, 48,
+  coming = {0, ROLLER_BOTTOM, 7714, 36, 7786, 48, 7857, 71, 7929, 86, 8000, 121,
+    8071, 145, 8143, 159, 8357, 158, 9214, 157, 9929, 156, 10429, 157, 10786, 158,
+    11143, 159},
+  leaving = {0, 159, 1429, 164, 1500, 170, 1571, 159, 1643, 111, 1714, 48,
     1786, ROLLER_BOTTOM, 2000, false},
 }
 
@@ -244,16 +248,50 @@ end
 --! the frame (milliseconds) and, from then on, the percent at the chart's
 --! upper part (LIGHT_TOP_ROW) and at its lower part (LIGHT_LOW_ROW), measured
 --! on the movie's frames beside the picture's edge. Elsewhere it is as light.
+--! (Measured again on 2026-11-24 frame by frame, against the picture's paper
+--! at its left edge in 5-row bands; and leaving too.)
 UIProfessorMenu.MOVIE_LIGHT = {
-  coming = {8143, 100, 103, 8286, 100, 108, 8857, 100, 106, 8929, 100, 103,
-    9000, 99, 103, 9071, 99, 102, 9286, 98, 100, 9357, 98, 99, 9500, 98, 97,
-    9571, 98, 96, 9643, 98, 95, 9714, 97, 95, 9786, 97, 93, 9857, 97, 92,
-    10286, 97, 91, 10429, 98, 92, 10714, 100, 92, 10786, 100, 93, 10857, 100, 95,
-    11000, 101, 98, 11071, 103, 100, 11143, 104, 100, 11286, 105, 102,
-    11357, 105, 103, 11643, 105, 105, 11857, 105, 104, 11929, 105, 103,
-    12071, 104, 103, 12143, 101, 102, 12214, 100, 100, 12357, 100, 99, 12643, 100, 100},
+  coming = {8143, 101, 104, 8214, 100, 105, 8286, 100, 107, 8357, 101, 107, 8429, 101, 108,
+    8500, 101, 107, 8786, 101, 106, 8857, 101, 105, 9000, 101, 104, 9143, 100, 103,
+    9286, 100, 101, 9357, 100, 100, 9500, 100, 98, 9571, 100, 97, 9714, 99, 96,
+    9786, 99, 95, 9857, 99, 94, 9929, 99, 93, 10500, 100, 93, 10571, 100, 94,
+    10643, 100, 95, 10714, 101, 95, 10857, 102, 97, 10929, 102, 98, 11000, 103, 99,
+    11071, 104, 101, 11214, 104, 102, 11286, 105, 103, 11429, 106, 104, 11500, 106, 105,
+    11714, 107, 106, 11786, 106, 106, 11857, 106, 105, 11929, 105, 104, 12000, 105, 105,
+    12071, 104, 103, 12143, 103, 102, 12214, 102, 101, 12286, 101, 101, 12357, 101, 100,
+    12429, 100, 100},
+  leaving = {0, 101, 102, 1429, 102, 102, 1500, 103, 102, 1571, 101, 102, 1643, 100, 100},
 }
-local LIGHT_TOP_ROW, LIGHT_LOW_ROW, LIGHT_BAND, LIGHT_STEP = 57, 120, 8, 2
+-- (Bands of LIGHT_BAND rows, LIGHT_STEP percent apart: 8 rows and 2 percent
+-- showed as squares on the paper, Jan 2026-11-24.)
+local LIGHT_TOP_ROW, LIGHT_LOW_ROW, LIGHT_BAND, LIGHT_STEP = 57, 120, 4, 1
+
+--! How light the blackboard under and beside the chart is in his movies while
+--! the chart is down (it changes with his light as he turns and points, from
+--! 72 to 124 percent): the time of the frame (milliseconds) and the percent
+--! against the picture's board under the chart, from then on, measured on
+--! the movies' frames at the picture's left part.
+UIProfessorMenu.MOVIE_BOARD = {
+  coming = {8143, 104, 8214, 100, 8286, 90, 8357, 80, 8500, 72, 8571, 76, 8643, 82,
+    8714, 92, 8786, 96, 8857, 102, 9000, 104, 9214, 106, 9286, 108, 9357, 104,
+    9571, 108, 9643, 112, 9714, 116, 9786, 120, 9929, 122, 10000, 124, 10571, 122,
+    10643, 120, 10714, 118, 10786, 116, 10857, 108, 10929, 104, 11000, 100, 11071, 92,
+    11143, 88, 11286, 84, 11429, 80, 11500, 76, 11643, 72, 12000, 76, 12071, 80,
+    12143, 84, 12214, 86, 12286, 94, 12357, 100},
+  leaving = {0, 124, 214, 120, 357, 122, 1143, 120, 1214, 116, 1429, 108, 1500, 94,
+    1571, 122, 1643, 100},
+}
+
+--! How light the blackboard is in one of his movies at `pts` (milliseconds)
+--! while the chart is down: percent (100: as in the picture).
+function UIProfessorMenu.boardInMovie(leaving, pts)
+  local keys = UIProfessorMenu.MOVIE_BOARD[leaving and "leaving" or "coming"]
+  local percent = 100
+  for i = 1, #keys - 1, 2 do
+    if pts >= keys[i] then percent = keys[i + 1] end
+  end
+  return percent
+end
 
 --! How light the chart is in one of his movies at `pts` (milliseconds): the
 --! percent at its upper and its lower part, or nil when as in the picture.
@@ -711,9 +749,10 @@ end
 --! it, with the paper's commonest colour (in the rows around) where that
 --! has the skeleton's lines. `kind` as UIProfessorMenu.sideColumn's ("down",
 --! "up" or "gone"); `light`, a percent, makes it that light; `look`, what his
---! movie shows there (UIProfessorMenu.MOVIE_ROWS). Made once each.
-local function side(app, loaded, kind, light, look)
-  local data_key = look and kind .. "/" .. look or kind
+--! movie shows there (UIProfessorMenu.MOVIE_ROWS); `movie`, beside his movies
+--! (the chart's bottom line as they have it). Made once each.
+local function side(app, loaded, kind, light, look, movie)
+  local data_key = (look and kind .. "/" .. look or kind) .. (movie and kind == "down" and "/movie" or "")
   local key = light and data_key .. light or data_key
   if loaded.sides[key] then return loaded.sides[key] end
   if not loaded.side_data[data_key] then
@@ -785,7 +824,68 @@ local function side(app, loaded, kind, light, look)
       end
       return b
     end
-    local out, n = {}, 0
+    -- The blackboard beside the chart's right end (BOARD_FROM to BOARD_TO) is
+    -- darker nearer the chart (its shadow): reflected back and forth it made
+    -- stripes, and without the chart (rolled up, gone) there is no shadow (Jan,
+    -- 2026-11-24). So the plain board is each row's average colour there (the
+    -- frame's shadow at the top stays) with the board's grain on it: what each
+    -- pixel has beyond its column's and its row's average, a little weaker
+    -- (BOARD_GRAIN, as grainy as his movies' board), and taken from another
+    -- height for each 20 columns, so that no blotch repeats in a row.
+    local BOARD_GRAIN, BOARD_SHIFT = 0.7, 37
+    local board_row, board_col = {}, {}
+    local board_lo, board_hi = FRAME_BOTTOM + 1, LEDGE_TOP - 1
+    do
+      local all, cols_n = {0, 0, 0}, BOARD_TO - BOARD_FROM + 1
+      for y = board_lo, board_hi do
+        local t = {0, 0, 0}
+        for s = BOARD_FROM, BOARD_TO do
+          local p = rgb[at(s, y)]
+          for k = 1, 3 do t[k] = t[k] + p[k] / cols_n end
+        end
+        board_row[y] = t
+        for k = 1, 3 do all[k] = all[k] + t[k] / (board_hi - board_lo + 1) end
+      end
+      for s = BOARD_FROM, BOARD_TO do
+        local t = {0, 0, 0}
+        for y = board_lo, board_hi do
+          local p = rgb[at(s, y)]
+          for k = 1, 3 do t[k] = t[k] + p[k] / (board_hi - board_lo + 1) end
+        end
+        board_col[s] = {t[1] - all[1], t[2] - all[2], t[3] - all[3]}
+      end
+    end
+    --! The plain board's colour at row `y` with the grain of the picture's
+    --! board at column `s`, from the height for fill column `x`'s 20 columns.
+    local function boardAt(x, y, s)
+      local tile = math.floor((CHART_LEFT + CHART_RIGHT - x - BOARD_FROM) / (BOARD_TO - BOARD_FROM))
+      local yy = board_lo + (y - board_lo + BOARD_SHIFT * tile) % (board_hi - board_lo + 1)
+      local p, row, col = rgb[at(s, yy)], board_row[y], board_col[s]
+      local q = {}
+      for k = 1, 3 do q[k] = row[k] + (p[k] - board_row[yy][k] - col[k]) * BOARD_GRAIN end
+      return q
+    end
+    -- Whether the fill's row `y` at column `x` is blackboard without the chart
+    -- beside it: then its picture column, evened out (UIProfessorMenu.sideColumn
+    -- reflects between BOARD_FROM and BOARD_TO there).
+    local function plainBoard(x, y)
+      if y <= FRAME_BOTTOM or y >= LEDGE_TOP then return nil end
+      if kind ~= "down" and y > ROLLER_BOTTOM then
+        return reflect(CHART_LEFT + CHART_RIGHT - x, BOARD_FROM, BOARD_TO)
+      end
+      local s = UIProfessorMenu.sideColumn(x, y, kind)
+      if x < CHART_LEFT and CHART_LEFT + CHART_RIGHT - x > MOUNT_TO then return s end
+      return nil
+    end
+    -- A colour {r, g, b} as the palette's nearest (each part kept to 0-255).
+    local function nearestRGB(p)
+      return nearestOf({math.max(0, math.min(255, p[1])), math.max(0, math.min(255, p[2])),
+          math.max(0, math.min(255, p[3]))}, p, 0)
+    end
+    -- (Paper at the picture's edge is within PAPER_DARK of its lightest
+    -- there; the skeleton's lines and their edges are darker.)
+    local PAPER_DARK = 90
+    local fill_rows = {}
     for y = 0, PIC_H - 1 do
       local paper, lightest
       if kind == "down" and y >= SKELETON_TOP and y <= SKELETON_BOTTOM then
@@ -793,19 +893,32 @@ local function side(app, loaded, kind, light, look)
         for yy = y - 3, y + 3 do
           for x = 0, EDGE_PAPER - 1 do lightest = math.max(lightest, bright(at(x, yy))) end
         end
-        local counts, most = {}, 0
+        -- The paper's average colour there, grain and all: its commonest was
+        -- one of its lightest, a lighter patch beside the skeleton's arm and
+        -- feet (Jan, 2026-11-24, "a change of colours near the left foot").
+        local found = {}
         for yy = y - 3, y + 3 do
           for x = 0, EDGE_PAPER - 1 do
             local c = at(x, yy)
-            if bright(c) >= lightest - 30 then
-              counts[c] = (counts[c] or 0) + 1
-              if counts[c] > most then most, paper = counts[c], c end
-            end
+            if bright(c) >= lightest - PAPER_DARK then found[#found + 1] = c end
           end
         end
+        local sum = {0, 0, 0}
+        for _, c in ipairs(found) do
+          local p = rgb[c]
+          for k = 1, 3 do sum[k] = sum[k] + p[k] / #found end
+        end
+        paper = nearestRGB(sum)
       end
+      local line = {}
       for x = -SIDE_W, -1 do
-        local c = at(UIProfessorMenu.sideColumn(x, y, kind), y)
+        local c
+        local s = plainBoard(x, y)
+        if s then
+          c = nearestRGB(boardAt(x, y, s))
+        else
+          c = at(UIProfessorMenu.sideColumn(x, y, kind), y)
+        end
         if paper and x >= CHART_LEFT + EDGE_W and bright(c) >= lightest - 60 then
           c = at(-x - 1, y)
           if bright(c) < lightest - 30 then c = paper end
@@ -816,19 +929,59 @@ local function side(app, loaded, kind, light, look)
         if w > 0 and not (paper and bright(c) < lightest - 60) then
           c = mix(c, endPaper(x, y), w)
         end
-        -- What his movie shows there, from the picture's edge to the chart's
-        -- end as the blend at the end goes.
-        local seen = rows and x >= rows.reach and rows.left[y - rows.from + 1]
-        if seen then
-          c = nearestOf(seen, rows.right[y - rows.from + 1], UIProfessorMenu.endBlend(x))
-        elseif rows and x >= rows.reach and board[y] ~= 100 then
-          local f = 1 + (board[y] / 100 - 1) * (1 - UIProfessorMenu.endBlend(x))
-          local p = rgb[c]
-          local lit = {math.min(255, p[1] * f), math.min(255, p[2] * f), math.min(255, p[3] * f)}
-          c = nearestOf(lit, lit, 0)
+        line[x] = c
+      end
+      -- What his movie shows there, from the picture's edge to the chart's end
+      -- as the blend at the end goes: its colours with the grain of what the
+      -- fill has there (each pixel as far from the row's average as it is;
+      -- flat colours made a smooth block beside the wood and the board, Jan
+      -- 2026-11-24).
+      local seen = rows and rows.left[y - rows.from + 1]
+      local mean
+      if seen then
+        mean = {0, 0, 0}
+        for x = rows.reach, -1 do
+          local p = rgb[line[x]]
+          for k = 1, 3 do mean[k] = mean[k] + p[k] / -rows.reach end
         end
+      end
+      for x = -SIDE_W, -1 do
+        local c = line[x]
+        if seen and x >= rows.reach then
+          -- (Evenly from the picture's edge to the chart's end: the roller's
+          -- shadow under it is five rows at the edge and two at its end; going
+          -- over within a few columns made a lump, Jan 2026-11-24.)
+          local want, p = rows.right[y - rows.from + 1], rgb[c]
+          local w = ramp(x, -1, CHART_LEFT + EDGE_W)
+          local t = {}
+          for k = 1, 3 do t[k] = p[k] - mean[k] + seen[k] + (want[k] - seen[k]) * w end
+          c = nearestRGB(t)
+        elseif rows and not seen and board[y] ~= 100 then
+          -- (The blackboard as light as his movie has it, the whole fill wide.)
+          local f = board[y] / 100
+          local p = rgb[c]
+          c = nearestRGB({p[1] * f, p[2] * f, p[3] * f})
+        end
+        line[x] = c
+      end
+      fill_rows[y] = line
+    end
+    -- In his movies the chart's bottom line is one row (LINE_TOP), as at its
+    -- right end, with paper under it; the picture has two at its left (Jan,
+    -- 2026-11-24: the corner did not line up).
+    if movie and kind == "down" then
+      local red, under, paper_row = fill_rows[LINE_TOP], fill_rows[LINE_LOW], fill_rows[LINE_LOW + 1]
+      for x = CHART_LEFT + EDGE_W, -1 do
+        local p = rgb[under[x]]
+        if p[1] > p[2] + 30 then red[x] = under[x] end
+        under[x] = paper_row[x]
+      end
+    end
+    local out, n = {}, 0
+    for y = 0, PIC_H - 1 do
+      for x = -SIDE_W, -1 do
         n = n + 1
-        out[n] = CHARS[c]
+        out[n] = CHARS[fill_rows[y][x]]
       end
     end
     loaded.side_data[data_key] = table.concat(out)
@@ -891,16 +1044,18 @@ end
 --! Elsewhere the chart's left end is its rows as his movies have them
 --! (UIProfessorMenu.chartRow). `top` and `low` (percent, or nil): how light
 --! the chart is (lightInMovie); `look` (or nil): what the movie shows behind
---! and under it (lookInMovie).
-function UIProfessorMenu.drawSide(canvas, bottom, top, low, look)
+--! and under it (lookInMovie); `board` (percent, beside his movies only): how
+--! light the blackboard is while the chart is down (boardInMovie).
+function UIProfessorMenu.drawSide(canvas, bottom, top, low, look, board)
   local app = TheApp
   local loaded = UIProfessorMenu.art(app)
   if not loaded then return end
   local l = UIProfessorMenu.layout(canvas:getRenderSize())
   if l.px <= 0 then return end
+  local movie = board ~= nil
   local down = bottom and bottom >= DOWN_FROM
   local kind = not bottom and "gone" or (down and "down" or "up")
-  local fill = side(app, loaded, kind, nil, kind ~= "down" and look or nil)
+  local fill = side(app, loaded, kind, nil, kind ~= "down" and look or nil, movie)
   if canvas:scale(l.scale) then
     local x, y = l.px - SIDE_W, l.py
     fill:draw(canvas, x, y)
@@ -908,7 +1063,7 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look)
     local left = math.max(0, l.px + CHART_LEFT)
     -- Its rows `from` to `to`, a band at a time: rows as far from theirs.
     local function chart(from, to, light)
-      local picture = side(app, loaded, "down", light)
+      local picture = side(app, loaded, "down", light, nil, movie)
       local row = from
       while row <= to do
         local off = UIProfessorMenu.chartRow(row, bottom) - row
@@ -937,6 +1092,24 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look)
         t = math.max(0, math.min(1, t))
         local light = LIGHT_STEP * math.floor((top + (low - top) * t) / LIGHT_STEP + 0.5)
         if light ~= 100 then chart(row, math.min(row + LIGHT_BAND - 1, bottom), light) end
+      end
+    end
+    if down and board and board ~= 100 then
+      -- The blackboard beside the chart and under it as light as his movie
+      -- has it (Jan, 2026-11-24: a darker block under the chart's corner).
+      local lit = side(app, loaded, "down", board, nil, movie)
+      local from = math.max(0, x)
+      canvas:pushClip(from, y + FRAME_BOTTOM + 1, left - from, LEDGE_TOP - FRAME_BOTTOM - 1)
+      lit:draw(canvas, x, y)
+      canvas:popClip()
+      local under = math.max(bottom, CHART_BOTTOM) + 1
+      canvas:pushClip(left, y + under, l.px - left, LEDGE_TOP - under)
+      lit:draw(canvas, x, y)
+      canvas:popClip()
+      if bottom < CHART_BOTTOM then
+        canvas:pushClip(left, y + bottom + 1, l.px - left, CHART_BOTTOM - bottom)
+        side(app, loaded, "up", board):draw(canvas, x, y)
+        canvas:popClip()
       end
     end
     canvas:scale(1)

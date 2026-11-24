@@ -130,13 +130,18 @@ describe("Professor menu", function()
         assert.is_true(y <= 24 or y >= 192 or gone <= 202, what)
       end
     end
+    -- (Each frame's row as measured again on 2026-11-24.)
     local at = UIProfessorMenu.chartInMovie
     assert.equal(21, at(false, 0))
-    assert.equal(120, at(false, 8000))
+    assert.equal(121, at(false, 8000))
+    assert.equal(159, at(false, 8286))
+    assert.equal(158, at(false, 8357))
     assert.equal(156, at(false, 10000))
+    assert.equal(158, at(false, 11071))
+    assert.equal(159, at(false, 11143))
     assert.equal(159, at(false, 20000))
     assert.equal(159, at(true, 0))
-    assert.equal(169, at(true, 1550))
+    assert.equal(170, at(true, 1550))
     assert.equal(21, at(true, 1800))
     assert.is_false(at(true, 2500))
     -- What the movies show behind and under the chart: rolled up as he
@@ -165,9 +170,24 @@ describe("Professor menu", function()
     end
     local light = UIProfessorMenu.lightInMovie
     assert.is_nil(light(false, 5000))
-    assert.same({97, 91}, {light(false, 10300)})
+    assert.same({99, 93}, {light(false, 10300)})
     assert.is_nil(light(false, 13000))
-    assert.is_nil(light(true, 1000))
+    assert.same({101, 102}, {light(true, 1000)})
+    assert.is_nil(light(true, 2500))
+    -- The blackboard's light while the chart is down: darker and lighter as
+    -- he turns, as the picture's once he stands still.
+    local board = UIProfessorMenu.boardInMovie
+    assert.equal(100, board(false, 5000))
+    assert.equal(72, board(false, 8500))
+    assert.equal(124, board(false, 10200))
+    assert.equal(100, board(false, 13000))
+    assert.equal(124, board(true, 100))
+    assert.equal(100, board(true, 2500))
+    for _, movie in ipairs({"coming", "leaving"}) do
+      local keys = UIProfessorMenu.MOVIE_BOARD[movie]
+      assert.equal(0, #keys % 2, movie)
+      for i = 3, #keys - 1, 2 do assert.is_true(keys[i] > keys[i - 2], movie) end
+    end
   end)
 
   it("moves the chart's left end as his movies move the chart", function()
