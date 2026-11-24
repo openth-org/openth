@@ -1739,7 +1739,7 @@ multiplayer_tips = {
     "Press N to look at the next hospital, your own included, and Shift+N to jump straight back to your own.",
     "Press Y to chat. Press Tab or click the \"To\" box to choose who reads it: everybody, your team or allies, or one player.",
     "Press M to open the first message waiting at the bottom of the screen, and M again to close it.",
-    "On the research screen each click moves 5 points in multiplayer. Hold Shift for 25 at once, or Ctrl for 100.",
+    "On the research screen each click moves 5 points in multiplayer. Hold Ctrl for 20 at once, or Ctrl+Shift for 100.",
     "To sell a bench or another corridor object, right-click it to pick it up, then press Delete or Q: you get its full price back. Esc puts it back.",
     "In a staff member's window, right-click their name to go to the next one of the same kind. The view follows.",
     "In a machine's window, right-click its name at the top to go to your next machine. Its strength and uses show at the bottom of the screen.",

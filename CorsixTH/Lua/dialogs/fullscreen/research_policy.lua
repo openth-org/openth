@@ -148,6 +148,20 @@ end
 --! the share while its command is on the way.
 local PENDING_STEPS = 20
 
+--! The points a click on an arrow moves: Shift 5, Ctrl 20, Ctrl+Shift 100,
+--! a plain click 1 (CorsixTH's own). In multiplayer a plain click moves 5
+--! (Jan, 2026-11-21: changing shares took long), the others as in single
+--! player (Argus, 2026-11-24: they were 25, 100 and 500, so the numbers
+--! differed from CorsixTH's).
+--!param mods (table) the key modifiers held (ctrl, shift)
+--!param multiplayer (boolean) whether clicks are multiplayer commands
+function UIResearch.stepPoints(mods, multiplayer)
+  if mods.ctrl and mods.shift then return 100 end
+  if mods.ctrl then return 20 end
+  if mods.shift then return 5 end
+  return multiplayer and 5 or 1
+end
+
 function UIResearch:adjustResearch(area, mode)
   local res = self.research
   local policy = res.research_policy
@@ -164,14 +178,7 @@ function UIResearch:adjustResearch(area, mode)
   end
   local total = 0
   for _, category in ipairs(research_categories) do total = total + share(category) end
-  local amount = session and 5 or 1
-  if self.ui.app.key_modifiers.ctrl and self.ui.app.key_modifiers.shift then
-    amount = amount * 100
-  elseif self.ui.app.key_modifiers.ctrl then
-    amount = amount * 20
-  elseif self.ui.app.key_modifiers.shift then
-    amount = amount * 5
-  end
+  local amount = UIResearch.stepPoints(self.ui.app.key_modifiers, session ~= nil)
   local frac
   if mode == "less" then
     if share(area) > 0 then
