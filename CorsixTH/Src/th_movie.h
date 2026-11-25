@@ -30,6 +30,7 @@ SOFTWARE.
 #include <array>
 #include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -187,6 +188,19 @@ class movie_picture_buffer {
   //! -1 when there was none to draw
   double draw(SDL_Renderer* pRenderer, const SDL_Rect& dstrect);
 
+  //! Draw part of the picture drawn last again
+  //!
+  //! \param pRenderer The renderer to draw to
+  //! \param source The part of the picture (in its pixels)
+  //! \param destination Where on the renderer to draw it
+  //! \param flip Whether to draw it mirrored left to right
+  //! \param alpha How opaque to draw it (0 to 255)
+  //! \returns Whether there was a picture to draw from
+  //!
+  //! \remark Must be run on the program's graphics thread
+  bool draw_part(SDL_Renderer* pRenderer, const SDL_FRect& source,
+                 const SDL_FRect& destination, bool flip, std::uint8_t alpha);
+
   //! Get the next presentation time stamp
   double get_next_pts();
 
@@ -243,6 +257,10 @@ class movie_picture_buffer {
   //! The (potentially hardware) texture to draw the picture to. In OpenGL this
   //! should only be accessed on the main thread
   SDL_Texture* texture;
+
+  //! Whether the texture holds a picture (one has been drawn since it was
+  //! made)
+  bool texture_drawn;
 
   //! A mutex for restricting access to the picture buffer to a single thread
   std::mutex mutex;
@@ -370,6 +388,16 @@ class movie_player {
   //! when the pictures come late, and moves on at most one frame a refresh
   //! \returns The current presentation time stamp of the movie in milliseconds
   double refresh(const SDL_Rect& destination_rect, double* shown_pts = nullptr);
+
+  //! Draw part of the frame drawn last (by refresh) again: as it is or
+  //! mirrored left to right, and as opaque as `alpha` (0 to 255). Something
+  //! drawn beside the movie can go on from it so.
+  //!
+  //! \param source The part of the frame (in the movie's pixels)
+  //! \param destination Where on the renderer to draw it
+  //! \returns Whether there was a frame to draw from
+  bool draw_part(const SDL_FRect& source, const SDL_FRect& destination,
+                 bool flip, std::uint8_t alpha);
 
   //! Deallocate the picture buffer and free any resources associated with it.
   //!

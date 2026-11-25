@@ -292,8 +292,17 @@ function MoviePlayer:playMenuMovie(leaving, callback)
       end
       local pts = UIProfessorMenu.frameTime(frame)
       local top, low = UIProfessorMenu.lightInMovie(leaving, pts)
-      UIProfessorMenu.drawSide(player.video, UIProfessorMenu.chartInMovie(leaving, pts),
-          top, low, UIProfessorMenu.lookInMovie(leaving, pts), UIProfessorMenu.boardInMovie(leaving, pts))
+      local bottom = UIProfessorMenu.chartInMovie(leaving, pts)
+      UIProfessorMenu.drawSide(player.video, bottom, top, low, UIProfessorMenu.lookInMovie(leaving, pts),
+          UIProfessorMenu.boardInMovie(leaving, pts))
+      -- Beside the picture's edge, from the very frame shown, where the
+      -- engine can draw part of it again (from 2026-11-25).
+      local engine = player.moviePlayer
+      if engine and engine.drawPart then
+        UIProfessorMenu.drawMovieStrip(player.video, bottom, function(...)
+          return engine:drawPart(...)
+        end)
+      end
     end
   end
 end

@@ -89,7 +89,8 @@ movie_picture_buffer::movie_picture_buffer()
       read_index(0),
       write_index(0),
       sws_context(nullptr),
-      texture(nullptr) {}
+      texture(nullptr),
+      texture_drawn(false) {}
 
 movie_picture_buffer::~movie_picture_buffer() {
   sws_freeContext(sws_context);
@@ -116,6 +117,7 @@ void movie_picture_buffer::allocate(SDL_Renderer* pRenderer, int iWidth,
   }
   texture = SDL_CreateTexture(pRenderer, SDL_PIXELFORMAT_RGB24,
                               SDL_TEXTUREACCESS_STREAMING, iWidth, iHeight);
+  texture_drawn = false;
   if (texture == nullptr) {
     std::cerr << "Problem creating overlay: " << SDL_GetError() << "\n";
     return;
@@ -148,6 +150,7 @@ void movie_picture_buffer::deallocate() {
     SDL_DestroyTexture(texture);
     texture = nullptr;
   }
+  texture_drawn = false;
 }
 
 bool movie_picture_buffer::advance() {
@@ -182,9 +185,35 @@ double movie_picture_buffer::draw(SDL_Renderer* pRenderer,
         std::cerr << "Error displaying movie frame: " << SDL_GetError() << "\n";
       }
       drawn_pts = cur_pic.pts;
+      texture_drawn = true;
     }
   }
   return drawn_pts;
+}
+
+bool movie_picture_buffer::draw_part(SDL_Renderer* pRenderer,
+                                     const SDL_FRect& source,
+                                     const SDL_FRect& destination, bool flip,
+                                     std::uint8_t alpha) {
+  if (!texture || !texture_drawn) {
+    return false;
+  }
+  if (alpha < 255) {
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureAlphaMod(texture, alpha);
+  }
+  const SDL_FlipMode flip_mode = flip ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
+  const bool ok = SDL_RenderTextureRotated(pRenderer, texture, &source,
+                                           &destination, 0, nullptr, flip_mode);
+  if (alpha < 255) {
+    SDL_SetTextureAlphaMod(texture, 255);
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE);
+  }
+  if (!ok) {
+    std::cerr << "Error drawing part of a movie frame: " << SDL_GetError()
+              << "\n";
+  }
+  return ok;
 }
 
 double movie_picture_buffer::get_next_pts() {
@@ -568,6 +597,13 @@ double movie_player::refresh(const SDL_Rect& destination_rect,
   return dCurTime;
 }
 
+bool movie_player::draw_part(const SDL_FRect& source,
+                             const SDL_FRect& destination, bool flip,
+                             std::uint8_t alpha) {
+  return movie_picture_buffer.draw_part(renderer, source, destination, flip,
+                                        alpha);
+}
+
 void movie_player::allocate_picture_buffer() {
   if (!video_codec_context) {
     return;
@@ -783,6 +819,10 @@ double movie_player::refresh(const SDL_Rect&, double* shown_pts) {
     *shown_pts = -1;
   }
   return 0;
+}
+bool movie_player::draw_part(const SDL_FRect&, const SDL_FRect&, bool,
+                             std::uint8_t) {
+  return false;
 }
 void movie_player::allocate_picture_buffer() {}
 void movie_player::deallocate_picture_buffer() {}

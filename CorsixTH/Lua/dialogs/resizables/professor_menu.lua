@@ -505,6 +505,87 @@ function UIProfessorMenu.endBlend(x, y)
   return ramp(x, BLEND_FROM, CHART_LEFT + EDGE_W)
 end
 
+-- Beside the picture's edge (LIVE_W columns, up to the chart's left end) the
+-- fill is taken from the frame his movie shows while the chart is down, as
+-- it is taken from the picture: its colours and light are the movie's, frame
+-- by frame (Jan 2026-11-25: one piece, not glued on; the chart's bottom
+-- line and edge beside the picture were not the movie's). Not while it is
+-- rolled up or rolling (his hand reaches into those columns as he pulls it
+-- down), and not the chart's left end (the mirror image of its right end,
+-- where he stands).
+local LIVE_W = -(CHART_LEFT + EDGE_W)
+
+--! What of the frame his movie shows to draw beside the picture's edge while
+--! the chart's bottom edge is at row `bottom` (UIProfessorMenu.chartInMovie):
+--! a list of {sx, sy, sw, sh (the frame's pixels), x, y, w, h (the fill's: x
+--! from -LIVE_W, rows as the picture's), flip (mirrored), alpha (0 to 255)},
+--! the columns as UIProfessorMenu.sideColumn takes them from the picture,
+--! the rows the frame's own (the chart moves in it). The last columns fade
+--! into the fill drawn from the picture as endBlend has it. Empty unless the
+--! chart is down.
+function UIProfessorMenu.movieStrip(bottom)
+  local draws = {}
+  if not bottom or bottom < DOWN_FROM then return draws end
+  -- The frame's row with the chart's row `r` as the picture has it.
+  local function rowOf(r)
+    local lo, hi = 0, PIC_H
+    for _ = 1, 24 do
+      local mid = (lo + hi) / 2
+      if UIProfessorMenu.chartRow(mid, bottom, true) < r then lo = mid else hi = mid end
+    end
+    return math.floor(hi + 0.5)
+  end
+  local top, feet, below = rowOf(SKELETON_TOP), rowOf(SKELETON_FEET), rowOf(SKELETON_BOTTOM + 1)
+  -- Rows and where their columns come from: the picture's edge mirrored, the
+  -- skeleton's other half, or the paper beside his feet.
+  local bands = {{0, top, "edge"}, {top, feet, "skeleton"}, {feet, below, "paper"},
+    {below, PIC_H, "edge"}}
+  -- Columns with as much of the frame (fully from BLEND_FROM on).
+  local groups = {{BLEND_FROM, -1}}
+  for x = BLEND_FROM - 1, -LIVE_W, -1 do groups[#groups + 1] = {x, x} end
+  local function add(sx, sw, x0, x1, band, flip, alpha)
+    draws[#draws + 1] = {sx = sx, sy = band[1], sw = sw, sh = band[2] - band[1],
+      x = x0, y = band[1], w = x1 - x0 + 1, h = band[2] - band[1], flip = flip, alpha = alpha}
+  end
+  for _, group in ipairs(groups) do
+    local x0, x1 = group[1], group[2]
+    local alpha = math.floor(255 * (1 - UIProfessorMenu.endBlend(x0)) + 0.5)
+    for _, band in ipairs(bands) do
+      if band[2] > band[1] then
+        if band[3] == "edge" then
+          add(-x1 - 1, x1 - x0 + 1, x0, x1, band, true, alpha)
+        elseif band[3] == "paper" then
+          add(PAPER_COLUMN, 1, x0, x1, band, false, alpha)
+        else
+          -- The skeleton's other half to PAPER_COLUMN, its paper beyond.
+          local split = SKELETON_2X - PAPER_COLUMN
+          if x1 >= split then
+            local a = math.max(x0, split)
+            add(SKELETON_2X - x1, x1 - a + 1, a, x1, band, true, alpha)
+          end
+          if x0 < split then add(PAPER_COLUMN, 1, x0, math.min(x1, split - 1), band, false, alpha) end
+        end
+      end
+    end
+  end
+  return draws
+end
+
+--! Draws UIProfessorMenu.movieStrip(`bottom`) on `canvas` beside his movie
+--! with `drawPart` (the movie player's: source and screen rectangles, flip,
+--! alpha; false when it has no frame to draw from).
+function UIProfessorMenu.drawMovieStrip(canvas, bottom, drawPart)
+  local l = UIProfessorMenu.layout(canvas:getRenderSize())
+  if l.px <= 0 then return end
+  local s = l.scale
+  for _, d in ipairs(UIProfessorMenu.movieStrip(bottom)) do
+    if not drawPart(d.sx, d.sy, d.sw, d.sh, (l.px + d.x) * s, (l.py + d.y) * s, d.w * s,
+        d.h * s, d.flip, d.alpha) then
+      return
+    end
+  end
+end
+
 --! Decodes a sprite of "complex" chunks as the engine does (chunk_renderer):
 --! its colours by position from 0 (left to right, top to bottom), without
 --! the transparent ones.

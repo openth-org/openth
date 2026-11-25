@@ -198,6 +198,51 @@ describe("Professor menu", function()
     end
   end)
 
+  it("takes the fill beside the picture's edge from his movie's frame while the chart is down", function()
+    local strip = UIProfessorMenu.movieStrip
+    assert.same({}, strip(nil))
+    assert.same({}, strip(121))
+    assert.same({}, strip(21))
+    for _, bottom in ipairs({159, 156.1, 164}) do
+      local seen = {}
+      for _, d in ipairs(strip(bottom)) do
+        assert.equal(d.sh, d.h)
+        assert.equal(d.sy, d.y)
+        assert.is_true(d.sx >= 0 and d.sx + d.sw <= 43, "only the frame's first columns")
+        assert.is_true(d.flip or d.sw == 1)
+        for x = d.x, d.x + d.w - 1 do
+          -- The frame's column for the fill's column x, as drawn.
+          local col = d.sw == 1 and d.sx or d.sx + (d.x + d.w - 1 - x)
+          for y = d.y, d.y + d.h - 1 do
+            local key = x .. "," .. y
+            assert.is_nil(seen[key], key)
+            seen[key] = true
+            -- At the picture's rows, the column the fill takes from the
+            -- picture (his feet: only paper beside them).
+            if bottom == 159 then
+              assert.equal(UIProfessorMenu.sideColumn(x, y, "down"), col, key)
+            end
+          end
+          local blend = UIProfessorMenu.endBlend(x)
+          assert.equal(math.floor(255 * (1 - blend) + 0.5), d.alpha, x)
+          assert.is_true(d.alpha > 0)
+        end
+      end
+      for x = -16, -1 do
+        for y = 0, 199 do assert.is_true(seen[x .. "," .. y], x .. "," .. y .. " at " .. bottom) end
+      end
+    end
+    -- Springing back, the paper beside his feet starts higher, as the frame
+    -- has it.
+    local function feet(bottom)
+      for _, d in ipairs(strip(bottom)) do
+        if d.sx == 42 and d.w == 6 and d.x == -6 then return d.y end
+      end
+    end
+    assert.equal(141, feet(159))
+    assert.is_true(feet(156.1) < 141)
+  end)
+
   it("draws the fill beside his movies for the frame they show", function()
     local frame, time = UIProfessorMenu.movieFrame, UIProfessorMenu.frameTime
     -- The engine's time of a frame (frame 111: 111 times 0.07142 seconds),
