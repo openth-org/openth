@@ -325,27 +325,26 @@ int l_radio_volume(lua_State* L) {
   return 0;
 }
 
+const char* radio_state_name(th::radio::state state) {
+  switch (state) {
+    case th::radio::state::connecting:
+      return "connecting";
+    case th::radio::state::playing:
+      return "playing";
+    case th::radio::state::failed:
+      return "failed";
+    case th::radio::state::stopped:
+      break;
+  }
+  return "stopped";
+}
+
 //! {state = "stopped"|"connecting"|"playing"|"failed", station, title,
 //! error, detail} (texts empty when not known).
 int l_radio_status(lua_State* L) {
   th::radio::status s = th::radio::get_status();
-  const char* state = "stopped";
-  switch (s.current) {
-    case th::radio::state::stopped:
-      state = "stopped";
-      break;
-    case th::radio::state::connecting:
-      state = "connecting";
-      break;
-    case th::radio::state::playing:
-      state = "playing";
-      break;
-    case th::radio::state::failed:
-      state = "failed";
-      break;
-  }
   lua_createtable(L, 0, 5);
-  lua_pushstring(L, state);
+  lua_pushstring(L, radio_state_name(s.current));
   lua_setfield(L, -2, "state");
   lua_pushlstring(L, s.station.data(), s.station.size());
   lua_setfield(L, -2, "station");

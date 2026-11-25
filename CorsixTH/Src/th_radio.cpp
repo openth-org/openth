@@ -74,7 +74,8 @@ std::string lower(std::string s) {
 
 //! Whether s starts with prefix (given in lower case), ignoring case.
 bool starts_with(const std::string& s, const std::string& prefix) {
-  return s.size() >= prefix.size() && lower(s.substr(0, prefix.size())) == prefix;
+  return s.size() >= prefix.size() &&
+         lower(s.substr(0, prefix.size())) == prefix;
 }
 
 bool is_stream_address(const std::string& s) {
@@ -284,7 +285,8 @@ void update_metadata(AVFormatContext* fmt) {
   std::string title =
       icy_stream_title(connection_option(fmt, "icy_metadata_packet"));
   if (station.empty()) {
-    if (AVDictionaryEntry* e = av_dict_get(fmt->metadata, "icy-name", nullptr, 0)) {
+    if (AVDictionaryEntry* e =
+            av_dict_get(fmt->metadata, "icy-name", nullptr, 0)) {
       station = e->value;
     }
   }
@@ -373,8 +375,8 @@ void queue_frame(connection& c, std::vector<uint8_t>& out) {
   out.resize(static_cast<std::size_t>(samples) * out_channels * sizeof(float));
   uint8_t* out_data = out.data();
   // (As th_movie.cpp: the input's type differs between FFmpeg versions.)
-  int converted = swr_convert(c.swr, &out_data, samples,
-                              frame->extended_data, frame->nb_samples);
+  int converted = swr_convert(c.swr, &out_data, samples, frame->extended_data,
+                              frame->nb_samples);
   if (converted > 0) {
     SDL_PutAudioStreamData(
         c.stream, out.data(),
@@ -425,10 +427,17 @@ outcome play_stream(const std::string& url, std::string* error,
     return outcome::not_opened;
   }
   c.codec = avcodec_alloc_context3(decoder);
-  if (c.codec == nullptr ||
-      avcodec_parameters_to_context(c.codec, c.fmt->streams[index]->codecpar) <
-          0 ||
-      (err = avcodec_open2(c.codec, decoder, nullptr)) < 0) {
+  if (c.codec == nullptr) {
+    *error = "no_audio";
+    *detail = error_text(AVERROR(ENOMEM));
+    return outcome::not_opened;
+  }
+  const AVCodecParameters* params = c.fmt->streams[index]->codecpar;
+  err = avcodec_parameters_to_context(c.codec, params);
+  if (err >= 0) {
+    err = avcodec_open2(c.codec, decoder, nullptr);
+  }
+  if (err < 0) {
     *error = "no_audio";
     *detail = error_text(err);
     return outcome::not_opened;
@@ -442,8 +451,8 @@ outcome play_stream(const std::string& url, std::string* error,
   spec.channels = out_channels;
   spec.freq = out_rate;
   // (The device starts paused: the sound begins once half a second waits.)
-  c.stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
-                                       &spec, nullptr, nullptr);
+  c.stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec,
+                                       nullptr, nullptr);
   if (c.stream == nullptr) {
     *error = "device";
     *detail = SDL_GetError();
@@ -518,8 +527,8 @@ void run(const std::string& url) {
   std::call_once(network_once, [] { avformat_network_init(); });
   radio_player& p = player();
   std::string address = url;
-  int hops = 0;      // Playlists followed.
-  int retries = 0;   // Reconnections since the last good while.
+  int hops = 0;     // Playlists followed.
+  int retries = 0;  // Reconnections since the last good while.
   while (!p.abort) {
     std::string error;
     std::string detail;
