@@ -1,0 +1,94 @@
+### OpenTH multiplayer bug report ###
+name: Multiplayer problem (OpenTH)
+description: Something went wrong in an online game, the lobby or a server
+title: "[Multiplayer] Give a summary of the problem"
+type: Bug
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for telling us. The server, the room name and the time let us find your game in the server's log, so please fill them in.
+        For a problem in single player, use the **Bug report** form instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you saw, and what you were doing just before (building a room, a fax, a dirty trick, saving...).
+    validations:
+      required: true
+  - type: dropdown
+    id: server
+    attributes:
+      label: Server
+      options:
+        - EU1 (eu1.openth.org)
+        - US1 (us1.openth.org)
+        - EU2, test builds (eu2.openth.org)
+        - My own server
+        - On a LAN
+    validations:
+      required: true
+  - type: input
+    id: room
+    attributes:
+      label: Room name and your player name
+      placeholder: e.g. Friday race, Janos
+    validations:
+      required: true
+  - type: input
+    id: when
+    attributes:
+      label: When did it happen? (date, time and your time zone)
+      placeholder: e.g. 25 Nov 2026, 21:40 CET
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: OpenTH version
+      description: The release you downloaded (e.g. f3cfd3ec), or the version at the top right of the main menu.
+      placeholder: e.g. f3cfd3ec
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Your system
+      options:
+        - Windows
+        - Linux
+        - macOS
+    validations:
+      required: true
+  - type: dropdown
+    id: th-ver
+    attributes:
+      label: Theme Hospital data
+      options:
+        - GOG.com
+        - Steam
+        - EA App
+        - CD
+    validations:
+      required: true
+  - type: upload
+    id: savegame
+    attributes:
+      label: Save game (optional)
+      description: >
+        A multiplayer save from shortly before the problem helps a lot. They are in the
+        Multiplayer folder of your saves; put the file in a zip and upload it here.
+  - type: textarea
+    id: gamelog
+    attributes:
+      label: gamelog.txt (optional)
+      description: >
+        It is next to your config.txt: on Windows in %AppData%\CorsixTH, on macOS in
+        ~/.config/CorsixTH, on Linux in the OpenTH folder.
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots, or who else was in the game.

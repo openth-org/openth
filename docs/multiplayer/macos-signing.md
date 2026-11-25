@@ -82,9 +82,9 @@ release's tag; "publish" off keeps the signed zip only as an artifact), for
 example when a macOS zip was uploaded again later. GitHub offers this button
 only once the workflow is on the default branch (master).
 
-The certificate must never go to a self-hosted runner such as Iris's Mac:
+The certificate must never go to a self-hosted runner such as Jan's Mac:
 anything running on that machine could read it. The signing job asks for
-`macos-26`, one of GitHub's own machines (Iris's Mac has the labels
+`macos-26`, one of GitHub's own machines (Jan's Mac has the labels
 `self-hosted` and `macos-27`), and stops at once if it finds itself anywhere
 else. So never give a self-hosted runner the label `macos-26`.
 
