@@ -144,6 +144,7 @@ local function new_config_defaults()
     play_music = true,
     play_own_music = false,
     music_volume = 0.5,
+    radio_on = false,
     prevent_edge_scrolling = false,
     capture_mouse = true,
     right_mouse_scrolling = false,
@@ -437,6 +438,13 @@ param(config_values, 'announcement_volume') .. [=[
 --]=] .. '\n' ..
 param(config_values, 'play_music') ..
 param(config_values, 'music_volume') .. [=[
+
+-------------------------------------------------------------------------------
+-- Internet radio (Jukebox, Radio): the address of the station played last,
+-- and whether the radio plays instead of the music tracks (radio_on = true).
+--]=] .. '\n' ..
+param(config_values, 'radio_url', '[[http://example.org/stream.mp3]]') ..
+param(config_values, 'radio_on') .. [=[
 
 -------------------------------------------------------------------------------
 -- Edge scrolling: By default enabled (prevent_edge_scrolling = false).

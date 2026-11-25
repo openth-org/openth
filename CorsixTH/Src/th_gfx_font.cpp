@@ -126,6 +126,7 @@ text_layout bitmap_font::draw_text_wrapped(render_target* pCanvas,
     unsigned int iLastASCII =
         static_cast<unsigned int>(sheet->get_sprite_count()) + iFirstASCII;
     const char* sMessageEnd = sMessage + iMessageLength;
+    const char* const sMessageStart = sMessage;
 
     while (sMessage != sMessageEnd && oDrawArea.row_count < iMaxRows) {
       const char* sBreakPosition = sMessageEnd;
@@ -145,8 +146,11 @@ text_layout bitmap_font::draw_text_wrapped(render_target* pCanvas,
             next_utf8_codepoint(s, sMessageEnd), character_set);
         iNextChar = unicode_to_font_character(static_cast<unsigned char>(*s),
                                               character_set);
+        // "//" is a paragraph break in the game's texts, but not in a web
+        // address's "://" (the jukebox's internet radio).
         if ((iChar == '\n' && iNextChar == '\n') ||
-            (iChar == '/' && iNextChar == '/')) {
+            (iChar == '/' && iNextChar == '/' &&
+             !(sOld != sMessageStart && sOld[-1] == ':'))) {
           foundNewLine = true;
           iMsgBreakWidth = iMsgWidth;
           sBreakPosition = sOld;
@@ -508,8 +512,12 @@ text_layout freetype_font::draw_text_wrapped(render_target* pCanvas,
       unsigned int iCode = next_utf8_codepoint(sMessage, sMessageEnd);
       unsigned int iNextCode =
           *reinterpret_cast<const unsigned char*>(sMessage);
-      bool bIsNewLine = (iCode == '\n' && iNextCode == '\n') ||
-                        (iCode == '/' && iNextCode == '/');
+      // "//" is a paragraph break in the game's texts, but not in a web
+      // address's "://" (the jukebox's internet radio).
+      bool bIsNewLine =
+          (iCode == '\n' && iNextCode == '\n') ||
+          (iCode == '/' && iNextCode == '/' &&
+           !(sOldMessage != sMessageStart && sOldMessage[-1] == ':'));
       // Just replace single line breaks with space.
       if (!bIsNewLine && iCode == '\n') {
         iCode = ' ';
@@ -589,7 +597,9 @@ text_layout freetype_font::draw_text_wrapped(render_target* pCanvas,
             vLines.push_back(std::make_pair(sLineStart, sOldMessage));
           }
           if (bIsNewLine) {
-            // skip // or \n\n
+            // skip // or \n\n (from its first character: sMessage is
+            // already past it, and the letter after it must stay)
+            sMessage = sOldMessage;
             next_utf8_codepoint(sMessage, sMessageEnd);
             next_utf8_codepoint(sMessage, sMessageEnd);
             sLineStart = sLineBreakPosition = sMessage;
@@ -650,12 +660,17 @@ text_layout freetype_font::draw_text_wrapped(render_target* pCanvas,
 
     for (auto itr = vLines.begin(); itr != vLines.end() && iNumRows < iMaxRows;
          ++itr) {
-      // Calculate the X change resulting from alignment.
-      const char* sLastChar = previous_utf8_codepoint(itr->second);
-      codepoint_glyph& oLastGlyph =
-          mapGlyphs[decode_utf8(sLastChar, sMessageEnd)];
-      iLineWidth = vCharPositions[sLastChar - sMessage].x +
-                   oLastGlyph.metrics.horiBearingX + oLastGlyph.metrics.width;
+      // Calculate the X change resulting from alignment. (An empty line at
+      // the very start, as from "//" there, has no last character before
+      // it: width 0.)
+      iLineWidth = 0;
+      if (itr->second != sMessage) {
+        const char* sLastChar = previous_utf8_codepoint(itr->second);
+        codepoint_glyph& oLastGlyph =
+            mapGlyphs[decode_utf8(sLastChar, sMessageEnd)];
+        iLineWidth = vCharPositions[sLastChar - sMessage].x +
+                     oLastGlyph.metrics.horiBearingX + oLastGlyph.metrics.width;
+      }
       if ((iLineWidth >> 6) < iWidth && eAlign != text_alignment::left) {
         iAlignDelta =
             ((iWidth * 64 - iLineWidth) * static_cast<int>(eAlign)) / 2;

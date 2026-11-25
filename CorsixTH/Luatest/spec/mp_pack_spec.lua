@@ -221,4 +221,65 @@ describe("Game packs", function()
     MultiplayerPack.afterStart(app)
     assert.is_nil(readFile(builds .. "starting.txt"))
   end)
+
+  it("writes down which game was installed when a build is chosen", function()
+    app.getFullPath = function() return dir end
+    writeFile(dir .. "app.lua", "return 1\n") -- (the stub checksum: 0123abcd)
+    MultiplayerPack.switchTo(app, "89abcdef", nil, nil)
+    local builds = dir .. "builds" .. sep
+    assert.equal("89abcdef\n", readFile(builds .. "current.txt"))
+    assert.equal("0123abcd\n", readFile(builds .. "installed.txt"))
+    MultiplayerPack.switchTo(app, nil, nil, nil)
+    assert.is_nil(readFile(builds .. "current.txt"))
+    assert.is_nil(readFile(builds .. "installed.txt"))
+  end)
+
+  it("starts a game installed after the build was chosen, not the build", function()
+    -- (The engine's CRC-32; any checksum does for the test.)
+    local saved_crc = TH.CRC32File
+    TH.CRC32File = function(text)
+      local sum = 0
+      for i = 1, #text do sum = (sum * 31 + text:byte(i)) % 4294967296 end
+      return sum
+    end
+    local start = assert(loadfile("../Lua/mp_pack_start.lua"))
+    local install = tempDir()
+    local lua = install .. "Lua" .. sep
+    lfs.mkdir(lua:sub(1, -2))
+    writeFile(lua .. "app.lua", "return 'installed'\n")
+    local builds = dir .. "builds" .. sep
+    lfs.mkdir(builds:sub(1, -2))
+    lfs.mkdir(builds .. "0123abcd")
+    writeFile(builds .. "0123abcd" .. sep .. "CorsixTH.lua", "")
+    local args = {"corsix-th", "--config-file=" .. dir .. "config.txt", "--hotkeys-file=" .. dir .. "hotkeys.txt"}
+    local function run() return start(install, lua, (table.unpack or unpack)(args)) end
+    local function choose(installed_then)
+      writeFile(builds .. "current.txt", "0123abcd\n")
+      if installed_then then writeFile(builds .. "installed.txt", installed_then .. "\n") end
+      os.remove(builds .. "starting.txt")
+    end
+    -- This game's own checksum, as the build was chosen in it: the build starts.
+    local own = string.format("%08x", TH.CRC32File("app.lua\0return 'installed'\n"))
+    choose(own)
+    assert.equal(builds .. "0123abcd" .. sep .. "CorsixTH.lua", run())
+    -- Chosen in another game (an older download): this one starts itself.
+    choose("feedbeef")
+    assert.is_nil(run())
+    assert.is_nil(readFile(builds .. "current.txt"))
+    assert.is_nil(readFile(builds .. "installed.txt"))
+    assert.is_nil(readFile(builds .. "starting.txt"))
+    -- Chosen by an older game that wrote nothing down: the dates decide.
+    os.remove(builds .. "installed.txt")
+    choose(nil)
+    lfs.touch(builds .. "current.txt", 2000000000, 2000000000)
+    lfs.touch(lua .. "app.lua", 1900000000, 1900000000)
+    assert.equal(builds .. "0123abcd" .. sep .. "CorsixTH.lua", run()) -- (chosen after this game came)
+    assert.equal(own .. "\n", readFile(builds .. "installed.txt"))
+    os.remove(builds .. "installed.txt")
+    choose(nil)
+    lfs.touch(builds .. "current.txt", 1800000000, 1800000000)
+    assert.is_nil(run()) -- (this game came after the choice)
+    assert.is_nil(readFile(builds .. "current.txt"))
+    TH.CRC32File = saved_crc
+  end)
 end)

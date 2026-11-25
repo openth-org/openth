@@ -277,12 +277,36 @@ function MoviePlayer:playMenuMovie(leaving, callback)
     end
     -- On a wider screen, the fill at its left as the menu has it, with the
     -- chart where the movie has it and as light (Jan: the left part was cut
-    -- off).
-    self.refresh_overlay = function(player, _, _, _, _, _, pts)
-      pts = pts or 0
+    -- off). It is drawn for the frame the movie shows, as one picture with
+    -- it, not for the movie's clock: the frame shown lags the clock when the
+    -- pictures come late, and with the sound on the clock jumps back and
+    -- forth (Jan 2026-11-25: still not aligned during the animation). An
+    -- engine that does not say which frame it drew shows the next one once
+    -- the clock reaches it, one frame a refresh.
+    local frame = 0
+    self.refresh_overlay = function(player, _, _, _, _, _, clock, shown)
+      if shown then
+        frame = UIProfessorMenu.movieFrame(shown)
+      elseif UIProfessorMenu.movieFrame(clock or 0) > frame then
+        frame = frame + 1
+      end
+      local pts = UIProfessorMenu.frameTime(frame)
       local top, low = UIProfessorMenu.lightInMovie(leaving, pts)
-      UIProfessorMenu.drawSide(player.video, UIProfessorMenu.chartInMovie(leaving, pts),
-          top, low, UIProfessorMenu.lookInMovie(leaving, pts), UIProfessorMenu.boardInMovie(leaving, pts))
+      local bottom = UIProfessorMenu.chartInMovie(leaving, pts)
+      UIProfessorMenu.drawSide(player.video, bottom, top, low, UIProfessorMenu.lookInMovie(leaving, pts),
+          UIProfessorMenu.boardInMovie(leaving, pts))
+      -- Beside the picture's edge, from the very frame shown, where the
+      -- engine can draw part of it again (from 2026-11-25).
+      local engine = player.moviePlayer
+      if engine and engine.drawPart then
+        UIProfessorMenu.drawMovieStrip(player.video, bottom, function(...)
+          return engine:drawPart(...)
+        end)
+      end
+      -- The fills of the frames to come, made a little each refresh while
+      -- he walks up with the chart rolled up, not all at once as he pulls
+      -- it down (Jan 2026-11-25: the movie stood still there).
+      UIProfessorMenu.prepare(player.app, UIProfessorMenu.prepareMs(leaving, frame))
     end
   end
 end
@@ -521,9 +545,11 @@ function MoviePlayer:refresh()
   if self.moviePlayer == nil then return end
 
   local x, y, w, h, scale = calculateSize(self)
-  local pts = self.moviePlayer:refresh(x, y, w, h)
+  -- The movie's clock, and the time of the frame drawn (engines before
+  -- 2026-11-25 give only the clock).
+  local pts, shown = self.moviePlayer:refresh(x, y, w, h)
   if self.refresh_overlay then
-    self.refresh_overlay(self, x, y, w, h, scale, pts)
+    self.refresh_overlay(self, x, y, w, h, scale, pts, shown)
   end
 end
 

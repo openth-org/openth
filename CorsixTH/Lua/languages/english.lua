@@ -2736,3 +2736,30 @@ bot_chat = {
     lower_staff = 1,
   },
 }
+
+-- Internet radio (Jukebox): the radio window and the jukebox's radio row.
+radio_window = {
+  caption = "Internet radio",
+  play = "Play",
+  stop = "Stop",
+  close = "Close",
+  status_off = "Type or paste (Ctrl+V) a station's address above, then press Play.",
+  status_connecting = "Connecting...",
+  status_playing = "Playing",
+  status_paused = "Paused",
+  error_open = "This address could not be played. Check it, or try another link of the station.",
+  error_https = "This game cannot open https addresses. Try the station's http address.",
+  error_no_audio = "There is no sound at this address. Try the station's stream link (.mp3, .aac, .pls or .m3u).",
+  error_device = "The sound could not be played on this computer.",
+  error_ended = "The station stopped sending.",
+  not_supported = "This version of the game cannot play internet radio. The newest version from openth.org can.",
+  jukebox_row = "Internet radio",
+  jukebox_failed = "Internet radio: not available",
+}
+tooltip.radio_window = {
+  address = "The address of an internet radio station: its stream (http or https), or a .pls or .m3u link to one. Ctrl+V pastes. The game remembers it.",
+  play = "Play this station instead of the game's music",
+  stop = "Stop the radio: the game's music plays again",
+}
+tooltip.jukebox.radio = "Internet radio: choose a station"
+tooltip.jukebox.radio_toggle = "Internet radio on or off"

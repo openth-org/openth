@@ -3927,3 +3927,26 @@ bot_chat = {
     lower_staff = 1,
   },
 }
+
+-- Internet radio (Jukebox): the radio window and the jukebox's radio row.
+radio_window.caption = "Internetradio"
+radio_window.play = "Afspil"
+radio_window.stop = "Stop"
+radio_window.close = "Luk"
+radio_window.status_off = "Skriv eller indsæt (Ctrl+V) en stations adresse ovenfor, og tryk på Afspil."
+radio_window.status_connecting = "Forbinder..."
+radio_window.status_playing = "Spiller"
+radio_window.status_paused = "Pause"
+radio_window.error_open = "Denne adresse kunne ikke afspilles. Tjek den, eller pröv et andet link til stationen."
+radio_window.error_https = "Dette spil kan ikke åbne https-adresser. Pröv stationens http-adresse."
+radio_window.error_no_audio = "Der er ingen lyd på denne adresse. Pröv stationens stream-link (.mp3, .aac, .pls eller .m3u)."
+radio_window.error_device = "Lyden kunne ikke afspilles på denne computer."
+radio_window.error_ended = "Stationen holdt op med at sende."
+radio_window.not_supported = "Denne version af spillet kan ikke afspille internetradio. Den nyeste version fra openth.org kan."
+radio_window.jukebox_row = "Internetradio"
+radio_window.jukebox_failed = "Internetradio: ikke tilgængelig"
+tooltip.radio_window.address = "Adressen på en internetradiostation: dens stream (http eller https) eller et .pls- eller .m3u-link til den. Ctrl+V indsætter. Spillet husker den."
+tooltip.radio_window.play = "Afspil denne station i stedet for spillets musik"
+tooltip.radio_window.stop = "Stop radioen: spillets musik spiller igen"
+tooltip.jukebox.radio = "Internetradio: vælg en station"
+tooltip.jukebox.radio_toggle = "Internetradio til eller fra"

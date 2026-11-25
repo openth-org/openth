@@ -154,6 +154,16 @@ function MultiplayerPack.installedBuild(app)
   return MultiplayerPack.cached_installed or nil
 end
 
+--! The Lua checksum of the installed game, whether this is it or a
+--! downloaded build (nil if it cannot be worked out).
+function MultiplayerPack.installedNow(app)
+  app = app or TheApp
+  if MultiplayerPack.installDir(app) then return MultiplayerPack.installedBuild(app) end
+  if not app.getFullPath then return nil end
+  local ok, sum = pcall(MultiplayerLobby.luaChecksum, app:getFullPath({"Lua"}, true))
+  return ok and sum or nil
+end
+
 --! Whether a build was downloaded before and is complete.
 function MultiplayerPack.have(app, build)
   if not isBuild(build) then return false end
@@ -320,11 +330,20 @@ function MultiplayerPack.switchTo(app, build, address, name)
   if not isDir(builds) then lfs().mkdir(builds:sub(1, -2)) end
   if build then
     assert(writeFile(builds .. "current.txt", build .. "\n"))
+    -- Which game was installed when this build was chosen: another one
+    -- installed later starts itself instead (mp_pack_start.lua).
+    local installed = MultiplayerPack.installedNow(app)
+    if installed then
+      writeFile(builds .. "installed.txt", installed .. "\n")
+    else
+      os.remove(builds .. "installed.txt")
+    end
     -- (When it was last used: prune keeps the latest.)
     local pack_txt = builds .. build .. pathsep .. "pack.txt"
     writeFile(pack_txt, readFile(pack_txt) or "")
   else
     os.remove(builds .. "current.txt")
+    os.remove(builds .. "installed.txt")
   end
   if address then writeFile(builds .. "rejoin.txt", address .. "\n" .. (name or "") .. "\n") end
   app:saveConfig()

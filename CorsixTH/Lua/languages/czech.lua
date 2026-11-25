@@ -5076,3 +5076,26 @@ bot_chat = {
     lower_staff = 1,
   },
 }
+
+-- Internet radio (Jukebox): the radio window and the jukebox's radio row.
+radio_window.caption = "Internetové rádio"
+radio_window.play = "Přehrát"
+radio_window.stop = "Zastavit"
+radio_window.close = "Zavřít"
+radio_window.status_off = "Napište nebo vložte (Ctrl+V) adresu stanice výše a stiskněte Přehrát."
+radio_window.status_connecting = "Připojování..."
+radio_window.status_playing = "Hraje"
+radio_window.status_paused = "Pozastaveno"
+radio_window.error_open = "Tuto adresu nelze přehrát. Zkontrolujte ji nebo zkuste jiný odkaz stanice."
+radio_window.error_https = "Tato hra neumí otevřít adresy https. Zkuste adresu stanice s http."
+radio_window.error_no_audio = "Na této adrese není žádný zvuk. Zkuste odkaz na stream stanice (.mp3, .aac, .pls nebo .m3u)."
+radio_window.error_device = "Zvuk nelze na tomto počítači přehrát."
+radio_window.error_ended = "Stanice přestala vysílat."
+radio_window.not_supported = "Tato verze hry neumí přehrávat internetové rádio. Nejnovější verze z openth.org to umí."
+radio_window.jukebox_row = "Internetové rádio"
+radio_window.jukebox_failed = "Internetové rádio: nedostupné"
+tooltip.radio_window.address = "Adresa internetové rozhlasové stanice: její stream (http nebo https), nebo odkaz .pls či .m3u na něj. Ctrl+V vkládá. Hra si ji zapamatuje."
+tooltip.radio_window.play = "Přehrát tuto stanici místo hudby ze hry"
+tooltip.radio_window.stop = "Zastavit rádio: znovu hraje hudba ze hry"
+tooltip.jukebox.radio = "Internetové rádio: vyberte stanici"
+tooltip.jukebox.radio_toggle = "Internetové rádio zapnout nebo vypnout"

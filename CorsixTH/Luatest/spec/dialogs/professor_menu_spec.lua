@@ -134,14 +134,25 @@ describe("Professor menu", function()
     local at = UIProfessorMenu.chartInMovie
     assert.equal(21, at(false, 0))
     assert.equal(121, at(false, 8000))
-    assert.equal(159, at(false, 8286))
-    assert.equal(158, at(false, 8357))
-    assert.equal(156, at(false, 10000))
-    assert.equal(158, at(false, 11071))
-    assert.equal(159, at(false, 11143))
+    -- Springing back, a fraction of a row a frame: up three rows and down
+    -- again (measured to a tenth of a row on 2026-11-25).
+    assert.equal(158.3, at(false, 8286))
+    assert.equal(158.1, at(false, 8357))
+    assert.equal(156.1, at(false, 10000))
+    assert.equal(158.1, at(false, 11071))
+    assert.equal(158.2, at(false, 11143))
+    assert.equal(158.8, at(false, 11857))
+    assert.equal(159, at(false, 11929))
     assert.equal(159, at(false, 20000))
+    local spring = UIProfessorMenu.MOVIE_CHART.coming
+    for i = 3, #spring - 1, 2 do
+      if spring[i] > 8143 then assert.is_true(math.abs(spring[i + 1] - spring[i - 1]) <= 0.5, spring[i]) end
+    end
     assert.equal(159, at(true, 0))
     assert.equal(170, at(true, 1550))
+    -- Rolling, an edge between two rows at the picture's edge, as there.
+    assert.equal(48.7, at(false, 7786))
+    assert.equal(111.5, at(true, 1643))
     assert.equal(21, at(true, 1800))
     assert.is_false(at(true, 2500))
     -- What the movies show behind and under the chart: rolled up as he
@@ -154,14 +165,17 @@ describe("Professor menu", function()
     assert.is_nil(look(true, 0))
     assert.equal("board", look(true, 1700))
     assert.equal("rolled", look(true, 1800))
+    -- (For a frame the roller springs up off its mount, the frame under it.)
+    assert.equal("sprung", look(true, 1857))
     assert.equal("rolled_high", look(true, 1950))
     assert.equal("gone", look(true, 2500))
-    -- Row by row, from the picture's edge to the chart's end.
+    -- Row by row, from the picture's edge to the chart's end (or, without
+    -- `right`, as at the picture's edge all along).
     for name, rows in pairs(UIProfessorMenu.MOVIE_ROWS) do
-      assert.equal(#rows.left, #rows.right, name)
+      if rows.right then assert.equal(#rows.left, #rows.right, name) end
       for i, colour in ipairs(rows.left) do
         assert.equal(3, #colour, name)
-        assert.equal(3, #rows.right[i], name)
+        if rows.right then assert.equal(3, #rows.right[i], name) end
       end
       assert.is_true(rows.from + #rows.left <= 192 and rows.reach < 0, name)
       -- The board's light: a row and a percent each, the rows in order.
@@ -190,6 +204,221 @@ describe("Professor menu", function()
     end
   end)
 
+  it("takes the fill beside the picture's edge from his movie's frame", function()
+    local strip = UIProfessorMenu.movieStrip
+    -- Gone: only the frame above the board (the roller falls below it).
+    for _, d in ipairs(strip(false)) do
+      assert.is_true(d.y == 0 and d.h == 53 and d.flip, "the frame's rows, mirrored")
+    end
+    assert.equal(#strip(false), #strip(nil))
+    -- Rolled up and as he pulls it down, his hand reaches the frame's
+    -- columns from 30 on below the chart (from row 100): those rows come
+    -- from its first 16.
+    for _, bottom in ipairs({21, 36, 48.7}) do
+      for _, d in ipairs(strip(bottom)) do
+        assert.is_true(d.sx + d.sw <= 16 or d.y + d.h <= 100, bottom .. " from " .. d.sx .. " at " .. d.y)
+      end
+    end
+    -- Rolling, under the roller's shadow too what is drawn on the chart
+    -- moves on: there his feet (only paper beside them), not mirrored.
+    local under = false
+    for _, d in ipairs(strip(36)) do
+      if d.sx == 42 and d.y <= 22 then under = true end
+    end
+    assert.is_true(under)
+    for _, bottom in ipairs({159, 156.1, 164, 121, 48.7, 21}) do
+      local seen = {}
+      for _, d in ipairs(strip(bottom)) do
+        assert.equal(d.sh, d.h)
+        assert.equal(d.sy, d.y)
+        assert.is_true(d.sx >= 0 and d.sx + d.sw <= 43, "only the frame's first columns")
+        assert.is_true(d.flip or d.sw == 1)
+        for x = d.x, d.x + d.w - 1 do
+          -- The frame's column for the fill's column x, as drawn.
+          local col = d.sw == 1 and d.sx or d.sx + (d.x + d.w - 1 - x)
+          for y = d.y, d.y + d.h - 1 do
+            local key = x .. "," .. y
+            assert.is_nil(seen[key], key)
+            seen[key] = true
+            -- At the picture's rows, the column the fill takes from the
+            -- picture (his feet: only paper beside them).
+            if bottom == 159 then
+              assert.equal(UIProfessorMenu.sideColumn(x, y, "down"), col, key)
+            end
+          end
+          local blend = UIProfessorMenu.endBlend(x)
+          assert.equal(math.floor(255 * (1 - blend) + 0.5), d.alpha, x)
+          assert.is_true(d.alpha > 0)
+        end
+      end
+      for x = -16, -1 do
+        for y = 0, 199 do assert.is_true(seen[x .. "," .. y], x .. "," .. y .. " at " .. bottom) end
+      end
+    end
+    -- Springing back, the paper beside his feet starts higher, as the frame
+    -- has it.
+    local function feet(bottom)
+      for _, d in ipairs(strip(bottom)) do
+        if d.sx == 42 and d.w == 6 and d.x == -6 then return d.y end
+      end
+    end
+    assert.equal(141, feet(159))
+    assert.is_true(feet(156.1) < 141)
+  end)
+
+  it("makes beforehand every fill drawn beside his movies", function()
+    local fills = UIProfessorMenu.movieFills()
+    local key = UIProfessorMenu.fillKey
+    local made = {}
+    for _, f in ipairs(fills) do
+      local k = key(f[1], f[2], f[3], f[4])
+      assert.is_nil(made[k], k)
+      made[k] = true
+    end
+    -- The first needed first: rolled up as he comes, then as he pulls the
+    -- chart down; the roller springing up as he leaves.
+    assert.equal("up/up", key(fills[1][1], fills[1][2], fills[1][3], fills[1][4]))
+    assert.equal("up/board", key(fills[2][1], fills[2][2], fills[2][3], fills[2][4]))
+    assert.is_true(made["up/sprung"])
+    assert.is_true(made["down"], "the menu's own")
+    -- Drawing each frame of both movies, and the menu, asks for none but
+    -- those.
+    local asked = {}
+    local bitmap = {draw = function() end}
+    local loaded = {picture = bitmap, sides = setmetatable({}, {__index = function(_, k)
+      asked[k] = true
+      return bitmap
+    end})}
+    local canvas = {getRenderSize = function() return 2560, 1080 end, scale = function() return true end,
+      pushClip = function() end, popClip = function() end}
+    local art, app = UIProfessorMenu.art, _G["TheApp"]
+    UIProfessorMenu.art = function() return loaded end
+    _G["TheApp"] = {config = {}}
+    local ok, err = pcall(function()
+      for _, leaving in ipairs({false, true}) do
+        for n = 0, 200 do
+          local pts = UIProfessorMenu.frameTime(n)
+          local top, low = UIProfessorMenu.lightInMovie(leaving, pts)
+          UIProfessorMenu.drawSide(canvas, UIProfessorMenu.chartInMovie(leaving, pts), top, low,
+              UIProfessorMenu.lookInMovie(leaving, pts), UIProfessorMenu.boardInMovie(leaving, pts))
+        end
+      end
+      UIProfessorMenu.drawPicture(canvas)
+    end)
+    UIProfessorMenu.art, _G["TheApp"] = art, app
+    assert(ok, err)
+    for k in pairs(asked) do assert.is_true(made[k], k) end
+    for k in pairs(made) do assert.is_true(asked[k], k) end
+  end)
+
+  it("makes them in time at the game's pace, before he pulls the chart down", function()
+    -- The game draws once a timer tick (18 ms) or slower: a refresh lasts
+    -- at least that, and longer by what prepare spends in it. Making them all
+    -- took about 1 s on Jan's PC (2 s with the game running): 4 ms a refresh
+    -- made them 13 s after he came, long after frame 108.
+    local spent, t, pull = 0, 0, UIProfessorMenu.frameTime(108)
+    while t < pull do
+      local ms = UIProfessorMenu.prepareMs(false, UIProfessorMenu.movieFrame(t))
+      spent = spent + ms
+      t = t + math.max(18, ms)
+    end
+    assert.is_true(spent >= 2 * 2000, tostring(spent))
+    -- Longer only while nothing moves: before he peeks in, and until he
+    -- walks in; never as he leaves.
+    local ms, still = UIProfessorMenu.PREPARE_MS, UIProfessorMenu.PREPARE_STILL_MS
+    assert.equal(still, UIProfessorMenu.prepareMs(false, 0))
+    assert.equal(ms, UIProfessorMenu.prepareMs(false, 20))
+    assert.equal(still, UIProfessorMenu.prepareMs(false, 40))
+    assert.equal(ms, UIProfessorMenu.prepareMs(false, 50))
+    assert.equal(ms, UIProfessorMenu.prepareMs(false, 108))
+    assert.equal(ms, UIProfessorMenu.prepareMs(true, 0))
+  end)
+
+  it("moves what is under the chart's edge up with it as it springs back", function()
+    -- Each drawing: the fill's key, the screen row its row 0 is at and the
+    -- screen rows it is clipped to (all, without a clip).
+    local draws, clip, scale = {}, nil, 1
+    local loaded = {picture = {}, sides = setmetatable({}, {__index = function(_, k)
+      return {draw = function(_, _, _, y) draws[#draws + 1] = {key = k, y = y * scale, clip = clip} end}
+    end})}
+    local canvas = {getRenderSize = function() return 2560, 1080 end,
+      scale = function(_, s) scale = s return true end,
+      pushClip = function(_, _, y, _, h) clip = {y * scale, (y + h) * scale} end,
+      popClip = function() clip = nil end}
+    local art, app = UIProfessorMenu.art, _G["TheApp"]
+    UIProfessorMenu.art = function() return loaded end
+    _G["TheApp"] = {config = {}}
+    local bottom = 157.2
+    local ok, err = pcall(UIProfessorMenu.drawSide, canvas, bottom, nil, nil, nil, 72)
+    UIProfessorMenu.art, _G["TheApp"] = art, app
+    assert(ok, err)
+    -- (2560 by 1080: 6 screen pixels a row, the picture's row 0 two rows up.)
+    local s, top = 6, -2
+    for row = bottom + 1.1, 159.9, 0.2 do
+      local screen = (row + top) * s
+      local last
+      for _, d in ipairs(draws) do
+        if not d.clip or (screen >= d.clip[1] and screen < d.clip[2]) then last = d end
+      end
+      -- The blackboard as under the chart when it is down (its shadow), as
+      -- light as the movie's board, as much higher as the edge; not the bare
+      -- blackboard behind the chart (lighter).
+      local shown = (screen - last.y) / s
+      assert.equal("down/movie72", last.key, tostring(row))
+      assert.is_true(shown >= 160 and math.abs(shown - row - (159 - bottom)) < 0.25,
+          ("%.1f shows %.2f"):format(row, shown))
+    end
+  end)
+
+  it("draws the fill beside his movies for the frame they show", function()
+    local frame, time = UIProfessorMenu.movieFrame, UIProfessorMenu.frameTime
+    -- The engine's time of a frame (frame 111: 111 times 0.07142 seconds),
+    -- and the movie's clock between two frames.
+    assert.equal(0, frame(0))
+    assert.equal(111, frame(111 * 0.07142 * 1000))
+    assert.equal(111, frame(7990))
+    assert.equal(111, frame(7999))
+    assert.equal(112, frame(112 * 71.42))
+    assert.equal(112, frame(8000))
+    assert.equal(7929, time(111))
+    -- Every time in the movie tables is a frame's.
+    for name, step in pairs({MOVIE_CHART = 2, MOVIE_LOOK = 2, MOVIE_BOARD = 2, MOVIE_LIGHT = 3}) do
+      for movie, keys in pairs(UIProfessorMenu[name]) do
+        for i = 1, #keys, step do
+          assert.equal(keys[i], time(math.floor(keys[i] * 14 / 1000 + 0.5)), name .. " " .. movie)
+        end
+      end
+    end
+
+    package.loaded["sdl"] = package.loaded["sdl"] or {getTicks = function() return 0 end}
+    require("movie_player")
+    local movie = setmetatable({}, {__index = _G["MoviePlayer"]})
+    movie.playMovie = function(self) self.playing = true end
+    local drawSide, drawn = UIProfessorMenu.drawSide, nil
+    UIProfessorMenu.drawSide = function(_, bottom) drawn = bottom end
+    local ok, err = pcall(function()
+      local at = UIProfessorMenu.chartInMovie
+      -- The engine says which frame it drew: the fill is that frame's, however
+      -- far ahead the clock is (the pictures came late).
+      movie:playMenuMovie(false)
+      movie.refresh_overlay(movie, 0, 0, 320, 200, 1, 8600, 110 * 71.42)
+      assert.equal(at(false, time(110)), drawn)
+      assert.equal(71.6, drawn)
+      -- An engine that does not say shows the next frame once the clock
+      -- reaches it, one frame a refresh; the clock going back (with the sound
+      -- on) does not take the frame back.
+      movie:playMenuMovie(false)
+      movie.refresh_overlay(movie, 0, 0, 320, 200, 1, 8000)
+      assert.equal(at(false, time(1)), drawn)
+      for _ = 1, 200 do movie.refresh_overlay(movie, 0, 0, 320, 200, 1, 8000) end
+      assert.equal(121, drawn)
+      movie.refresh_overlay(movie, 0, 0, 320, 200, 1, 7000)
+      assert.equal(121, drawn)
+    end)
+    UIProfessorMenu.drawSide = drawSide
+    assert(ok, err)
+  end)
+
   it("moves the chart's left end as his movies move the chart", function()
     local row = UIProfessorMenu.chartRow
     -- Rolling down or up, the whole chart is higher, under the roller's
@@ -206,6 +435,11 @@ describe("Professor menu", function()
         assert.is_true(r > row(y - 1, bottom) and r - y <= 159 - bottom, ("%d at %d"):format(y, bottom))
       end
     end
+    -- (Or as a fraction: the paper squeezed evenly to a bottom edge between
+    -- two rows.)
+    assert.equal(80, row(80, 156.5, true))
+    assert.near(159, row(156.5, 156.5, true), 1e-9)
+    assert.near(80 + 40 * 79 / 76.5, row(120, 156.5, true), 1e-9)
     for y = 22, 159 do assert.equal(y, row(y, 159)) end
     -- Tugged, its paper is pulled lower, its top stays and the paper
     -- between is drawn out.

@@ -2299,3 +2299,26 @@ bot_chat = {
     lower_staff = 0,
   },
 }
+
+-- Internet radio (Jukebox): the radio window and the jukebox's radio row.
+radio_window.caption = "Internetradio"
+radio_window.play = "Abspielen"
+radio_window.stop = "Stopp"
+radio_window.close = "Schließen"
+radio_window.status_off = "Geben Sie oben die Adresse eines Senders ein oder fügen Sie sie ein (Strg+V) und klicken Sie dann auf Abspielen."
+radio_window.status_connecting = "Verbinde..."
+radio_window.status_playing = "Läuft"
+radio_window.status_paused = "Pausiert"
+radio_window.error_open = "Diese Adresse lässt sich nicht abspielen. Prüfen Sie sie oder versuchen Sie einen anderen Link des Senders."
+radio_window.error_https = "Dieses Spiel kann keine https-Adressen öffnen. Versuchen Sie die http-Adresse des Senders."
+radio_window.error_no_audio = "Unter dieser Adresse kommt kein Ton. Versuchen Sie den Stream-Link des Senders (.mp3, .aac, .pls oder .m3u)."
+radio_window.error_device = "Der Ton lässt sich auf diesem Computer nicht abspielen."
+radio_window.error_ended = "Der Sender sendet nicht mehr."
+radio_window.not_supported = "Diese Version des Spiels kann kein Internetradio abspielen. Die neueste Version von openth.org kann es."
+radio_window.jukebox_row = "Internetradio"
+radio_window.jukebox_failed = "Internetradio: nicht erreichbar"
+tooltip.radio_window.address = "Die Adresse eines Internetradiosenders: sein Stream (http oder https) oder ein .pls- oder .m3u-Link darauf. Strg+V fügt ein. Das Spiel merkt sie sich."
+tooltip.radio_window.play = "Diesen Sender statt der Spielmusik abspielen"
+tooltip.radio_window.stop = "Radio aus: die Spielmusik läuft wieder"
+tooltip.jukebox.radio = "Internetradio: Sender wählen"
+tooltip.jukebox.radio_toggle = "Internetradio an oder aus"

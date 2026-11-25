@@ -65,9 +65,19 @@ int l_show_cursor(lua_State* L) {
   return 0;
 }
 
-constexpr std::array<struct luaL_Reg, 3> sdl_wmlib{
+//! The text on the clipboard ("" when there is none), for Ctrl+V in text
+//! boxes.
+int l_get_clipboard_text(lua_State* L) {
+  char* text = SDL_GetClipboardText();
+  lua_pushstring(L, text != nullptr ? text : "");
+  SDL_free(text);
+  return 1;
+}
+
+constexpr std::array<struct luaL_Reg, 4> sdl_wmlib{
     {{"setIconWin32", l_set_icon_win32},
      {"showCursor", l_show_cursor},
+     {"getClipboardText", l_get_clipboard_text},
      {nullptr, nullptr}}};
 
 }  // namespace

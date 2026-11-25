@@ -5172,3 +5172,26 @@ multiplayer_tips = {
     "Шпионаж копирует исследования соперника: улучшение, открытие или два сразу. Самый сильный ещё и отбрасывает его текущее исследование назад.",
   },
 }
+
+-- Internet radio (Jukebox): the radio window and the jukebox's radio row.
+radio_window.caption = "Интернет-радио"
+radio_window.play = "Слушать"
+radio_window.stop = "Стоп"
+radio_window.close = "Закрыть"
+radio_window.status_off = "Введите или вставьте (Ctrl+V) адрес станции выше и нажмите Слушать."
+radio_window.status_connecting = "Подключение..."
+radio_window.status_playing = "Играет"
+radio_window.status_paused = "Пауза"
+radio_window.error_open = "Не удалось воспроизвести этот адрес. Проверьте его или попробуйте другую ссылку станции."
+radio_window.error_https = "Эта игра не умеет открывать адреса https. Попробуйте http-адрес станции."
+radio_window.error_no_audio = "По этому адресу нет звука. Попробуйте ссылку на поток станции (.mp3, .aac, .pls или .m3u)."
+radio_window.error_device = "Звук не удалось воспроизвести на этом компьютере."
+radio_window.error_ended = "Станция перестала вещать."
+radio_window.not_supported = "Эта версия игры не умеет играть интернет-радио. Новейшая версия с openth.org умеет."
+radio_window.jukebox_row = "Интернет-радио"
+radio_window.jukebox_failed = "Интернет-радио: недоступно"
+tooltip.radio_window.address = "Адрес интернет-радиостанции: её поток (http или https) или ссылка .pls или .m3u на него. Ctrl+V вставляет. Игра его запомнит."
+tooltip.radio_window.play = "Слушать эту станцию вместо музыки игры"
+tooltip.radio_window.stop = "Выключить радио: снова играет музыка игры"
+tooltip.jukebox.radio = "Интернет-радио: выбрать станцию"
+tooltip.jukebox.radio_toggle = "Включить или выключить интернет-радио"

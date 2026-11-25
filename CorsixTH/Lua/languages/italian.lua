@@ -2226,3 +2226,26 @@ bot_chat = {
     lower_staff = 1,
   },
 }
+
+-- Internet radio (Jukebox): the radio window and the jukebox's radio row.
+radio_window.caption = "Radio via internet"
+radio_window.play = "Ascolta"
+radio_window.stop = "Ferma"
+radio_window.close = "Chiudi"
+radio_window.status_off = "Scrivi o incolla (Ctrl+V) qui sopra l'indirizzo di una stazione, poi premi Ascolta."
+radio_window.status_connecting = "Connessione..."
+radio_window.status_playing = "In onda"
+radio_window.status_paused = "In pausa"
+radio_window.error_open = "Impossibile riprodurre questo indirizzo. Controllalo o prova un altro link della stazione."
+radio_window.error_https = "Questo gioco non può aprire indirizzi https. Prova l'indirizzo http della stazione."
+radio_window.error_no_audio = "A questo indirizzo non c'è audio. Prova il link dello stream della stazione (.mp3, .aac, .pls o .m3u)."
+radio_window.error_device = "Impossibile riprodurre l'audio su questo computer."
+radio_window.error_ended = "La stazione ha smesso di trasmettere."
+radio_window.not_supported = "Questa versione del gioco non può riprodurre la radio via internet. La versione più recente su openth.org sì."
+radio_window.jukebox_row = "Radio via internet"
+radio_window.jukebox_failed = "Radio via internet: non disponibile"
+tooltip.radio_window.address = "L'indirizzo di una stazione radio via internet: il suo stream (http o https), o un link .pls o .m3u che lo indica. Ctrl+V incolla. Il gioco lo ricorda."
+tooltip.radio_window.play = "Ascolta questa stazione al posto della musica del gioco"
+tooltip.radio_window.stop = "Ferma la radio: torna la musica del gioco"
+tooltip.jukebox.radio = "Radio via internet: scegli una stazione"
+tooltip.jukebox.radio_toggle = "Accendi o spegni la radio via internet"

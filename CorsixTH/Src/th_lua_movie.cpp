@@ -133,13 +133,48 @@ int l_movie_refresh(lua_State* L) {
   ZoneScoped;
 
   movie_player* pMovie = luaT_testuserdata<movie_player>(L);
-  double pts =
-      pMovie->refresh(SDL_Rect{static_cast<int>(luaL_checkinteger(L, 2)),
-                               static_cast<int>(luaL_checkinteger(L, 3)),
-                               static_cast<int>(luaL_checkinteger(L, 4)),
-                               static_cast<int>(luaL_checkinteger(L, 5))});
+  SDL_Rect rect{static_cast<int>(luaL_checkinteger(L, 2)),
+                static_cast<int>(luaL_checkinteger(L, 3)),
+                static_cast<int>(luaL_checkinteger(L, 4)),
+                static_cast<int>(luaL_checkinteger(L, 5))};
+  double shown_pts = -1;
+  double pts = pMovie->refresh(rect, &shown_pts);
 
+  // The movie's clock, and the time of the frame drawn (nil when none was).
   lua_pushnumber(L, pts);
+  if (shown_pts < 0) {
+    lua_pushnil(L);
+  } else {
+    lua_pushnumber(L, shown_pts);
+  }
+  return 2;
+}
+
+// moviePlayer:drawPart(sx, sy, sw, sh, dx, dy, dw, dh, flip, alpha): part of
+// the frame drawn last again (source in the movie's pixels, destination on
+// the screen), mirrored left to right if flip, alpha 0 to 255 (default 255).
+// Returns whether there was a frame to draw from.
+int l_movie_draw_part(lua_State* L) {
+  ZoneScoped;
+
+  movie_player* pMovie = luaT_testuserdata<movie_player>(L);
+  SDL_FRect source{static_cast<float>(luaL_checknumber(L, 2)),
+                   static_cast<float>(luaL_checknumber(L, 3)),
+                   static_cast<float>(luaL_checknumber(L, 4)),
+                   static_cast<float>(luaL_checknumber(L, 5))};
+  SDL_FRect destination{static_cast<float>(luaL_checknumber(L, 6)),
+                        static_cast<float>(luaL_checknumber(L, 7)),
+                        static_cast<float>(luaL_checknumber(L, 8)),
+                        static_cast<float>(luaL_checknumber(L, 9))};
+  bool flip = lua_toboolean(L, 10) != 0;
+  lua_Integer alpha = luaL_optinteger(L, 11, 255);
+  if (alpha < 0) {
+    alpha = 0;
+  } else if (alpha > 255) {
+    alpha = 255;
+  }
+  lua_pushboolean(L, pMovie->draw_part(source, destination, flip,
+                                       static_cast<std::uint8_t>(alpha)));
   return 1;
 }
 
@@ -176,6 +211,7 @@ void lua_register_movie(const lua_register_state* pState) {
   lcb.add_function(l_movie_has_audio_track, "hasAudioTrack");
   lcb.add_function(l_movie_get_length, "getLength");
   lcb.add_function(l_movie_refresh, "refresh");
+  lcb.add_function(l_movie_draw_part, "drawPart");
   lcb.add_function(l_movie_allocate_picture_buffer, "allocatePictureBuffer");
   lcb.add_function(l_movie_deallocate_picture_buffer,
                    "deallocatePictureBuffer");

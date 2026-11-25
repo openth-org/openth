@@ -747,9 +747,11 @@ function Audio:pauseBackgroundTrack()
   return self.background_paused
 end
 
---! Stops playing background music for the time being.
+--! Stops playing background music for the time being, the internet radio
+--! too (it stays the chosen music for the next start).
 --! Does not affect the configuration setting play_music.
 function Audio:stopBackgroundTrack()
+  self:stopRadio(true)
   if self.background_paused then
     -- Resume first in order to clear the saved volume.
     self:pauseBackgroundTrack()
@@ -784,6 +786,8 @@ end
 function Audio:playBackgroundTrack(index)
   local info = self.background_playlist[index]
   assert(info, "Index not valid: " .. tostring(index))
+  -- A track chosen while the radio plays: the tracks are the music again.
+  if self.radio_on then self:stopRadio() end
 
   -- Tokenise the request for each asynchrous call to play music to handle
   -- a state change. Each call supersedes any earlier asynchronous request.
@@ -891,6 +895,9 @@ function Audio:onMusicOver()
 end
 
 function Audio:setBackgroundVolume(volume)
+  if self:radioSupported() then
+    SDL.audio.radioSetVolume(volume)
+  end
   if self.midi_player then
     self.app.config.music_volume = volume
     self.midi_player:setVolume(volume)
@@ -939,6 +946,134 @@ end
 
 function Audio:setAnnouncementVolume(volume)
   self.app.config.announcement_volume = volume
+end
+
+--! Starts the music the player chose: the internet radio if that was on
+--! when the game was last left (and this game can play it), else a random
+--! track. Only when the configuration wants music (play_music).
+function Audio:startMusic()
+  local config = self.app.config
+  if not config.play_music then return end
+  if config.radio_on and config.radio_url and config.radio_url ~= ""
+      and self:radioSupported() then
+    -- (If the station does not answer, the tracks play instead: radioTick.)
+    self:playRadio(config.radio_url, true)
+  else
+    self:playRandomBackgroundTrack()
+  end
+end
+
+--! Whether this game can play internet radio: an engine built with FFmpeg
+--! (a game from a pack on an older engine cannot), and sound is on.
+function Audio:radioSupported()
+  return not self.not_loaded and SDL.audio.radioSupported ~= nil
+      and SDL.audio.radioSupported() or false
+end
+
+--! The address as the player typed or pasted it, cleaned up: spaces and
+--! line breaks around it go, and "http://" is added when no scheme is given.
+--!param text (string)
+--!return (string) the address, or "" for none
+function Audio.cleanRadioAddress(text)
+  local url = tostring(text or ""):gsub("[%c]", ""):match("^%s*(.-)%s*$")
+  if url ~= "" and not url:find("^%a[%w+.-]*://") then
+    url = "http://" .. url
+  end
+  return url
+end
+
+--! Plays the internet radio at url instead of the music tracks, and
+--! remembers it (address, and that the radio is the music) for later games.
+--!param url (string) the stream, or a .pls or .m3u playlist naming it
+--!param at_start (boolean) the game is starting: if the station does not
+--! answer, the tracks play instead
+--!return (boolean) whether the radio was started
+function Audio:playRadio(url, at_start)
+  url = Audio.cleanRadioAddress(url)
+  if url == "" or not self:radioSupported() then return false end
+  local config = self.app.config
+  -- (Stops the tracks and any station playing now.)
+  self:stopBackgroundTrack()
+  SDL.audio.radioSetVolume(config.music_volume)
+  SDL.audio.radioPause(false)
+  SDL.audio.radioPlay(url)
+  self.radio_on = true
+  self.radio_paused = nil
+  self.radio_fallback = at_start or nil
+  self.radio_status = {state = "connecting", station = "", title = "",
+    error = "", detail = ""}
+  self.radio_next_poll = 0
+  if config.radio_url ~= url or not config.radio_on or not config.play_music then
+    config.radio_url = url
+    config.radio_on = true
+    config.play_music = true
+    self.app:saveConfig()
+  end
+  self:notifyJukebox()
+  return true
+end
+
+--! Stops the internet radio.
+--!param keep_choice (boolean) the radio stays the music for the next start
+--! (the music was only turned off); else the tracks are the music again
+function Audio:stopRadio(keep_choice)
+  if not self.radio_on then return end
+  SDL.audio.radioStop()
+  self.radio_on = nil
+  self.radio_paused = nil
+  self.radio_fallback = nil
+  self.radio_status = nil
+  if not keep_choice then self:chooseTracks() end
+  self:notifyJukebox()
+end
+
+--! The player picked the tracks (not the radio) as the music, for this and
+--! later games.
+function Audio:chooseTracks()
+  if self.app.config.radio_on then
+    self.app.config.radio_on = false
+    self.app:saveConfig()
+  end
+end
+
+--! Pauses or resumes the internet radio.
+--!return (boolean) whether it is paused now
+function Audio:pauseRadio()
+  if not self.radio_on then return false end
+  self.radio_paused = not self.radio_paused or nil
+  SDL.audio.radioPause(not not self.radio_paused)
+  self:notifyJukebox()
+  return not not self.radio_paused
+end
+
+--! What the radio does now, as the engine said at the last look:
+--! {state = "connecting"|"playing"|"failed", station, title, error, detail},
+--! or nil when the radio is off.
+function Audio:getRadioStatus()
+  return self.radio_on and self.radio_status or nil
+end
+
+--! Called every tick while the radio is on: asks the engine how the stream
+--! goes twice a second. A station that fails as the game starts gives way
+--! to the tracks.
+function Audio:radioTick()
+  if not self.radio_on then return end
+  local now = SDL.getTicks()
+  if now < (self.radio_next_poll or 0) then return end
+  self.radio_next_poll = now + 500
+  local status = SDL.audio.radioStatus()
+  local changed = not self.radio_status or self.radio_status.state ~= status.state
+      or self.radio_status.station ~= status.station or self.radio_status.title ~= status.title
+  self.radio_status = status
+  if status.state == "playing" then
+    self.radio_fallback = nil
+  elseif status.state == "failed" and self.radio_fallback then
+    -- The remembered station is gone or offline: the game's own music.
+    self:stopRadio(true)
+    self:playRandomBackgroundTrack()
+    return
+  end
+  if changed then self:notifyJukebox() end
 end
 
 -- search for jukebox and notify it to update its play button

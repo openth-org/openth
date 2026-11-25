@@ -127,6 +127,13 @@ play_music = true
 music_volume = 0.5
 
 -------------------------------------------------------------------------------
+-- Internet radio (Jukebox, Radio): the address of the station played last,
+-- and whether the radio plays instead of the music tracks (radio_on = true).
+--
+radio_url = nil -- [[http://example.org/stream.mp3]]
+radio_on = false
+
+-------------------------------------------------------------------------------
 -- Edge scrolling: By default enabled (prevent_edge_scrolling = false).
 --
 prevent_edge_scrolling = false
