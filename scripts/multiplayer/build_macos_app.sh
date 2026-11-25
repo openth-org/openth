@@ -66,20 +66,28 @@ fi
 # Homebrew; bundled with the other libraries below. Configure names the
 # decoders by their source names: "smacker" is the video one (it calls itself
 # "smackvid" at run time; that name matches nothing here, and builds before
-# this had no video decoder: every video was skipped). The stamp rebuilds an
-# FFmpeg built without it.
-ffmpeg_stamp=$P/lib/ffmpeg-smacker-video
+# this had no video decoder: every video was skipped). The jukebox's internet
+# radio (th_radio.cpp) needs the network too: http and https (TLS from macOS's
+# own Secure Transport, nothing more to bundle), HLS, and the usual radio
+# formats (MP3, AAC, Ogg Vorbis and Opus, FLAC). The stamp rebuilds an FFmpeg
+# built without them.
+ffmpeg_stamp=$P/lib/ffmpeg-smacker-radio
 if [[ ! -f "$ffmpeg_stamp" ]]; then
   [[ -d ffmpeg ]] || git clone -q --depth 1 --branch n8.0 https://github.com/FFmpeg/FFmpeg.git ffmpeg
   (cd ffmpeg && ./configure --prefix="$P" --arch="$arch" --target-os=darwin --cc=clang --disable-x86asm \
     --extra-cflags="-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" \
     --extra-ldflags="-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" \
-    --enable-shared --disable-static --disable-programs --disable-doc --disable-network \
-    --disable-autodetect --disable-everything \
-    --enable-demuxer=smacker --enable-decoder=smacker,smackaud --enable-protocol=file \
+    --enable-shared --disable-static --disable-programs --disable-doc \
+    --disable-autodetect --disable-everything --enable-network --enable-securetransport \
+    --enable-demuxer=smacker,mp3,aac,ogg,flac,hls,mpegts,wav \
+    --enable-decoder=smacker,smackaud,mp3float,mp3,aac,vorbis,opus,flac,pcm_s16le \
+    --enable-parser=mpegaudio,aac,vorbis,opus,flac \
+    --enable-protocol=file,http,https,tcp,tls,hls,crypto,httpproxy \
     --enable-swscale --enable-swresample \
     && grep -q ff_smacker_decoder libavcodec/codec_list.c \
     && grep -q ff_smackaud_decoder libavcodec/codec_list.c \
+    && grep -q ff_https_protocol libavformat/protocol_list.c \
+    && grep -q ff_mp3float_decoder libavcodec/codec_list.c \
     && make -j"$jobs" && make install)
   touch "$ffmpeg_stamp"
 fi

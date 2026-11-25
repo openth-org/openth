@@ -73,6 +73,13 @@ local ok, err = pcall(function()
       TH.CRC32File(table.concat(parts, "\0")), tostring(socket._VERSION)))
   assert(runtime == "lua5.5", "the builds for Windows and Linux use Lua 5.5")
 
+  -- The jukebox's internet radio: an engine built with FFmpeg (its network
+  -- and https are checked when build_macos_app.sh builds FFmpeg).
+  local audio = require("sdl").audio
+  local radio = audio and audio.radioSupported and audio.radioSupported()
+  print("MACOS SMOKE radio=" .. tostring(radio))
+  assert(radio, "no internet radio: the engine was built without FFmpeg")
+
   if opts.server then
     local host, port = opts.server:match("^(.+):(%d+)$")
     local conn = assert(socket.connect(host, tonumber(port)))

@@ -257,7 +257,7 @@ function UISoundSettings:selectMusicVolume(index)
     self.app.audio:setBackgroundVolume(vol)
     if not self.app.config.play_music then
       self.app.config.play_music = true
-      self.app.audio:playRandomBackgroundTrack()
+      self.app.audio:startMusic()
     end
   end
   self.buttons.music_volume:setLabel(self.volume_options[index].text)

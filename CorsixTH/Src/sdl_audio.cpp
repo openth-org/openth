@@ -29,10 +29,12 @@ SOFTWARE.
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 #include "lua.hpp"
 #include "lua_sdl.h"
 #include "th_lua.h"
+#include "th_radio.h"
 #include "th_sound.h"
 #include "xmi2mid.h"
 
@@ -78,6 +80,7 @@ int l_init(lua_State* L) {
 }
 
 int l_destroy(lua_State* L) {
+  th::radio::stop();
   th::sound::quit();
   return 0;
 }
@@ -293,10 +296,78 @@ int l_transcode_xmi(lua_State* L) {
   return 1;
 }
 
-constexpr std::array<struct luaL_Reg, 4> sdl_audiolib{
+// Internet radio (th_radio.h): played beside the music track, never with it.
+
+int l_radio_supported(lua_State* L) {
+  lua_pushboolean(L, th::radio::supported() ? 1 : 0);
+  return 1;
+}
+
+int l_radio_play(lua_State* L) {
+  size_t length;
+  const char* url = luaL_checklstring(L, 1, &length);
+  th::radio::play(std::string(url, length));
+  return 0;
+}
+
+int l_radio_stop(lua_State* L) {
+  th::radio::stop();
+  return 0;
+}
+
+int l_radio_pause(lua_State* L) {
+  th::radio::set_paused(lua_toboolean(L, 1) != 0);
+  return 0;
+}
+
+int l_radio_volume(lua_State* L) {
+  th::radio::set_volume(static_cast<float>(luaL_checknumber(L, 1)));
+  return 0;
+}
+
+//! {state = "stopped"|"connecting"|"playing"|"failed", station, title,
+//! error, detail} (texts empty when not known).
+int l_radio_status(lua_State* L) {
+  th::radio::status s = th::radio::get_status();
+  const char* state = "stopped";
+  switch (s.current) {
+    case th::radio::state::stopped:
+      state = "stopped";
+      break;
+    case th::radio::state::connecting:
+      state = "connecting";
+      break;
+    case th::radio::state::playing:
+      state = "playing";
+      break;
+    case th::radio::state::failed:
+      state = "failed";
+      break;
+  }
+  lua_createtable(L, 0, 5);
+  lua_pushstring(L, state);
+  lua_setfield(L, -2, "state");
+  lua_pushlstring(L, s.station.data(), s.station.size());
+  lua_setfield(L, -2, "station");
+  lua_pushlstring(L, s.title.data(), s.title.size());
+  lua_setfield(L, -2, "title");
+  lua_pushlstring(L, s.error.data(), s.error.size());
+  lua_setfield(L, -2, "error");
+  lua_pushlstring(L, s.detail.data(), s.detail.size());
+  lua_setfield(L, -2, "detail");
+  return 1;
+}
+
+constexpr std::array<struct luaL_Reg, 10> sdl_audiolib{
     {{"init", l_init},
      {"transcodeXmiToMid", l_transcode_xmi},
      {"destroy", l_destroy},
+     {"radioSupported", l_radio_supported},
+     {"radioPlay", l_radio_play},
+     {"radioStop", l_radio_stop},
+     {"radioPause", l_radio_pause},
+     {"radioSetVolume", l_radio_volume},
+     {"radioStatus", l_radio_status},
      {nullptr, nullptr}}};
 
 constexpr std::array<struct luaL_Reg, 8> sdl_musiclib{

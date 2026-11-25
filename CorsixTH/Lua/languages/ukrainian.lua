@@ -4798,3 +4798,26 @@ bot_chat = {
     lower_staff = 1,
   },
 }
+
+-- Internet radio (Jukebox): the radio window and the jukebox's radio row.
+radio_window.caption = "Інтернет-радіо"
+radio_window.play = "Слухати"
+radio_window.stop = "Стоп"
+radio_window.close = "Закрити"
+radio_window.status_off = "Введіть або вставте (Ctrl+V) адресу станції вище й натисніть Слухати."
+radio_window.status_connecting = "Підключення..."
+radio_window.status_playing = "Грає"
+radio_window.status_paused = "Пауза"
+radio_window.error_open = "Не вдалося відтворити цю адресу. Перевірте її або спробуйте інше посилання станції."
+radio_window.error_https = "Ця гра не вміє відкривати адреси https. Спробуйте http-адресу станції."
+radio_window.error_no_audio = "За цією адресою немає звуку. Спробуйте посилання на потік станції (.mp3, .aac, .pls або .m3u)."
+radio_window.error_device = "Звук не вдалося відтворити на цьому комп'ютері."
+radio_window.error_ended = "Станція припинила мовлення."
+radio_window.not_supported = "Ця версія гри не вміє грати інтернет-радіо. Найновіша версія з openth.org вміє."
+radio_window.jukebox_row = "Інтернет-радіо"
+radio_window.jukebox_failed = "Інтернет-радіо: недоступне"
+tooltip.radio_window.address = "Адреса інтернет-радіостанції: її потік (http або https) або посилання .pls чи .m3u на нього. Ctrl+V вставляє. Гра її запам'ятає."
+tooltip.radio_window.play = "Слухати цю станцію замість музики гри"
+tooltip.radio_window.stop = "Вимкнути радіо: знову грає музика гри"
+tooltip.jukebox.radio = "Інтернет-радіо: вибрати станцію"
+tooltip.jukebox.radio_toggle = "Увімкнути або вимкнути інтернет-радіо"

@@ -3125,3 +3125,26 @@ bot_chat = {
     lower_staff = 1,
   },
 }
+
+-- Internet radio (Jukebox): the radio window and the jukebox's radio row.
+radio_window.caption = "Internetes rádió"
+radio_window.play = "Lejátszás"
+radio_window.stop = "Leállítás"
+radio_window.close = "Bezárás"
+radio_window.status_off = "Írd be vagy illeszd be (Ctrl+V) fent egy állomás címét, majd nyomd meg a Lejátszás gombot."
+radio_window.status_connecting = "Csatlakozás..."
+radio_window.status_playing = "Szól"
+radio_window.status_paused = "Szünetel"
+radio_window.error_open = "Ezt a címet nem lehet lejátszani. Ellenőrizd, vagy próbáld az állomás egy másik linkjét."
+radio_window.error_https = "Ez a játék nem tud https-címeket megnyitni. Próbáld az állomás http-címét."
+radio_window.error_no_audio = "Ezen a címen nincs hang. Próbáld az állomás streamlinkjét (.mp3, .aac, .pls vagy .m3u)."
+radio_window.error_device = "A hangot nem lehet lejátszani ezen a számítógépen."
+radio_window.error_ended = "Az állomás abbahagyta az adást."
+radio_window.not_supported = "A játék ezen verziója nem tud internetes rádiót lejátszani. Az openth.org legújabb verziója igen."
+radio_window.jukebox_row = "Internetes rádió"
+radio_window.jukebox_failed = "Internetes rádió: nem elérhető"
+tooltip.radio_window.address = "Egy internetes rádióállomás címe: a streamje (http vagy https), vagy egy .pls vagy .m3u link rá. A Ctrl+V beilleszt. A játék megjegyzi."
+tooltip.radio_window.play = "Ennek az állomásnak a lejátszása a játék zenéje helyett"
+tooltip.radio_window.stop = "Rádió leállítása: újra a játék zenéje szól"
+tooltip.jukebox.radio = "Internetes rádió: állomás választása"
+tooltip.jukebox.radio_toggle = "Internetes rádió be- vagy kikapcsolása"

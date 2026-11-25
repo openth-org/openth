@@ -410,7 +410,8 @@ function App:init()
   -- Load main menu (which creates UI)
   local function callback_after_movie()
     self:loadMainMenu()
-    self.audio:playRandomBackgroundTrack()
+    -- (The internet radio if the player left it on, else a track.)
+    self.audio:startMusic()
     -- (A build downloaded from a multiplayer server: it started, and joins
     -- the server it was downloaded for.)
     corsixth.require("mp_pack").afterStart(self)
@@ -1349,6 +1350,7 @@ function App:dispatch(evt_type, ...)
 end
 
 function App:onTick(...)
+  if self.audio.radio_on then self.audio:radioTick() end
   if (not self.moviePlayer.playing) then
     -- Multiplayer desync repair: save or load between game ticks.
     local session = self.mp_session

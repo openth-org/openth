@@ -320,7 +320,8 @@ function Panel:setLabel(label, font, align)
 end
 
 --! Specifies whether auto clip (clipping text at the end so it fits) is enabled for this panel
---!param mode (boolean) true to activate, false to deactivate.
+--!param mode (boolean or "start") true to activate, false to deactivate;
+--! "start" clips at the front instead, so the end shows (an address box).
 function Panel:setAutoClip(mode)
   self.auto_clip = mode
   return self
@@ -328,6 +329,7 @@ end
 
 --! Checks if a given line drawn with the panel's label font would be longer than the given limit
 --! and if so, shortens it enough to fit including "..." at the end
+--! (at the start with setAutoClip("start"))
 --!param line (string) the line to modify
 --!param limit (int) the maximum length in pixels the line should have
 --!return the possibly modified line
@@ -335,6 +337,14 @@ function Panel:clipLine(line, limit)
   local _, last_x = self.label_font:draw(nil, line, 0, 0)
   if last_x > limit then
     limit = limit - self.label_font:sizeOf("..._")
+    if self.auto_clip == "start" then
+      -- (A whole letter off the front each time.)
+      while last_x > limit and line ~= "" do
+        line = line:sub(2):gsub("^[\128-\191]+", "")
+        _, last_x = self.label_font:draw(nil, line, 0, 0)
+      end
+      return "..." .. line
+    end
     while last_x > limit and line ~= "" do
       line = line:sub(1, letter_start(line, #line - 1)) -- (a whole letter off)
       _, last_x = self.label_font:draw(nil, line, 0, 0)
@@ -1111,6 +1121,16 @@ function Textbox:keyInput(char, rawchar)
   local pat = "%a%d_\128-\255"
   local new_line
   local handled = false
+  -- Ctrl+V pastes the clipboard's text, line breaks as spaces (the engine
+  -- reads the clipboard; an older engine has no getClipboardText).
+  if ui.app.key_modifiers.ctrl and char == "v" then
+    local wm = require("sdl").wm
+    if wm.getClipboardText then
+      local clip = wm.getClipboardText():gsub("%c+", " ")
+      if clip ~= "" then self:textInput(clip) end
+    end
+    return true
+  end
   -- (A typing key is the box's even when the box is full, textInput keeps
   -- the limit: it did not stop the text, and the key went on to the
   -- hotkeys, e.g. N in the multiplayer chat.)

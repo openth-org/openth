@@ -90,6 +90,7 @@ The whole single player game of CorsixTH (you can complete the full campaign), a
 - New versions downloaded in the game from the server, signed by OpenTH
 - Theme Hospital's own main menu with the professor (Customise switches it off)
 - 23 new songs in the style of the original music, and a jukebox that lists a long playlist in columns
+- Internet radio in the jukebox: paste a station's address (http, https, .pls or .m3u) and the game remembers it (Windows and macOS)
 - Czech, Ukrainian, Chinese, Japanese and Korean text in a smooth Unicode font
 - The map editor makes maps for up to 8 players, and maps of 128, 192 or 256 tiles a side (MAP SIZE menu)
 

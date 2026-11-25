@@ -1249,9 +1249,10 @@ function UI:togglePlayAnnouncements()
 end
 
 function UI:togglePlayMusic()
-  if not self.app.audio.background_music then
+  local audio = self.app.audio
+  if not audio.background_music and not audio.radio_on then
     self.app.config.play_music = true
-    self.app.audio:playRandomBackgroundTrack() -- play
+    audio:startMusic() -- play (the radio if that is the chosen music)
   else
     self.app.config.play_music = false
     self.app.audio:stopBackgroundTrack() -- stop

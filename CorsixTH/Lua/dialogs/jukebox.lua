@@ -64,7 +64,11 @@ function UIJukebox:UIJukebox(app)
   self.ui = app.ui
   local scr_w, scr_h = app.video:getRenderSize()
   local s = app.gfx:getUIScale()
-  local columns, rows = UIJukebox.layout(#self.audio.background_playlist, scr_w / s, scr_h / s)
+  -- The internet radio is one more row after the tracks (where the engine
+  -- can play it).
+  local playlist = self.audio.background_playlist
+  local entries = #playlist + (self.audio:radioSupported() and 1 or 0)
+  local columns, rows = UIJukebox.layout(entries, scr_w / s, scr_h / s)
   self.width = COLUMN_W * columns
   self.height = 74 + ROW_H * rows + 18
   -- (26 from the top left corner as in the original, less where it would not fit.)
@@ -85,8 +89,8 @@ function UIJukebox:UIJukebox(app)
   self.play_btn =
   self:addPanel(392,   0, 49):makeToggleButton(19, 2, 50, 24, 393, self.togglePlayPause):setSound("selectx.wav"):setTooltip(_S.tooltip.jukebox.play)
   self:updatePlayButton()
-  self:addPanel(394,  87, 49):makeButton(0, 2, 24, 24, 395, self.audio.playPreviousBackgroundTrack, self.audio):setSound("selectx.wav"):setTooltip(_S.tooltip.jukebox.rewind)
-  self:addPanel(396, 115, 49):makeButton(0, 2, 24, 24, 397, self.audio.playNextBackgroundTrack, self.audio):setSound("selectx.wav"):setTooltip(_S.tooltip.jukebox.fast_forward)
+  self:addPanel(394,  87, 49):makeButton(0, 2, 24, 24, 395, self.previousTrack):setSound("selectx.wav"):setTooltip(_S.tooltip.jukebox.rewind)
+  self:addPanel(396, 115, 49):makeButton(0, 2, 24, 24, 397, self.nextTrack):setSound("selectx.wav"):setTooltip(_S.tooltip.jukebox.fast_forward)
   self:addPanel(398, 157, 49):makeButton(0, 2, 24, 24, 399, self.stopBackgroundTrack):setSound("selectx.wav"):setTooltip(_S.tooltip.jukebox.stop)
   self:addPanel(400, 185, 49):makeButton(0, 2, 24, 24, 401, self.loopTrack):setSound("selectx.wav"):setTooltip(_S.tooltip.jukebox.loop)
 
@@ -97,24 +101,38 @@ function UIJukebox:UIJukebox(app)
   -- (The lowest track's row of each column, for its footer.)
   local last_y = {}
   local column, row = 0, 0
-  for i, info in ipairs(self.audio.background_playlist) do
+  for i = 1, entries do
+    local info = playlist[i]
     local in_column = column == 0 and rows or rows + 1
     if row >= in_column then column, row = column + 1, 0 end
     local x0 = column * COLUMN_W
     local y = column == 0 and 47 + (row + 1) * ROW_H or 47 + row * ROW_H
     row = row + 1
-    self.track_pos[i] = {x0, y}
     last_y[column + 1] = y
     self:addPanel(402, x0, y)
     for x = x0 + 30, x0 + COLUMN_W - 61, 24 do
       self:addPanel(403, x, y)
     end
-    self.track_buttons[i] = self:addPanel(404, x0 + COLUMN_W - 61, y):makeToggleButton(19, 4, 24, 24, 405):setSound("selectx.wav")
-    if not info.enabled then
-      self.track_buttons[i]:setToggleState(true)
-    end
-    self.track_buttons[i].on_click = --[[persistable:jukebox_toggle_track]] function(window)
-      window:toggleTrack(i)
+    if info then
+      self.track_pos[i] = {x0, y}
+      self.track_buttons[i] = self:addPanel(404, x0 + COLUMN_W - 61, y):makeToggleButton(19, 4, 24, 24, 405):setSound("selectx.wav")
+      if not info.enabled then
+        self.track_buttons[i]:setToggleState(true)
+      end
+      self.track_buttons[i].on_click = --[[persistable:jukebox_toggle_track]] function(window)
+        window:toggleTrack(i)
+      end
+    else
+      -- The internet radio's row: its name opens the radio window, the
+      -- button at its end (pressed while the radio is off, as an
+      -- excluded track's) turns it on and off.
+      self.radio_pos = {x0, y}
+      self:addPanel(0, x0 + 17, y):makeButton(0, 2, 190, 24, 0, self.openRadio)
+          :setTooltip(_S.tooltip.jukebox.radio)
+      self.radio_button = self:addPanel(404, x0 + COLUMN_W - 61, y)
+          :makeToggleButton(19, 4, 24, 24, 405, self.toggleRadio):setSound("selectx.wav")
+          :setTooltip(_S.tooltip.jukebox.radio_toggle)
+      self.radio_button:setToggleState(not self.audio.radio_on)
     end
   end
 
@@ -138,18 +156,26 @@ end
 -- stopped -> not toggled
 -- paused  -> not toggled
 function UIJukebox:updatePlayButton()
-  local status = not not self.audio.background_music and not self.audio.background_paused
+  local audio = self.audio
+  local status = (not not audio.background_music and not audio.background_paused)
+      or (not not audio.radio_on and not audio.radio_paused)
   if status ~= self.play_btn.toggled then
     self.play_btn:toggle()
+  end
+  if self.radio_button then
+    self.radio_button:setToggleState(not audio.radio_on)
   end
 end
 
 function UIJukebox:togglePlayPause()
-  if not self.audio.background_music then
+  if self.audio.radio_on then
+    self.audio:pauseRadio()
+  elseif not self.audio.background_music then
     -- Update configuration that we want music now.
     self.app.config.play_music = true
     self.app:saveConfig()
-    self.audio:playRandomBackgroundTrack()
+    -- (The radio, if that is the chosen music.)
+    self.audio:startMusic()
   else
     self.audio:pauseBackgroundTrack()
     -- Just pausing does not imply that the player will want to have music turned off
@@ -157,9 +183,44 @@ function UIJukebox:togglePlayPause()
   end
 end
 
+--! The previous or next track: the tracks are the music again, also when
+--! the radio played.
+function UIJukebox:previousTrack()
+  self.audio:chooseTracks()
+  self.audio:playPreviousBackgroundTrack()
+end
+
+function UIJukebox:nextTrack()
+  self.audio:chooseTracks()
+  self.audio:playNextBackgroundTrack()
+end
+
+--! The radio window: the station's address, Play and Stop.
+function UIJukebox:openRadio()
+  if not self.ui:getWindow(UIRadio) then
+    self.ui:addWindow(UIRadio(self.ui))
+  end
+end
+
+--! The radio row's button: the radio on (the station played last, or the
+--! radio window to choose one) or off (the tracks play again).
+function UIJukebox:toggleRadio()
+  local audio = self.audio
+  if audio.radio_on then
+    audio:stopRadio()
+    if self.app.config.play_music then
+      audio:playRandomBackgroundTrack()
+    end
+  elseif not (self.app.config.radio_url and audio:playRadio(self.app.config.radio_url)) then
+    self:openRadio()
+  end
+  self:updatePlayButton()
+end
+
 function UIJukebox:stopBackgroundTrack()
   -- Pressing this button means that the player doesn't want any
   -- background music in the future, so set that config flag.
+  -- (The radio stops too; it stays the chosen music for when music is on.)
   self.app.config.play_music = false
   self.app:saveConfig()
   self.audio:stopBackgroundTrack()
@@ -219,15 +280,45 @@ function UIJukebox:draw(canvas, x, y)
     if info.music == playing then
       font = self.blue_font
     end
-    local str = info.title
-    while font:sizeOf(str) > 185 * s do
-      str = string.sub(str, 1, string.len(str) - 5) .. "..."
-    end
+    local str = UIJukebox.fitText(font, info.title, 185 * s)
     font:draw(canvas, str, xpos + 24 * s, ypos + 11 * s)
     if info.music == playing then
       font:draw(canvas, str, x + 24 * s, y + 27 * s)
     end
   end
+
+  -- The internet radio: its row says so, or names the station while it
+  -- plays (in blue, as a playing track), and so does the top.
+  if self.radio_pos then
+    local radio = self.audio:getRadioStatus()
+    local font = radio and self.blue_font or self.white_font
+    local name = _S.radio_window.jukebox_row
+    if radio then
+      local what = UIRadio.nowPlaying(radio)
+      if radio.state == "failed" then
+        name = _S.radio_window.jukebox_failed
+      elseif what ~= "" then
+        name = what
+      end
+    end
+    local str = UIJukebox.fitText(font, name, 185 * s)
+    font:draw(canvas, str, x + (self.radio_pos[1] + 24) * s, y + (self.radio_pos[2] + 11) * s)
+    if radio then
+      font:draw(canvas, str, x + 24 * s, y + 27 * s)
+    end
+  end
+end
+
+--! text shortened with "..." until it is at most width wide in font.
+function UIJukebox.fitText(font, text, width)
+  local str = text
+  while font:sizeOf(str) > width and #str > 3 do
+    -- Five bytes off, then back to a whole letter (a station may send
+    -- Russian or other letters of several bytes).
+    local cut = string.sub(str, 1, #str - (str:sub(-3) == "..." and 8 or 5))
+    str = cut:gsub("[\192-\255][\128-\191]*$", "") .. "..."
+  end
+  return str
 end
 
 function UIJukebox:afterLoad(old, new)
