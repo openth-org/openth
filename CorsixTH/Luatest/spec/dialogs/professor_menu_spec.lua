@@ -190,6 +190,55 @@ describe("Professor menu", function()
     end
   end)
 
+  it("draws the fill beside his movies for the frame they show", function()
+    local frame, time = UIProfessorMenu.movieFrame, UIProfessorMenu.frameTime
+    -- The engine's time of a frame (frame 111: 111 times 0.07142 seconds),
+    -- and the movie's clock between two frames.
+    assert.equal(0, frame(0))
+    assert.equal(111, frame(111 * 0.07142 * 1000))
+    assert.equal(111, frame(7990))
+    assert.equal(111, frame(7999))
+    assert.equal(112, frame(112 * 71.42))
+    assert.equal(112, frame(8000))
+    assert.equal(7929, time(111))
+    -- Every time in the movie tables is a frame's.
+    for name, step in pairs({MOVIE_CHART = 2, MOVIE_LOOK = 2, MOVIE_BOARD = 2, MOVIE_LIGHT = 3}) do
+      for movie, keys in pairs(UIProfessorMenu[name]) do
+        for i = 1, #keys, step do
+          assert.equal(keys[i], time(math.floor(keys[i] * 14 / 1000 + 0.5)), name .. " " .. movie)
+        end
+      end
+    end
+
+    package.loaded["sdl"] = package.loaded["sdl"] or {getTicks = function() return 0 end}
+    require("movie_player")
+    local movie = setmetatable({}, {__index = _G["MoviePlayer"]})
+    movie.playMovie = function(self) self.playing = true end
+    local drawSide, drawn = UIProfessorMenu.drawSide, nil
+    UIProfessorMenu.drawSide = function(_, bottom) drawn = bottom end
+    local ok, err = pcall(function()
+      local at = UIProfessorMenu.chartInMovie
+      -- The engine says which frame it drew: the fill is that frame's, however
+      -- far ahead the clock is (the pictures came late).
+      movie:playMenuMovie(false)
+      movie.refresh_overlay(movie, 0, 0, 320, 200, 1, 8600, 110 * 71.42)
+      assert.equal(at(false, time(110)), drawn)
+      assert.equal(71, drawn)
+      -- An engine that does not say shows the next frame once the clock
+      -- reaches it, one frame a refresh; the clock going back (with the sound
+      -- on) does not take the frame back.
+      movie:playMenuMovie(false)
+      movie.refresh_overlay(movie, 0, 0, 320, 200, 1, 8000)
+      assert.equal(at(false, time(1)), drawn)
+      for _ = 1, 200 do movie.refresh_overlay(movie, 0, 0, 320, 200, 1, 8000) end
+      assert.equal(121, drawn)
+      movie.refresh_overlay(movie, 0, 0, 320, 200, 1, 7000)
+      assert.equal(121, drawn)
+    end)
+    UIProfessorMenu.drawSide = drawSide
+    assert(ok, err)
+  end)
+
   it("moves the chart's left end as his movies move the chart", function()
     local row = UIProfessorMenu.chartRow
     -- Rolling down or up, the whole chart is higher, under the roller's

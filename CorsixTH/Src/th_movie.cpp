@@ -167,8 +167,9 @@ bool movie_picture_buffer::advance() {
   return true;
 }
 
-void movie_picture_buffer::draw(SDL_Renderer* pRenderer,
-                                const SDL_Rect& dstrect) {
+double movie_picture_buffer::draw(SDL_Renderer* pRenderer,
+                                  const SDL_Rect& dstrect) {
+  double drawn_pts = -1;
   if (!empty()) {
     auto& cur_pic = picture_queue[read_index];
 
@@ -180,8 +181,10 @@ void movie_picture_buffer::draw(SDL_Renderer* pRenderer,
       if (!SDL_RenderTexture(pRenderer, texture, nullptr, &fdstrect)) {
         std::cerr << "Error displaying movie frame: " << SDL_GetError() << "\n";
       }
+      drawn_pts = cur_pic.pts;
     }
   }
+  return drawn_pts;
 }
 
 double movie_picture_buffer::get_next_pts() {
@@ -539,7 +542,8 @@ const char* movie_player::get_last_error() const { return last_error.c_str(); }
 
 void movie_player::clear_last_error() { last_error.clear(); }
 
-double movie_player::refresh(const SDL_Rect& destination_rect) {
+double movie_player::refresh(const SDL_Rect& destination_rect,
+                             double* shown_pts) {
   SDL_Rect dest_rect = SDL_Rect{destination_rect.x, destination_rect.y,
                                 destination_rect.w, destination_rect.h};
 
@@ -548,13 +552,17 @@ double movie_player::refresh(const SDL_Rect& destination_rect) {
                           current_sync_pts_system_time) +
       current_sync_pts * 1000.0;
 
+  double dShownPts = -1;
   if (!movie_picture_buffer.empty()) {
     double dNextPts = movie_picture_buffer.get_next_pts();
 
     if (dNextPts > 0 && dNextPts * 1000.0 <= dCurTime) {
       movie_picture_buffer.advance();
     }
-    movie_picture_buffer.draw(renderer, dest_rect);
+    dShownPts = movie_picture_buffer.draw(renderer, dest_rect);
+  }
+  if (shown_pts) {
+    *shown_pts = dShownPts < 0 ? -1 : dShownPts * 1000.0;
   }
 
   return dCurTime;
@@ -770,7 +778,12 @@ bool movie_player::has_audio_track() const { return false; }
 double movie_player::get_movie_length() const { return 0; }
 const char* movie_player::get_last_error() const { return nullptr; }
 void movie_player::clear_last_error() {}
-double movie_player::refresh(const SDL_Rect&) { return 0; }
+double movie_player::refresh(const SDL_Rect&, double* shown_pts) {
+  if (shown_pts) {
+    *shown_pts = -1;
+  }
+  return 0;
+}
 void movie_player::allocate_picture_buffer() {}
 void movie_player::deallocate_picture_buffer() {}
 void movie_player::read_streams() {}

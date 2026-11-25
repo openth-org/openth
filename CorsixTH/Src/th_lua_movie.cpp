@@ -133,14 +133,21 @@ int l_movie_refresh(lua_State* L) {
   ZoneScoped;
 
   movie_player* pMovie = luaT_testuserdata<movie_player>(L);
-  double pts =
-      pMovie->refresh(SDL_Rect{static_cast<int>(luaL_checkinteger(L, 2)),
-                               static_cast<int>(luaL_checkinteger(L, 3)),
-                               static_cast<int>(luaL_checkinteger(L, 4)),
-                               static_cast<int>(luaL_checkinteger(L, 5))});
+  SDL_Rect rect{static_cast<int>(luaL_checkinteger(L, 2)),
+                static_cast<int>(luaL_checkinteger(L, 3)),
+                static_cast<int>(luaL_checkinteger(L, 4)),
+                static_cast<int>(luaL_checkinteger(L, 5))};
+  double shown_pts = -1;
+  double pts = pMovie->refresh(rect, &shown_pts);
 
+  // The movie's clock, and the time of the frame drawn (nil when none was).
   lua_pushnumber(L, pts);
-  return 1;
+  if (shown_pts < 0) {
+    lua_pushnil(L);
+  } else {
+    lua_pushnumber(L, shown_pts);
+  }
+  return 2;
 }
 
 int l_movie_allocate_picture_buffer(lua_State* L) {

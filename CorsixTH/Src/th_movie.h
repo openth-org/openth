@@ -183,7 +183,9 @@ class movie_picture_buffer {
   //! \param dstrect The rectangle on the renderer to draw to
   //!
   //! \remark Must be run on the program's graphics thread
-  void draw(SDL_Renderer* pRenderer, const SDL_Rect& dstrect);
+  //! \returns The presentation time stamp (seconds) of the picture drawn, or
+  //! -1 when there was none to draw
+  double draw(SDL_Renderer* pRenderer, const SDL_Rect& dstrect);
 
   //! Get the next presentation time stamp
   double get_next_pts();
@@ -363,8 +365,11 @@ class movie_player {
   //!
   //! \param destination_rect The location and dimensions in the renderer on
   //! which to draw the movie
+  //! \param shown_pts When given, set to the presentation time stamp of the
+  //! frame drawn in milliseconds (-1 when none was): it lags the movie's clock
+  //! when the pictures come late, and moves on at most one frame a refresh
   //! \returns The current presentation time stamp of the movie in milliseconds
-  double refresh(const SDL_Rect& destination_rect);
+  double refresh(const SDL_Rect& destination_rect, double* shown_pts = nullptr);
 
   //! Deallocate the picture buffer and free any resources associated with it.
   //!

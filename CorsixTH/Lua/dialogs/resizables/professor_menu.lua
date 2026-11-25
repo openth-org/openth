@@ -92,6 +92,23 @@ local ROLLER_BOTTOM, MOUNT_FROM, CHART_BOTTOM = 21, 186, 159
 -- ROLLER_SHADOW) stays where it is while the chart rolls.
 local DOWN_FROM, STRETCH_FROM, PULL_FROM, ROLLER_SHADOW = CHART_BOTTOM - 9, 80, 32, 29
 
+--! How far apart (milliseconds) the frames of his movies are: 71.42, as their
+--! Smacker headers say. (The times in the MOVIE_ tables below are those of
+--! frames 1000/14 milliseconds apart, rounded, as they were measured.)
+UIProfessorMenu.MOVIE_FRAME_MS = 71.42
+
+--! The frame of one of his movies that shows from `pts` (milliseconds, the
+--! frame's own time or the movie's clock) on: its number, from 0.
+function UIProfessorMenu.movieFrame(pts)
+  return math.floor(pts / UIProfessorMenu.MOVIE_FRAME_MS + 1e-6)
+end
+
+--! The time of frame `frame` of one of his movies as the MOVIE_ tables have
+--! it (milliseconds).
+function UIProfessorMenu.frameTime(frame)
+  return math.floor(frame * 1000 / 14 + 0.5)
+end
+
 --! Where the chart's bottom edge is in his movies, as they go on: the time
 --! of the frame (in milliseconds, 14 frames a second) and the row from that
 --! frame on (ROLLER_BOTTOM: rolled up under its roller; false: the chart and
