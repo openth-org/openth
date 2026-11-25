@@ -12,18 +12,18 @@
 
 OpenTH is not an official CorsixTH release. Single player works exactly as in CorsixTH.
 
-<picture>![Eight hospitals in one town: every hospital's patients wear its own colour, with a bar of that colour at their feet](docs/multiplayer/images/hospitals-colours.png)</picture>
+<picture>![A bot's hospital on TEAM TOWN during a race: every hospital's patients wear its own colour, with a bar of that colour at their feet](docs/multiplayer/images/hospitals-colours.png)</picture>
 
 ## Getting Started ##
 
 1. **Download the game** for your system from the [latest release](https://github.com/openth-org/openth/releases/latest):
    - **Windows** (64-bit): unzip `...-win64.zip` and start `OpenTH.exe`.
    - **Linux** (x86_64, Ubuntu 24.04, Linux Mint 22 or newer): unpack `...-linux-x86_64.tar.gz` and start `OpenTH/OpenTH.sh`.
-   - **macOS** (Apple Silicon, the macOS version the release names, usually 27 or newer): unzip `...-macos-arm64.zip` and move `OpenTH.app` to Applications. The app is not notarized by Apple: the first time, open **System Settings > Privacy & Security** and click **Open Anyway**.
-2. **Theme Hospital's game data** is needed, as for CorsixTH: the original CD, or a download from [GOG.com](https://www.gog.com/game/theme_hospital) or [EA](https://www.ea.com/games/theme/theme-hospital). The first start asks for its folder.
+   - **macOS** (Apple Silicon, macOS 26 or newer): unzip `...-macos-arm64.zip` and move `OpenTH.app` to Applications. It is signed and notarized by Apple: the first time, macOS asks whether to open an app downloaded from the internet; click **Open**.
+2. **Theme Hospital's game data** is needed, as for CorsixTH: the original CD, or a download from [GOG.com](https://www.gog.com/game/theme_hospital), [Steam](https://store.steampowered.com/app/2229820/Theme_Hospital/) or [EA](https://www.ea.com/games/theme/theme-hospital). The first start asks for its folder.
 3. **Main menu > Multiplayer**: click a server's button (EU2 runs test builds, the others the stable release; [openth.org/play](https://openth.org/play) lists them), enter your name, then **Connect**.
 4. **Create a room** (the level, how many places, a password if you like) or **join** one. Everybody picks a colour and a team: the same colour shares a hospital, the same team wins together. Click an empty place to add a bot. When everybody is ready, the room's owner starts the game. The lobby measures everybody's connection and sets the top speed that stays smooth.
-5. Everybody in a game must run the **same release**. A server only lets in the release it runs, and tells you which one to download.
+5. Everybody in a game must run the **same release**. A server only lets in the release it runs; if yours is older, click **Get the server's version of the game**: it downloads that version, restarts and joins the server again by itself.
 
 The full guide, with co-op, races, trading, saving and what to do if something goes wrong: [docs/multiplayer/PLAYING.md](docs/multiplayer/PLAYING.md). To run your own server with the referee, like OpenTH's servers: [docs/multiplayer/SERVER-SETUP.md](docs/multiplayer/SERVER-SETUP.md). To play on your LAN without the internet: [mp_server/README.md](mp_server/README.md#playing-on-a-lan-no-internet-needed).
 
@@ -36,7 +36,7 @@ The whole single player game of CorsixTH (you can complete the full campaign), a
 - **A hospital each, as a team (co-op):** each player runs their own hospital; the level is won when every hospital has reached its goals, and lost if one keeps failing them.
 - **Races:** everyone for themselves, teams against teams, or team mates running one hospital together against another team's. The first to reach the goals wins, and a hospital that fails them at two year ends is out. Standings come by fax.
 - **Dirty tricks** (MULTIPLAYER > DIRTY TRICKS), in three levels each: an evil handyman who breaks machines, an epidemic, an emergency the rival can hardly handle, a rat attack, a headhunter who poaches staff, a broken boiler, a smear campaign, espionage and the original game's litter bomb. You can sack the evil handyman, shoot the rats, and pick up a litter bomb and throw it on before it goes off.
-- **Bots** take the empty places. They research, build what their patients need, hire the most skilled staff when a room needs them, train juniors with their best consultant, pay bonuses, answer pay rises, borrow and pay back, bid at auctions and play dirty tricks in a race (and say so in the chat). A bot on your team does what you ask it in the chat ("Agnes, build a psychiatry") and runs your hospital while you are away; with **Allied bots build** off, it leaves building to you.
+- **Bots** take the empty places, at three levels: easy, normal (no cheats) and hard. They research, build what their patients need, hire the most skilled staff when a room needs them, train juniors with their best consultant, pay bonuses, answer pay rises, borrow and pay back, bid at auctions and play dirty tricks in a race (and say so in the chat). A bot on your team does what you ask it in the chat ("Agnes, build a psychiatry") and runs your hospital while you are away; with **Allied bots build** off, it leaves building to you.
 - **Land auctions:** a plot next to another hospital's land goes to auction, with up to 4 bidders and the game standing still meanwhile (game option: contested plots, every plot, or off).
 - **Trading between hospitals:** send money or ask for it, offer staff (free or for a price), refer patients, share research.
 - **Look at the other hospitals:** press **N** for the next hospital, or click a player in the Players window (MULTIPLAYER > PLAYERS), with each one's ping, value, balance, reputation and goals.
@@ -44,21 +44,31 @@ The whole single player game of CorsixTH (you can complete the full campaign), a
 - **Nobody waits for another player's windows:** faxes, pay rises and questions do not pause the game; the year end waits until everybody has read the annual report.
 - **In-game chat**, to everybody, your team or one player.
 - **Saving and continuing** a multiplayer game from the lobby (File > Save and a monthly autosave).
-- **Self-repairing games:** the server runs its own copy of every game; if the players' games ever differ, everybody quietly loads the server's copy and plays on. A player who drops out can rejoin.
+- **Self-repairing games:** the server runs its own copy of every game; if the players' games ever differ, everybody quietly loads the server's copy and plays on. A player who drops out can rejoin, and a bot stands in for them meanwhile.
+- **Join a running game** in a bot's place or that of a player who left.
+- **Updates in the game:** when a server runs a newer version, your game downloads it (signed by OpenTH), restarts and joins again.
+- **Multiplayer tips** beside the multiplayer window: keys, corridor objects and what to do about each dirty trick (English and Russian).
 - **Any game language and any edition** of Theme Hospital's data, all in one game. The multiplayer windows are translated into every CorsixTH language.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/multiplayer/images/lobby-eight.png" alt="A room of eight: one person and seven bots, each with a colour and a team"><br>A room of eight: a colour and a team for each place.</td>
-<td width="50%"><img src="docs/multiplayer/images/players-eight.png" alt="The Players window with eight hospitals: ping, value, balance and reputation"><br>The Players window: click a row to look at that hospital.</td>
+<td width="50%"><img src="docs/multiplayer/images/lobby-eight.png" alt="A room of eight: Janos and seven normal bots, each with a colour and a team"><br>A room of eight: a colour and a team for each place, bots at three levels.</td>
+<td width="50%"><img src="docs/multiplayer/images/players-eight.png" alt="The Players window with eight hospitals: team, ping, status, value, balance and reputation"><br>The Players window: click a row to look at that hospital.</td>
 </tr>
 <tr>
-<td><img src="docs/multiplayer/images/dirty-tricks.png" alt="The dirty tricks window: eight tricks in three levels, with their prices"><br>Dirty tricks against a rival, in three levels.</td>
+<td><img src="docs/multiplayer/images/dirty-tricks.png" alt="The dirty tricks window: nine tricks in three levels, with their prices"><br>Nine dirty tricks against a rival, in three levels.</td>
 <td><img src="docs/multiplayer/images/rat-attack.png" alt="Rats running about a rival hospital's grounds, enlarged"><br>A rat attack: rats run about the rival's hospital (enlarged).</td>
 </tr>
 <tr>
-<td><img src="docs/multiplayer/images/auction.png" alt="A land auction: two hospitals bid for a plot; the map shows the eight hospitals' land in their colours"><br>A land auction on TEAM TOWN, the eight hospitals' land in their colours.</td>
+<td><img src="docs/multiplayer/images/auction.png" alt="A land auction on TEAM TOWN: two hospitals bid for a plot, with a countdown; the map shows the eight hospitals' land in their colours"><br>A land auction on TEAM TOWN, the eight hospitals' land in their colours.</td>
 <td><img src="docs/multiplayer/images/bot-chat.png" alt="Bots taunting each other in the chat after a rat attack"><br>Bots have their say in the chat.</td>
+</tr>
+<tr>
+<td><img src="docs/multiplayer/images/professor-menu.png" alt="Theme Hospital's main menu with the professor and his chart"><br>Theme Hospital's own main menu, with the professor.</td>
+<td><img src="docs/multiplayer/images/multiplayer-tips.png" alt="The Multiplayer window with the server buttons, and a tips box beside it about the dirty tricks"><br>Pick a server; tips for multiplayer come up beside it.</td>
+</tr>
+<tr>
+<td colspan="2" align="center"><img src="docs/multiplayer/images/jukebox.png" width="70%" alt="The jukebox listing the game's songs and OpenTH's 23 new ones in three columns"><br>The jukebox: Theme Hospital's songs and OpenTH's 23 new ones.</td>
 </tr>
 </table>
 
@@ -74,9 +84,13 @@ The whole single player game of CorsixTH (you can complete the full campaign), a
 ### New Features ###
 ##### In OpenTH #####
 - Network multiplayer for up to 8 players, shared, co-op and races, through a small relay server ([run your own](docs/multiplayer/vps-guide.md))
-- Builds for Windows, Linux and macOS (Apple Silicon) that play together
+- Builds for Windows, Linux and macOS (Apple Silicon) that play together; the macOS app is signed and notarized by Apple
 - Bots, dirty tricks, land auctions, teams, trades with prices, chat, a players window, votes on the game speed
 - A headless referee on the server that repairs games and lets players rejoin
+- New versions downloaded in the game from the server, signed by OpenTH
+- Theme Hospital's own main menu with the professor (Customise switches it off)
+- 23 new songs in the style of the original music, and a jukebox that lists a long playlist in columns
+- Czech, Ukrainian, Chinese, Japanese and Korean text in a smooth Unicode font
 - The map editor makes maps for up to 8 players, and maps of 128, 192 or 256 tiles a side (MAP SIZE menu)
 
 ##### From CorsixTH #####
@@ -99,7 +113,7 @@ The whole single player game of CorsixTH (you can complete the full campaign), a
 ### What's missing/needs improvement? ###
 ##### Multiplayer #####
 - Encryption: connections and room passwords are not encrypted, so do not use a password you use elsewhere
-- A notarized macOS app, and builds for Intel Macs and 32-bit systems
+- Builds for Intel Macs and 32-bit systems
 - More levels for more than 4 hospitals, and playable larger maps (the map editor can make them)
 - Now and then the players' games still go out of sync; the server repairs this within a second
 
@@ -107,7 +121,6 @@ The whole single player game of CorsixTH (you can complete the full campaign), a
 - AI Hospitals (and the components associated with it)
 - Rats (but rat holes are present) and the bonus rat level (in multiplayer races rats come as a dirty trick)
 - Vomit waves
-- Win level video/letter
 - The original graphics do not have a complete set for Pregnancy, Alien DNA, and female Fractured Bones patients -- these may cause anomalies if you enable regular spawning in settings
 - Some objects in the game may glitch with walls
 

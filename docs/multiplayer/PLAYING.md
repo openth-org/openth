@@ -10,17 +10,17 @@ rough edges in those); please report what you find.
 ## What you need
 
 - **Windows or Linux** (64-bit), or a **Mac with Apple Silicon** (M1 or
-  later) on the macOS version the release names: usually macOS 27 or newer
-  (macOS 26 for releases built on GitHub's machines). Players on all three can play together.
-- **Your own Theme Hospital game data** (GOG, EA or the original CD). It is
+  later) on macOS 26 or newer. Players on all three can play together.
+- **Your own Theme Hospital game data** (GOG, Steam, EA or the original CD). It is
   not included and must never be shared. Editions differ in their
   multiplayer maps and level settings; OpenTH's servers have the GOG
   edition. With another edition (an old CD, say) you can play there too:
   your game then starts from the server's own copy of the game (it takes a
   moment longer to start).
 - **OpenTH**, the same release as everybody you play with. A server with a
-  referee only lets in the build it runs; it tells you which release to
-  download.
+  referee only lets in the build it runs; if yours is older, click **Get
+  the server's version of the game** and your game downloads it, restarts
+  and joins the server again by itself.
 - **A server address** (`host:port`, port 47800 by default).
   `eu2.openth.org:47800` runs the newest test build, every other OpenTH
   server the newest stable release; https://openth.org/play lists them.
@@ -43,17 +43,18 @@ rough edges in those); please report what you find.
 that folder. It brings its own libraries; the usual desktop ones (graphics,
 sound) come from your system.
 
-**macOS** (Apple Silicon, the macOS version the release names): download the
+**macOS** (Apple Silicon, macOS 26 or newer): download the
 `...-macos-arm64.zip` of the same release, unzip it and move
-`OpenTH.app` to Applications. The app is not notarized by Apple, so the
-first time macOS refuses to open it: open **System Settings > Privacy &
-Security**, scroll down to the note about OpenTH and click **Open
-Anyway** (once). (Or in Terminal:
-`xattr -dr com.apple.quarantine /Applications/OpenTH.app`.) Settings
-and saves are in the hidden folder `~/.config/CorsixTH`.
+`OpenTH.app` to Applications. It is signed and notarized by Apple: the
+first time, macOS asks whether to open an app downloaded from the
+internet; click **Open**. Settings and saves are in the hidden folder
+`~/.config/CorsixTH`.
 
 Everybody in a game must use the same release, and the server must run the
-matching version (each release names its server image). Builds of newer
+matching version. Usually you download OpenTH only once: when a server
+runs a newer version, the Multiplayer window offers **Get the server's
+version of the game**, which downloads it (checked against OpenTH's signature), restarts
+the game and joins the server again. Builds of newer
 commits are also on OpenTH's **Actions** tab (a run of the Windows, the
 Linux package or the macOS app workflow on `master`, Artifacts; this needs a GitHub account).
 
