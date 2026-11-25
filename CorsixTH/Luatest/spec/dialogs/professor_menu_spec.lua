@@ -203,12 +203,29 @@ describe("Professor menu", function()
     end
   end)
 
-  it("takes the fill beside the picture's edge from his movie's frame while the chart is down", function()
+  it("takes the fill beside the picture's edge from his movie's frame", function()
     local strip = UIProfessorMenu.movieStrip
-    assert.same({}, strip(nil))
-    assert.same({}, strip(121))
-    assert.same({}, strip(21))
-    for _, bottom in ipairs({159, 156.1, 164}) do
+    -- Gone: only the frame above the board (the roller falls below it).
+    for _, d in ipairs(strip(false)) do
+      assert.is_true(d.y == 0 and d.h == 53 and d.flip, "the frame's rows, mirrored")
+    end
+    assert.equal(#strip(false), #strip(nil))
+    -- Rolled up and as he pulls it down, his hand reaches the frame's
+    -- columns from 30 on below the chart (from row 100): those rows come
+    -- from its first 16.
+    for _, bottom in ipairs({21, 36, 48.7}) do
+      for _, d in ipairs(strip(bottom)) do
+        assert.is_true(d.sx + d.sw <= 16 or d.y + d.h <= 100, bottom .. " from " .. d.sx .. " at " .. d.y)
+      end
+    end
+    -- Rolling, under the roller's shadow too what is drawn on the chart
+    -- moves on: there his feet (only paper beside them), not mirrored.
+    local under = false
+    for _, d in ipairs(strip(36)) do
+      if d.sx == 42 and d.y <= 22 then under = true end
+    end
+    assert.is_true(under)
+    for _, bottom in ipairs({159, 156.1, 164, 121, 48.7, 21}) do
       local seen = {}
       for _, d in ipairs(strip(bottom)) do
         assert.equal(d.sh, d.h)

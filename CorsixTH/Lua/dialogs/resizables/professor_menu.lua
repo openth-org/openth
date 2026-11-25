@@ -559,14 +559,18 @@ function UIProfessorMenu.endBlend(x, y)
 end
 
 -- Beside the picture's edge (LIVE_W columns, up to the chart's left end) the
--- fill is taken from the frame his movie shows while the chart is down, as
--- it is taken from the picture: its colours and light are the movie's, frame
--- by frame (Jan 2026-11-25: one piece, not glued on; the chart's bottom
--- line and edge beside the picture were not the movie's). Not while it is
--- rolled up or rolling (his hand reaches into those columns as he pulls it
--- down), and not the chart's left end (the mirror image of its right end,
--- where he stands).
+-- fill is taken from the frame his movie shows, as it is taken from the
+-- picture: its colours and light are the movie's, frame by frame (Jan
+-- 2026-11-25: one piece, not glued on; the chart's bottom line and edge
+-- beside the picture were not the movie's). Rolled up and rolling too (Jan,
+-- later that day: the red line a row off as he pulled it down; his hand
+-- reaches only the columns the skeleton's other half is taken from, while
+-- those rows are below the chart, taken from the picture's edge). Once the
+-- chart is gone only the frame above the board (GONE_ROWS rows: the roller
+-- falls through those below; Jan: a made-up part beside the frame). Not the
+-- chart's left end (the mirror image of its right end, where he stands).
 local LIVE_W = -(CHART_LEFT + EDGE_W)
+local GONE_ROWS = 53
 
 --! What of the frame his movie shows to draw beside the picture's edge while
 --! the chart's bottom edge is at row `bottom` (UIProfessorMenu.chartInMovie):
@@ -574,25 +578,34 @@ local LIVE_W = -(CHART_LEFT + EDGE_W)
 --! from -LIVE_W, rows as the picture's), flip (mirrored), alpha (0 to 255)},
 --! the columns as UIProfessorMenu.sideColumn takes them from the picture,
 --! the rows the frame's own (the chart moves in it). The last columns fade
---! into the fill drawn from the picture as endBlend has it. Empty unless the
---! chart is down.
+--! into the fill drawn from the picture as endBlend has it. With the chart
+--! gone (`bottom` false or nil) only its first GONE_ROWS rows.
 function UIProfessorMenu.movieStrip(bottom)
   local draws = {}
-  if not bottom or bottom < DOWN_FROM then return draws end
-  -- The frame's row with the chart's row `r` as the picture has it.
-  local function rowOf(r)
-    local lo, hi = 0, PIC_H
-    for _ = 1, 24 do
-      local mid = (lo + hi) / 2
-      if UIProfessorMenu.chartRow(mid, bottom, true) < r then lo = mid else hi = mid end
-    end
-    return math.floor(hi + 0.5)
-  end
-  local top, feet, below = rowOf(SKELETON_TOP), rowOf(SKELETON_FEET), rowOf(SKELETON_BOTTOM + 1)
   -- Rows and where their columns come from: the picture's edge mirrored, the
   -- skeleton's other half, or the paper beside his feet.
-  local bands = {{0, top, "edge"}, {top, feet, "skeleton"}, {feet, below, "paper"},
-    {below, PIC_H, "edge"}}
+  local bands = {{0, GONE_ROWS, "edge"}}
+  if bottom then
+    -- The chart's row as the picture has it at the frame's row `y`: rolling,
+    -- what is drawn on it moves on under the roller's shadow too (only the
+    -- shadow stays; its skeleton's legs were mirrored there).
+    local function chartAt(y)
+      if bottom >= DOWN_FROM then return UIProfessorMenu.chartRow(y, bottom, true) end
+      return y <= ROLLER_BOTTOM and y or y + CHART_BOTTOM - bottom
+    end
+    -- The frame's row with the chart's row `r` as the picture has it.
+    local function rowOf(r)
+      local lo, hi = 0, PIC_H
+      for _ = 1, 24 do
+        local mid = (lo + hi) / 2
+        if chartAt(mid) < r then lo = mid else hi = mid end
+      end
+      return math.floor(hi + 0.5)
+    end
+    local top, feet, below = rowOf(SKELETON_TOP), rowOf(SKELETON_FEET), rowOf(SKELETON_BOTTOM + 1)
+    bands = {{0, top, "edge"}, {top, feet, "skeleton"}, {feet, below, "paper"},
+      {below, PIC_H, "edge"}}
+  end
   -- Columns with as much of the frame (fully from BLEND_FROM on).
   local groups = {{BLEND_FROM, -1}}
   for x = BLEND_FROM - 1, -LIVE_W, -1 do groups[#groups + 1] = {x, x} end
