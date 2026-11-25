@@ -150,6 +150,9 @@ describe("Professor menu", function()
     end
     assert.equal(159, at(true, 0))
     assert.equal(170, at(true, 1550))
+    -- Rolling, an edge between two rows at the picture's edge, as there.
+    assert.equal(48.7, at(false, 7786))
+    assert.equal(111.5, at(true, 1643))
     assert.equal(21, at(true, 1800))
     assert.is_false(at(true, 2500))
     -- What the movies show behind and under the chart: rolled up as he
@@ -162,6 +165,8 @@ describe("Professor menu", function()
     assert.is_nil(look(true, 0))
     assert.equal("board", look(true, 1700))
     assert.equal("rolled", look(true, 1800))
+    -- (For a frame the roller springs up off its mount, the frame under it.)
+    assert.equal("sprung", look(true, 1857))
     assert.equal("rolled_high", look(true, 1950))
     assert.equal("gone", look(true, 2500))
     -- Row by row, from the picture's edge to the chart's end.
@@ -243,6 +248,51 @@ describe("Professor menu", function()
     assert.is_true(feet(156.1) < 141)
   end)
 
+  it("makes beforehand every fill drawn beside his movies", function()
+    local fills = UIProfessorMenu.movieFills()
+    local key = UIProfessorMenu.fillKey
+    local made = {}
+    for _, f in ipairs(fills) do
+      local k = key(f[1], f[2], f[3], f[4])
+      assert.is_nil(made[k], k)
+      made[k] = true
+    end
+    -- The first needed first: rolled up as he comes, then as he pulls the
+    -- chart down; the roller springing up as he leaves.
+    assert.equal("up/up", key(fills[1][1], fills[1][2], fills[1][3], fills[1][4]))
+    assert.equal("up/board", key(fills[2][1], fills[2][2], fills[2][3], fills[2][4]))
+    assert.is_true(made["up/sprung"])
+    assert.is_true(made["down"], "the menu's own")
+    -- Drawing each frame of both movies, and the menu, asks for none but
+    -- those.
+    local asked = {}
+    local bitmap = {draw = function() end}
+    local loaded = {picture = bitmap, sides = setmetatable({}, {__index = function(_, k)
+      asked[k] = true
+      return bitmap
+    end})}
+    local canvas = {getRenderSize = function() return 2560, 1080 end, scale = function() return true end,
+      pushClip = function() end, popClip = function() end}
+    local art, app = UIProfessorMenu.art, _G["TheApp"]
+    UIProfessorMenu.art = function() return loaded end
+    _G["TheApp"] = {config = {}}
+    local ok, err = pcall(function()
+      for _, leaving in ipairs({false, true}) do
+        for n = 0, 200 do
+          local pts = UIProfessorMenu.frameTime(n)
+          local top, low = UIProfessorMenu.lightInMovie(leaving, pts)
+          UIProfessorMenu.drawSide(canvas, UIProfessorMenu.chartInMovie(leaving, pts), top, low,
+              UIProfessorMenu.lookInMovie(leaving, pts), UIProfessorMenu.boardInMovie(leaving, pts))
+        end
+      end
+      UIProfessorMenu.drawPicture(canvas)
+    end)
+    UIProfessorMenu.art, _G["TheApp"] = art, app
+    assert(ok, err)
+    for k in pairs(asked) do assert.is_true(made[k], k) end
+    for k in pairs(made) do assert.is_true(asked[k], k) end
+  end)
+
   it("draws the fill beside his movies for the frame they show", function()
     local frame, time = UIProfessorMenu.movieFrame, UIProfessorMenu.frameTime
     -- The engine's time of a frame (frame 111: 111 times 0.07142 seconds),
@@ -276,7 +326,7 @@ describe("Professor menu", function()
       movie:playMenuMovie(false)
       movie.refresh_overlay(movie, 0, 0, 320, 200, 1, 8600, 110 * 71.42)
       assert.equal(at(false, time(110)), drawn)
-      assert.equal(71, drawn)
+      assert.equal(71.6, drawn)
       -- An engine that does not say shows the next frame once the clock
       -- reaches it, one frame a refresh; the clock going back (with the sound
       -- on) does not take the frame back.

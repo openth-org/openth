@@ -126,15 +126,19 @@ end
 --! the fill's edge against the movie's on either side of the picture's edge,
 --! in tenths of a row; whole rows held the fill still while the movie moved
 --! on, then made it jump: Jan saw the left side lag as the chart went up).
+--! Rolling, some frames have its edge between two rows at the picture's edge
+--! (half lit): there too a fraction, fitted to the edge as the movie has it
+--! at the picture's first columns (2026-11-25: a row higher than the movie's
+--! at the seam as he pulled it down and let it roll up).
 UIProfessorMenu.MOVIE_CHART = {
-  coming = {0, ROLLER_BOTTOM, 7714, 36, 7786, 48, 7857, 71, 7929, 86, 8000, 121,
-    8071, 145, 8143, 158.4, 8214, 158.3, 8357, 158.1, 8429, 157.9, 8500, 157.8,
+  coming = {0, ROLLER_BOTTOM, 7714, 36, 7786, 48.7, 7857, 71.6, 7929, 86, 8000, 121,
+    8071, 145.2, 8143, 158.4, 8214, 158.3, 8357, 158.1, 8429, 157.9, 8500, 157.8,
     8571, 157.7, 8643, 157.6, 8786, 157.5, 8929, 157.4, 9000, 157.3, 9071, 157.2,
     9214, 157.1, 9286, 156.9, 9357, 156.8, 9571, 156.7, 9643, 156.5, 9786, 156.3,
     9929, 156.2, 10000, 156.1, 10357, 156.2, 10429, 156.4, 10500, 156.6, 10571, 156.9,
     10643, 157, 10714, 157.1, 10786, 157.3, 10857, 157.5, 10929, 157.9, 11071, 158.1,
     11143, 158.2, 11286, 158.4, 11429, 158.6, 11571, 158.7, 11786, 158.8, 11929, 159},
-  leaving = {0, 159, 1429, 164, 1500, 170, 1571, 159, 1643, 111, 1714, 48,
+  leaving = {0, 159, 1429, 164, 1500, 170, 1571, 159, 1643, 111.5, 1714, 48.4,
     1786, ROLLER_BOTTOM, 2000, false},
 }
 
@@ -145,8 +149,10 @@ UIProfessorMenu.MOVIE_CHART = {
 --! image, UIProfessorMenu.endBlend between). Rolled up as he comes (`up`):
 --! the paper's edge in the roller's shadow, the blackboard's frame behind
 --! the chart and the frame's shadow on the board; rolled up as he leaves
---! (`rolled`, then `rolled_high` as it springs up): the paper wound round
---! the roller; gone (`gone`): the frame behind where the roller was, lit.
+--! (`rolled`, then `sprung` as the roller springs up off its mount and
+--! `rolled_high` as it comes down again): the paper wound round the roller
+--! (springing up, the frame behind it under it); gone (`gone`): the frame
+--! behind where the roller was, lit.
 --! The colours as the movies show them (8 bits each): the fill takes the
 --! picture's nearest. Below them the blackboard is as the picture has it
 --! beside the chart's right end, as light as `board` says (from each row on,
@@ -200,6 +206,26 @@ UIProfessorMenu.MOVIE_ROWS = {
       {24, 16, 16}, {12, 16, 16}, {12, 16, 16}, {12, 16, 16}, {12, 16, 16}, {12, 16, 16},
       {12, 16, 16}, {12, 16, 16}, {12, 16, 16}, {12, 16, 16}, {12, 16, 16}, {12, 16, 16},
       {12, 16, 16}, {19, 23, 23}, {20, 24, 24}, {20, 24, 24}, {20, 24, 24}}},
+  -- (One frame, 1857 ms: Jan 2026-11-25 saw the roller wound up beside it
+  -- while the movie's had sprung up.)
+  sprung = {from = 0, reach = CHART_LEFT,
+    board = {118, 106, 126, 104, 142, 112, 150, 135, 158, 126, 166, 128, 174, 138},
+    left = {{231, 215, 186}, {231, 215, 186}, {231, 215, 186}, {227, 203, 178}, {219, 195, 170},
+      {207, 186, 162}, {186, 166, 146}, {170, 150, 134}, {138, 121, 109}, {117, 105, 93},
+      {85, 73, 65}, {65, 56, 48}, {56, 52, 44}, {73, 48, 32}, {113, 69, 40}, {130, 81, 48},
+      {138, 89, 56}, {138, 89, 56}, {105, 73, 48}, {121, 85, 56}, {121, 85, 56}, {121, 85, 56},
+      {73, 48, 32}, {52, 32, 16}, {40, 24, 16}, {40, 24, 16}, {40, 24, 16}, {52, 32, 16},
+      {52, 32, 16}, {32, 28, 24}, {20, 24, 24}, {20, 24, 24}, {20, 24, 24}, {32, 32, 32},
+      {32, 32, 32}, {32, 32, 32}, {32, 32, 32}, {32, 32, 32}, {32, 32, 32}, {32, 32, 32},
+      {32, 32, 32}, {32, 32, 32}, {32, 32, 32}},
+    right = {{219, 199, 162}, {231, 215, 186}, {231, 215, 186}, {231, 215, 186}, {231, 215, 186},
+      {231, 215, 186}, {231, 215, 186}, {231, 215, 186}, {227, 203, 178}, {219, 199, 162},
+      {203, 182, 146}, {207, 186, 162}, {190, 170, 134}, {170, 150, 134}, {154, 134, 117},
+      {117, 97, 85}, {93, 81, 73}, {73, 65, 56}, {85, 60, 44}, {162, 109, 77}, {154, 105, 77},
+      {146, 101, 73}, {105, 77, 56}, {65, 40, 24}, {40, 24, 16}, {40, 24, 16}, {24, 16, 16},
+      {12, 16, 16}, {12, 16, 16}, {12, 16, 16}, {12, 16, 16}, {12, 16, 16}, {12, 16, 16},
+      {12, 16, 16}, {20, 24, 24}, {20, 24, 24}, {20, 24, 24}, {20, 24, 24}, {20, 24, 24},
+      {20, 24, 24}, {20, 24, 24}, {20, 24, 24}, {20, 24, 24}}},
   gone = {from = 0, reach = CHART_LEFT + CHART_RIGHT - MOUNT_FROM + 1,
     board = {34, 115, 38, 109, 46, 100, 118, 106, 126, 104, 142, 112, 150, 135, 158, 126,
       166, 128, 174, 137},
@@ -225,7 +251,7 @@ UIProfessorMenu.MOVIE_ROWS = {
 --! frame (milliseconds) and the look from then on (false: none).
 UIProfessorMenu.MOVIE_LOOK = {
   coming = {0, "up", 7714, "board", 8143, false},
-  leaving = {1643, "board", 1786, "rolled", 1929, "rolled_high", 2000, "gone"},
+  leaving = {1643, "board", 1786, "rolled", 1857, "sprung", 1929, "rolled_high", 2000, "gone"},
 }
 
 --! What one of his movies (`leaving` or coming) shows at `pts`
@@ -294,6 +320,33 @@ UIProfessorMenu.MOVIE_LIGHT = {
 -- (Bands of LIGHT_BAND rows, LIGHT_STEP percent apart: 8 rows and 2 percent
 -- showed as squares on the paper, Jan 2026-11-24.)
 local LIGHT_TOP_ROW, LIGHT_LOW_ROW, LIGHT_BAND, LIGHT_STEP = 57, 120, 4, 1
+
+-- How light (percent) the chart's band of rows from `row` is, when it is `top`
+-- at its upper part and `low` at its lower part (lightInMovie's).
+local function bandLight(row, top, low)
+  local t = (row + LIGHT_BAND / 2 - LIGHT_TOP_ROW) / (LIGHT_LOW_ROW - LIGHT_TOP_ROW)
+  t = math.max(0, math.min(1, t))
+  return LIGHT_STEP * math.floor((top + (low - top) * t) / LIGHT_STEP + 0.5)
+end
+
+-- While the chart rolls (pulled down, rolling up), the roller's shadow on its
+-- paper fades out lower in his movies than the picture's (to ROLLER_SHADOW):
+-- from each row on, how light the paper is there, percent (measured on
+-- 2026-11-25 against the fill, frames 109 to 113 coming and 23 and 24
+-- leaving; Jan saw a lighter block under the shadow).
+local ROLLING_LIGHT = {ROLLER_SHADOW + 1, 86, ROLLER_SHADOW + 2, 90, 44, 95, 50, 100}
+
+-- The bands of rows {from, to, percent} as light as ROLLING_LIGHT has them
+-- (not 100) above the chart's bottom edge at row `bottom`.
+local function rollingBands(bottom)
+  local bands = {}
+  for i = 1, #ROLLING_LIGHT - 1, 2 do
+    local from, light = ROLLING_LIGHT[i], ROLLING_LIGHT[i + 1]
+    local to = math.min((ROLLING_LIGHT[i + 2] or PIC_H) - 1, bottom)
+    if light ~= 100 and from <= to then bands[#bands + 1] = {from, to, light} end
+  end
+  return bands
+end
 
 --! How light the blackboard under and beside the chart is in his movies while
 --! the chart is down (it changes with his light as he turns and points, from
@@ -851,6 +904,20 @@ local function bitmapOf(app, data, width, palette)
   return bitmap
 end
 
+--! The keys the fill made with these (side's arguments) is kept under: its
+--! own, and its pixels' (the same for each `light`).
+function UIProfessorMenu.fillKey(kind, light, look, movie)
+  local data_key = (look and kind .. "/" .. look or kind) .. (movie and kind == "down" and "/movie" or "")
+  return light and data_key .. light or data_key, data_key
+end
+
+-- While UIProfessorMenu.prepare makes fills beforehand: when (SDL's ticks) it
+-- stops for now, at the next row.
+local pause_at = nil
+local function pause()
+  if pause_at and require("sdl").getTicks() >= pause_at then coroutine.yield() end
+end
+
 --! The fill at the picture's left (SIDE_W wide), made the first time it is
 --! needed, from the picture with the chart's writing rubbed out (the end of
 --! his speech mark is over the chart's right end). Beside the skeleton only
@@ -862,8 +929,7 @@ end
 --! movie shows there (UIProfessorMenu.MOVIE_ROWS); `movie`, beside his movies
 --! (the chart's bottom line as they have it). Made once each.
 local function side(app, loaded, kind, light, look, movie)
-  local data_key = (look and kind .. "/" .. look or kind) .. (movie and kind == "down" and "/movie" or "")
-  local key = light and data_key .. light or data_key
+  local key, data_key = UIProfessorMenu.fillKey(kind, light, look, movie)
   if loaded.sides[key] then return loaded.sides[key] end
   if not loaded.side_data[data_key] then
     local base, rubbed, rgb = loaded.base, loaded.rubbed, loaded.rgb
@@ -997,6 +1063,7 @@ local function side(app, loaded, kind, light, look, movie)
     local PAPER_DARK = 90
     local fill_rows = {}
     for y = 0, PIC_H - 1 do
+      pause()
       local paper, lightest
       if kind == "down" and y >= SKELETON_TOP and y <= SKELETON_BOTTOM then
         lightest = 0
@@ -1094,8 +1161,10 @@ local function side(app, loaded, kind, light, look, movie)
         out[n] = CHARS[fill_rows[y][x]]
       end
     end
-    loaded.side_data[data_key] = table.concat(out)
+    -- (Made meanwhile when it was needed before prepare had it.)
+    loaded.side_data[data_key] = loaded.side_data[data_key] or table.concat(out)
   end
+  if loaded.sides[key] then return loaded.sides[key] end
   local palette = nil
   if light then
     palette = loaded.palettes[light]
@@ -1152,7 +1221,8 @@ end
 --! the picture; ROLLER_BOTTOM: rolled up), or with the chart and its roller
 --! gone (false): what his movies need beside them (MoviePlayer:playMenuMovie).
 --! Elsewhere the chart's left end is its rows as his movies have them
---! (UIProfessorMenu.chartRow). `top` and `low` (percent, or nil): how light
+--! (UIProfessorMenu.chartRow), while it rolls with the roller's shadow on it
+--! as they have it (ROLLING_LIGHT). `top` and `low` (percent, or nil): how light
 --! the chart is (lightInMovie); `look` (or nil): what the movie shows behind
 --! and under it (lookInMovie); `board` (percent, beside his movies only): how
 --! light the blackboard is while the chart is down (boardInMovie).
@@ -1218,13 +1288,14 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look, board)
         canvas:popClip()
       end
       chart(ROLLER_BOTTOM + 1, bottom)
+      if not down then
+        for _, band in ipairs(rollingBands(bottom)) do chart(band[1], band[2], band[3]) end
+      end
     end
     if down and top then
       -- In bands, each as light as the movie has the chart there.
       for row = ROLLER_BOTTOM + 1, bottom, LIGHT_BAND do
-        local t = (row + LIGHT_BAND / 2 - LIGHT_TOP_ROW) / (LIGHT_LOW_ROW - LIGHT_TOP_ROW)
-        t = math.max(0, math.min(1, t))
-        local light = LIGHT_STEP * math.floor((top + (low - top) * t) / LIGHT_STEP + 0.5)
+        local light = bandLight(row, top, low)
         if light ~= 100 then chart(row, math.min(row + LIGHT_BAND - 1, bottom), light) end
       end
     end
@@ -1252,6 +1323,103 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look, board)
     canvas:scale(1)
   else
     fill:draw(canvas, l.x - SIDE_W, l.y)
+  end
+end
+
+-- The fills UIProfessorMenu.drawSide draws with these (its arguments): a
+-- list of side's arguments {kind, light, look, movie} each.
+local function fillsOf(bottom, top, low, look, board)
+  local movie = board ~= nil
+  local down = bottom and bottom >= DOWN_FROM
+  local kind = not bottom and "gone" or (down and "down" or "up")
+  local fills = {{kind, nil, kind ~= "down" and look or nil, movie}}
+  if bottom and bottom > ROLLER_BOTTOM and bottom ~= CHART_BOTTOM then
+    if down and bottom < CHART_BOTTOM then fills[#fills + 1] = {"up"} end
+    fills[#fills + 1] = {"down", nil, nil, movie}
+    if not down then
+      for _, band in ipairs(rollingBands(bottom)) do fills[#fills + 1] = {"down", band[3], nil, movie} end
+    end
+  end
+  if down and top then
+    for row = ROLLER_BOTTOM + 1, bottom, LIGHT_BAND do
+      local light = bandLight(row, top, low)
+      if light ~= 100 then fills[#fills + 1] = {"down", light, nil, movie} end
+    end
+  end
+  if down and board and board ~= 100 then
+    fills[#fills + 1] = {"down", board, nil, movie}
+    if bottom < CHART_BOTTOM then fills[#fills + 1] = {"up", board} end
+  end
+  return fills
+end
+
+-- (His movies are shorter than this, milliseconds.)
+local MOVIES_MS = 15000
+
+--! Every fill drawn beside his movies (UIProfessorMenu.drawSide), each once,
+--! in the order they are first needed: as he comes, the menu's own after it,
+--! then as he leaves. A list of side's arguments {kind, light, look, movie}.
+function UIProfessorMenu.movieFills()
+  local fills, seen = {}, {}
+  local function add(list)
+    for _, f in ipairs(list) do
+      local key = UIProfessorMenu.fillKey(f[1], f[2], f[3], f[4])
+      if not seen[key] then
+        seen[key] = true
+        fills[#fills + 1] = f
+      end
+    end
+  end
+  for _, leaving in ipairs({false, true}) do
+    local n = 0
+    while UIProfessorMenu.frameTime(n) < MOVIES_MS do
+      local pts = UIProfessorMenu.frameTime(n)
+      local top, low = UIProfessorMenu.lightInMovie(leaving, pts)
+      add(fillsOf(UIProfessorMenu.chartInMovie(leaving, pts), top, low,
+          UIProfessorMenu.lookInMovie(leaving, pts), UIProfessorMenu.boardInMovie(leaving, pts)))
+      n = n + 1
+    end
+    if not leaving then add(fillsOf(CHART_BOTTOM)) end
+  end
+  return fills
+end
+
+--! How long (milliseconds) UIProfessorMenu.prepare goes on a call.
+UIProfessorMenu.PREPARE_MS = 4
+
+-- Making the fills beforehand (UIProfessorMenu.prepare): the coroutine doing
+-- it, or false once they are all made.
+local preparing = nil
+
+--! Makes the fills drawn beside his movies before they are needed, a little
+--! at a time: for about `ms` milliseconds each call (each refresh of his
+--! movie, each drawing of the menu), a row of a fill at a time. Made when
+--! first drawn, those of his coming took half a second just as he pulled the
+--! chart down, and those of his leaving as it rolled up (Jan 2026-11-25: the
+--! movie stood still there, then jumped). Nothing where the screen has no
+--! fill or the movies are off.
+function UIProfessorMenu.prepare(app, ms)
+  if preparing == false or not (app and app.video and app.config) or not app.config.movies then
+    return
+  end
+  local loaded = UIProfessorMenu.art(app)
+  if not loaded or UIProfessorMenu.layout(app.video:getRenderSize()).px <= 0 then return end
+  if not preparing then
+    preparing = coroutine.create(function()
+      for _, f in ipairs(UIProfessorMenu.movieFills()) do
+        pause()
+        side(app, loaded, f[1], f[2], f[3], f[4])
+      end
+    end)
+  end
+  pause_at = require("sdl").getTicks() + ms
+  local ok, err = coroutine.resume(preparing)
+  pause_at = nil
+  if not ok then
+    print("Professor menu: the fills beside his movies were not made beforehand: " .. tostring(err))
+    preparing = false
+  elseif coroutine.status(preparing) == "dead" then
+    preparing = false
   end
 end
 
@@ -1534,6 +1702,8 @@ end
 
 function UIProfessorMenu:draw(canvas, x, y)
   local app = self.ui.app
+  -- (For his leaving, while the menu waits.)
+  UIProfessorMenu.prepare(app, UIProfessorMenu.PREPARE_MS)
   local loaded = UIProfessorMenu.art(app)
   local sw = canvas:getRenderSize()
   local spot = self.hover
