@@ -310,8 +310,10 @@ function UIJukebox:draw(canvas, x, y)
 end
 
 --! text shortened with "..." until it is at most width wide in font.
+--! (text may be a game text from _S, which is no Lua string.)
 function UIJukebox.fitText(font, text, width)
   local str = text
+  if type(str) == "userdata" then str = require("TH").stringProxy._unwrap(str) end
   while font:sizeOf(str) > width and #str > 3 do
     -- Five bytes off, then back to a whole letter (a station may send
     -- Russian or other letters of several bytes).

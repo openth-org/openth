@@ -597,7 +597,9 @@ text_layout freetype_font::draw_text_wrapped(render_target* pCanvas,
             vLines.push_back(std::make_pair(sLineStart, sOldMessage));
           }
           if (bIsNewLine) {
-            // skip // or \n\n
+            // skip // or \n\n (from its first character: sMessage is
+            // already past it, and the letter after it must stay)
+            sMessage = sOldMessage;
             next_utf8_codepoint(sMessage, sMessageEnd);
             next_utf8_codepoint(sMessage, sMessageEnd);
             sLineStart = sLineBreakPosition = sMessage;
@@ -658,12 +660,17 @@ text_layout freetype_font::draw_text_wrapped(render_target* pCanvas,
 
     for (auto itr = vLines.begin(); itr != vLines.end() && iNumRows < iMaxRows;
          ++itr) {
-      // Calculate the X change resulting from alignment.
-      const char* sLastChar = previous_utf8_codepoint(itr->second);
-      codepoint_glyph& oLastGlyph =
-          mapGlyphs[decode_utf8(sLastChar, sMessageEnd)];
-      iLineWidth = vCharPositions[sLastChar - sMessage].x +
-                   oLastGlyph.metrics.horiBearingX + oLastGlyph.metrics.width;
+      // Calculate the X change resulting from alignment. (An empty line at
+      // the very start, as from "//" there, has no last character before
+      // it: width 0.)
+      iLineWidth = 0;
+      if (itr->second != sMessage) {
+        const char* sLastChar = previous_utf8_codepoint(itr->second);
+        codepoint_glyph& oLastGlyph =
+            mapGlyphs[decode_utf8(sLastChar, sMessageEnd)];
+        iLineWidth = vCharPositions[sLastChar - sMessage].x +
+                     oLastGlyph.metrics.horiBearingX + oLastGlyph.metrics.width;
+      }
       if ((iLineWidth >> 6) < iWidth && eAlign != text_alignment::left) {
         iAlignDelta =
             ((iWidth * 64 - iLineWidth) * static_cast<int>(eAlign)) / 2;

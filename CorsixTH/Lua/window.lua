@@ -338,9 +338,10 @@ function Panel:clipLine(line, limit)
   if last_x > limit then
     limit = limit - self.label_font:sizeOf("..._")
     if self.auto_clip == "start" then
-      -- (A whole letter off the front each time.)
+      -- (A whole letter off the front each time, and no "/" left in front:
+      -- "//" is a paragraph break in the game's texts, also after "...".)
       while last_x > limit and line ~= "" do
-        line = line:sub(2):gsub("^[\128-\191]+", "")
+        line = line:sub(2):gsub("^[\128-\191]+", ""):gsub("^/+", "")
         _, last_x = self.label_font:draw(nil, line, 0, 0)
       end
       return "..." .. line

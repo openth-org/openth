@@ -240,4 +240,53 @@ describe("Jukebox text that does not fit", function()
   it("leaves text that fits alone", function()
     assert.equal("Radio", UIJukebox.fitText(font, "Radio", 100))
   end)
+
+  it("is shortened when it is one of the game's texts", function()
+    -- (_S gives the jukebox a game text, which is no Lua string: a long
+    -- one, Dutch "Internetradio: niet beschikbaar", stopped the jukebox.
+    -- io.stdout stands in for such a text here.)
+    local TH = require("TH")
+    local old_proxy = TH.stringProxy
+    TH.stringProxy = {_unwrap = function(text)
+      if text == io.stdout then return "Internetradio: niet beschikbaar" end
+      return text
+    end}
+    local ok, str = pcall(UIJukebox.fitText, font, io.stdout, 100)
+    TH.stringProxy = old_proxy
+    assert.is_true(ok, tostring(str))
+    assert.is_true(#str * 7 <= 100)
+    assert.equal("Internetrad...", str)
+  end)
+end)
+
+describe("Address box shortened at the front", function()
+  -- (A font of 7 pixels a byte that notes every text it measures.)
+  local measured = {}
+  local font = {
+    sizeOf = function(_, s) return #s * 7 end,
+    draw = function(_, _, s)
+      measured[#measured + 1] = s
+      return 0, #s * 7
+    end,
+  }
+  local box = {label_font = font, auto_clip = "start"}
+  local Panel = _G["Panel"]
+
+  it("shows the end of a long address, never from a \"/\"", function()
+    local address = "http://ice1.somafm.com/groovesalad-128-mp3"
+    -- (Typed again on the end of the remembered address, as it happens.)
+    local line = address .. address
+    for limit = 100, 400, 7 do
+      for k in pairs(measured) do measured[k] = nil end
+      local str = Panel.clipLine(box, line, limit)
+      assert.equal("...", str:sub(1, 3))
+      assert.is_true(line:sub(-(#str - 3)) == str:sub(4), str)
+      -- "//" first is a paragraph break in the game's texts (and the
+      -- Unicode font misread one at the very start of a text).
+      assert.is_true(str:sub(4, 4) ~= "/", str)
+      for _, s in ipairs(measured) do
+        assert.is_true(s:sub(1, 1) ~= "/", s)
+      end
+    end
+  end)
 end)
