@@ -484,6 +484,8 @@ function UIBankManager:decreaseLoan()
       amount = math.min(hospital.loan, math.floor(hospital.balance / 5000) * 5000)
     end
   end
+  -- (The last of an odd sum owed: all of it.)
+  amount = math.min(amount, hospital.loan)
   if hospital.loan > 0 and hospital.balance >= amount then
     if MultiplayerSession.actionsAreCommands() then
       TheApp.mp_session:issue({kind = "loan", amount = -amount})

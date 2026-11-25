@@ -107,6 +107,12 @@ local function meander_action_start(action, humanoid)
     -- Nowhere to walk to - go idle instead, or go onto the next action
     if #humanoid.action_queue == 1 then
       humanoid:queueAction(IdleAction())
+    elseif humanoid.action_queue[2].name == "meander" then
+      -- Another meander next (a handyman with no task queues one): wait a
+      -- moment first. Started at once, it finds nowhere either, and so on
+      -- without end, until a stack overflow (a multiplayer handyman on
+      -- another hospital's plot stopped the game that way, 2026-11-23).
+      humanoid:queueAction(IdleAction():setCount(20), 1)
     end
     humanoid:finishAction()
     return

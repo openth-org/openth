@@ -190,6 +190,9 @@ function UIMultiplayer:UIMultiplayer(ui, status)
     self.status_panel.lowered = true
     self:setStatus(self.status_text)
   end
+  -- The multiplayer tips beside it (main menu only).
+  local tips = _G["UITipOfTheDay"]
+  if tips and tips.showMultiplayer and not ui.app.world then tips.showMultiplayer(ui, self.width) end
 end
 
 --! Replace this window by a fresh one for the current lobby state.

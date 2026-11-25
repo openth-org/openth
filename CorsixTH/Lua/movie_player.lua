@@ -282,7 +282,7 @@ function MoviePlayer:playMenuMovie(leaving, callback)
       pts = pts or 0
       local top, low = UIProfessorMenu.lightInMovie(leaving, pts)
       UIProfessorMenu.drawSide(player.video, UIProfessorMenu.chartInMovie(leaving, pts),
-          top, low, UIProfessorMenu.lookInMovie(leaving, pts))
+          top, low, UIProfessorMenu.lookInMovie(leaving, pts), UIProfessorMenu.boardInMovie(leaving, pts))
     end
   end
 end

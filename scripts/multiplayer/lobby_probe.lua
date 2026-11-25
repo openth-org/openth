@@ -2151,6 +2151,28 @@ local function run()
           else
             log("UI: no evil handyman found")
           end
+        elseif a == "evilparcel" then
+          -- The plot button of a rival's evil handyman's staff window (he
+          -- looks like one of ours): one of our plots for him (Argus's game,
+          -- 2026-11-23: thrown out after that, he froze every game at home).
+          local evil
+          for _, e in ipairs(world.entities) do
+            if not evil and e.mp_saboteur and not e.mp_in_transit and e.hospital == world.ui.hospital then evil = e end
+          end
+          if not evil and (entry.retries or 0) < 40 and entry.hour < target - 100 then
+            entry.retries = (entry.retries or 0) + 1
+            entry.hour = entry.hour + 50
+            done[i] = nil
+          elseif evil then
+            local win = UIStaff(world.ui, evil)
+            world.ui:addWindow(win)
+            win:changeParcel()
+            log(string.format("UI: plot %s for evil handyman #%d at step %d",
+                tostring(world.ui.hospital.ownedPlots[1]), evil.mp_id, session.step))
+            if win.close and world.ui:getWindow(UIStaff) then win:close() end
+          else
+            log("UI: no evil handyman found")
+          end
         elseif a == "bombplant" or a == "bombthrow" then
           -- bombplant:<level>:<hospital>: MULTIPLAYER > DIRTY TRICKS, the
           -- litter bomb at <level>, then a click on a free corridor tile of

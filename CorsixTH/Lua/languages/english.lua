@@ -233,6 +233,7 @@ menu_debug = {
   dump_gamelog                = "  (%1%) DUMP GAME LOG  ",
   map_overlay                 = "  MAP OVERLAY  ",
   sprite_viewer               = "  SPRITE VIEWER  ",
+  play_as_hospital            = "  PLAY AS HOSPITAL  ",
 }
 menu_debug_overlay_blocking_off_areas = {
   choice_1 = "  TOTALLY FORBIDDEN  ",
@@ -1017,6 +1018,7 @@ multiplayer_window = {
   menu_research = "  SHARE RESEARCH  ",
   player_away_note = "%s has left: their hospital does not count for the team's goals until they rejoin (same room, same name).",
   player_back_note = "%s is back: their hospital counts for the team's goals again.",
+  play_as_online = "Only in a multiplayer game opened on its own, not while playing online.",
   player_joined_game = "%s has joined the game.",
   player_rejoined_game = "%s is back in the game.",
   server_eu1 = "EU1: stable",
@@ -1069,15 +1071,16 @@ multiplayer_window = {
   players_waiting = "Waiting for the server's list...",
   players_note = "Ping: average of the last 10 seconds. Value: the hospital value (a level goal).",
   looking_at = "Looking at %s",
-  -- Progress Report tooltips for another player's hospital: name, current
-  -- value, goal_target or goal_limit, the goal's value
+  -- Progress Report tooltips for another player's hospital: name, goal_target
+  -- or goal_limit, the goal's value, then the current value (goal first, as
+  -- in your own hospital's tooltips)
   goal_other = {
-    reputation = "%s: reputation %d (%s %d)",
-    balance = "%s: balance $%d (%s $%d)",
-    percentage_cured = "%s: %d%% of patients cured (%s %d%%)",
-    num_cured = "%s: %d patients cured (%s %d)",
-    percentage_killed = "%s: %d%% of patients died (%s %d%%)",
-    value = "%s: hospital value $%d (%s $%d)",
+    reputation = "%s: reputation (%s %d), now %d",
+    balance = "%s: balance (%s $%d), now $%d",
+    percentage_cured = "%s: patients cured (%s %d%%), now %d%%",
+    num_cured = "%s: patients cured (%s %d), so far %d",
+    percentage_killed = "%s: patients who died (%s %d%%), now %d%%",
+    value = "%s: hospital value (%s $%d), now $%d",
   },
   goal_target = "goal:",
   goal_limit = "limit:",
@@ -1727,6 +1730,29 @@ totd_window = {
   },
   previous = "Previous Tip",
   next = "Next Tip",
+}
+-- Multiplayer tips, shown beside the multiplayer windows of the main menu
+-- (dialogs/resizables/tip_of_the_day.lua, UITipOfTheDay "multiplayer")
+multiplayer_tips = {
+  title = "Multiplayer tip",
+  tips = {
+    "Press N to look at the next hospital, your own included, and Shift+N to jump straight back to your own.",
+    "Press Y to chat. Press Tab or click the \"To\" box to choose who reads it: everybody, your team or allies, or one player.",
+    "Press M to open the first message waiting at the bottom of the screen, and M again to close it.",
+    "On the research screen each click moves 5 points in multiplayer. Hold Ctrl for 20 at once, or Ctrl+Shift for 100.",
+    "To sell a bench or another corridor object, right-click it to pick it up, then press Delete or Q: you get its full price back. Esc puts it back.",
+    "In a staff member's window, right-click their name to go to the next one of the same kind. The view follows.",
+    "In a machine's window, right-click its name at the top to go to your next machine. Its strength and uses show at the bottom of the screen.",
+    "Dirty tricks are for races: MULTIPLAYER, DIRTY TRICKS. Click a level once to read what it does and again to buy it. You pay only when it happens, and your rival never learns who sent it.",
+    "The dirty tricks: evil handyman, epidemic, emergency, rat attack, headhunter, broken boiler, smear campaign, espionage and litter bomb. Most of their stronger levels unlock month by month.",
+    "A litter bomb in your corridor? Click it to pick it up, then click a corridor in a rival's hospital to throw it there. Hold it too long and it goes off in your own hospital.",
+    "An evil handyman looks like one of yours but is not on your staff list and does no work. Stronger ones drop litter and wreck machines. Click him and press Sack: he goes back to whoever sent him.",
+    "Rats sent by a rival cost you reputation every day they live. Click them to shoot them.",
+    "A headhunter makes one of your best staff ask for a big pay rise. Pay it within 10 days, or they leave you.",
+    "A broken boiler makes your hospital too cold or too hot until your handymen mend it. The more handymen, the sooner.",
+    "A smear campaign sends part of your new patients to your rivals for one to three months.",
+    "Espionage copies a rival's research: an improvement, a discovery, or two of them. The strongest also sets their current research back.",
+  },
 }
 
 tooltip.totd_window = {

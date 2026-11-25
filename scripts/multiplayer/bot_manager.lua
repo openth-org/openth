@@ -2075,8 +2075,11 @@ function M:daily(s)
   -- Its floor in pieces (Bot:repairFloor): looked at once a game week, every
   -- 2 days while it is being mended. (Not when it leaves the building to the
   -- person it shares with: those are their things.)
+  -- Then two doors near each other a long walk apart because of a corridor
+  -- object (Bot:repairWalks).
   if s.day >= (self.floor_check or 0) and not bot:leavesBuilding() then
     local sold = bot:repairFloor()
+    if not sold and bot.repairWalks then sold = bot:repairWalks() end
     self.floor_check = s.day + (sold and 2 or 7)
     if sold then self:note(string.format("day %d: %s", s.day, sold)) end
   end
@@ -2110,7 +2113,8 @@ function M:assistantLoan(s)
   if date:dayOfMonth() <= date:lastDayOfMonth() - ASSIST_LOAN_DAYS then return end
   local month = date:monthOfGame()
   if self.loan_repaid_month == month then return end
-  local amount = math.min(s.loan, math.floor((s.balance - ASSIST_LOAN_KEEP) / 1000) * 1000)
+  -- (In steps of $5000, like the bank manager: Argus, 2026-11-24, owed $9,000.)
+  local amount = math.min(s.loan, math.floor((s.balance - ASSIST_LOAN_KEEP) / 5000) * 5000)
   if amount > 0 and self:issue({kind = "loan", amount = -amount}) then
     self.loan_repaid_month = month
     self:noteSpent("loan", amount)
@@ -2186,7 +2190,7 @@ function M:monthly(s)
   -- (Not in a hospital a person plays too: M:assistantLoan.)
   if s.loan > 0 and (s.balance > 25000 or (flowing and s.balance > 17000)) and #self.bot:hospitalMates() == 0 then
     local keep = s.balance > 25000 and 20000 or 12000
-    local amount = math.min(s.loan, math.floor((s.balance - keep) / 1000) * 1000)
+    local amount = math.min(s.loan, math.floor((s.balance - keep) / 5000) * 5000)
     if amount > 0 and self:issue({kind = "loan", amount = -amount}) then
       self:noteSpent("loan", amount)
       self:note(string.format("day %d: repaid $%d of the loan ($%d left)", s.day, amount, s.loan - amount))

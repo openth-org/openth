@@ -8,8 +8,11 @@
 #      and an emergency (level 3) to max, max an epidemic (level 1) to kim;
 #      a second emergency for max is refused at once (one is on)
 #   2. the evil handyman walks over, drops litter and wears lou's cardiogram
-#      machine down; lou throws him out with the sack button and he walks
-#      back to kim and works there as an ordinary handyman
+#      machine down; lou gives him one of lou's plots (his staff window's plot
+#      button), throws him out with the sack button and he walks back to kim
+#      and works there as an ordinary handyman, on all of kim's land (with
+#      lou's plot he found no tile to go to at kim's: a stack overflow that
+#      stopped every game, Argus on MOUNT EVEREST 2026-11-23)
 #   3. a rat attack (level 2, lou against max): ten rats in max's hospital,
 #      max's reputation falls while they live; max shoots one
 #   4. the race: lou's hospital reaches the goals (test command) and takes
@@ -109,7 +112,7 @@ run_probe kim MP_ROLE=host MP_ROOM=race MP_MODE=competitive MP_PLAYERS=3 MP_LEVE
   MP_UI_SCRIPT="20:openhospital;100:sabotage:handyman:3:2;150:sabotage:emergency:3:3;160:sabotage:emergency:1:3;1100:goals:2:win;1110:wincheck;1200:goals:3:lose;1210:yearend;1260:yearend;1300:race;1310:players" & pids+=($!)
 sleep 1
 run_probe lou MP_ROLE=join MP_ROOM=race MP_STEPS=1400 MP_FURNISH_PACE=40 \
-  MP_UI_SCRIPT="30:openhospital;60:discover:cardiogram;80:room:cardiogram:4:4;250:sabotage:rats:2:3;560:furnishroom:gp:4:4;600:rivals;950:kickevil;1150:answerfax:information:1:wait" & pids+=($!)
+  MP_UI_SCRIPT="30:openhospital;60:discover:cardiogram;80:room:cardiogram:4:4;250:sabotage:rats:2:3;560:furnishroom:gp:4:4;600:rivals;900:evilparcel;950:kickevil;1150:answerfax:information:1:wait" & pids+=($!)
 sleep 1
 run_probe max MP_ROLE=join MP_ROOM=race MP_STEPS=1400 \
   MP_UI_SCRIPT="40:openhospital;200:sabotage:epidemic:1:1;240:race;600:race;610:rivals;650:shootrat;700:progress;710:progress:2;1300:race" & pids+=($!)
@@ -166,11 +169,12 @@ arrived = re.search(r'sabotage \(step \d+\): handyman #(\d+) arrived at hospital
 litter = len(re.findall(r'sabotage \(step \d+\): handyman #\d+ dropped litter', k))
 worn = re.findall(r'sabotage \(step \d+\): machine #\d+ worn down to \d+ uses', k)
 thrown = 'thrown out of hospital 2' in k and re.search(r'step \d+: peer 2 #\d+ fire_staff -> ok', k)
+plot = re.search(r'step \d+: peer 2 #\d+ handyman_parcel -> ok', k)
 back = arrived and re.search(r'transferred staff #%s arrived at hospital 1' % arrived.group(1), k)
 race1300 = re.search(r'UI: race at step 1300: .*my staff: (.*)', k)
-ok2 = bool(arrived and litter > 0 and worn and thrown and back and race1300 and 'Handyman' in race1300.group(1))
+ok2 = bool(arrived and litter > 0 and worn and plot and thrown and back and race1300 and 'Handyman' in race1300.group(1))
 print(f"2. Evil handyman:           arrived: {bool(arrived)}; litter dropped: {litter}; machines worn down: {len(worn)}; "
-      f"thrown out: {bool(thrown)}; works for kim now: {bool(back)} (kim's staff at 1300: {race1300.group(1) if race1300 else '-'})")
+      f"given lou's plot: {bool(plot)}; thrown out: {bool(thrown)}; works for kim now: {bool(back)} (kim's staff at 1300: {race1300.group(1) if race1300 else '-'})")
 fail |= not ok2
 
 rats = re.search(r'sabotage \(step \d+\): (\d+) rats let loose in hospital 3', k)
