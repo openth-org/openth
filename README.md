@@ -10,7 +10,7 @@
 
 **Network multiplayer for [CorsixTH](https://github.com/CorsixTH/CorsixTH)**, the open-source reimplementation of Bullfrog's 1997 business sim Theme Hospital. Play with friends over the internet, **up to 8 players**: in **one shared hospital**, **each in your own hospital as a team**, or **in a race against each other** with dirty tricks, land auctions and computer players (bots) for the empty places. Windows, Linux and macOS players play together, each in their own game language.
 
-OpenTH is not an official CorsixTH release. Single player works exactly as in CorsixTH.
+OpenTH is not an official CorsixTH release. Single player plays as in CorsixTH, with OpenTH's main menu, new music and a few additions to the windows.
 
 <picture>![A bot's hospital on TEAM TOWN during a race: every hospital's patients wear its own colour, with a bar of that colour at their feet](docs/multiplayer/images/hospitals-colours.png)</picture>
 
