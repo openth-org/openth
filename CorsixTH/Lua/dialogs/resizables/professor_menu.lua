@@ -120,10 +120,20 @@ end
 --! board under it at three places along the chart's left part: several
 --! changes had come a frame or three late, and Jan saw the chart's left end
 --! jump as it settled.)
+--! Springing back, it moves up three rows and down again a tenth of a row or
+--! so a frame: there the rows are fractions, the edge where it is between
+--! two rows of the picture (measured on 2026-11-25 at six times the size,
+--! the fill's edge against the movie's on either side of the picture's edge,
+--! in tenths of a row; whole rows held the fill still while the movie moved
+--! on, then made it jump: Jan saw the left side lag as the chart went up).
 UIProfessorMenu.MOVIE_CHART = {
   coming = {0, ROLLER_BOTTOM, 7714, 36, 7786, 48, 7857, 71, 7929, 86, 8000, 121,
-    8071, 145, 8143, 159, 8357, 158, 9214, 157, 9929, 156, 10429, 157, 10786, 158,
-    11143, 159},
+    8071, 145, 8143, 158.4, 8214, 158.3, 8357, 158.1, 8429, 157.9, 8500, 157.8,
+    8571, 157.7, 8643, 157.6, 8786, 157.5, 8929, 157.4, 9000, 157.3, 9071, 157.2,
+    9214, 157.1, 9286, 156.9, 9357, 156.8, 9571, 156.7, 9643, 156.5, 9786, 156.3,
+    9929, 156.2, 10000, 156.1, 10357, 156.2, 10429, 156.4, 10500, 156.6, 10571, 156.9,
+    10643, 157, 10714, 157.1, 10786, 157.3, 10857, 157.5, 10929, 157.9, 11071, 158.1,
+    11143, 158.2, 11286, 158.4, 11429, 158.6, 11571, 158.7, 11786, 158.8, 11929, 159},
   leaving = {0, 159, 1429, 164, 1500, 170, 1571, 159, 1643, 111, 1714, 48,
     1786, ROLLER_BOTTOM, 2000, false},
 }
@@ -245,8 +255,9 @@ end
 --! the roller to `bottom`) when its bottom edge is at row `bottom` in his
 --! movies: rolling, the whole chart is higher under the roller's shadow;
 --! springing back, its paper is squeezed from STRETCH_FROM down; tugged, it is
---! drawn out at PULL_FROM.
-function UIProfessorMenu.chartRow(y, bottom)
+--! drawn out at PULL_FROM. `exact`: springing back, the row as a fraction
+--! (to draw it a fraction of a row higher or lower), not the nearest row.
+function UIProfessorMenu.chartRow(y, bottom, exact)
   if bottom > CHART_BOTTOM then
     if y <= PULL_FROM then return y end
     return math.max(PULL_FROM, y - (bottom - CHART_BOTTOM))
@@ -256,8 +267,9 @@ function UIProfessorMenu.chartRow(y, bottom)
   elseif y <= STRETCH_FROM then
     return y
   end
-  return STRETCH_FROM + math.floor((y - STRETCH_FROM) * (CHART_BOTTOM - STRETCH_FROM)
-      / (bottom - STRETCH_FROM) + 0.5)
+  local row = STRETCH_FROM + (y - STRETCH_FROM) * (CHART_BOTTOM - STRETCH_FROM)
+      / (bottom - STRETCH_FROM)
+  return exact and row or math.floor(row + 0.5)
 end
 
 --! How light the chart is in his coming movie while he turns and points,
@@ -1078,17 +1090,41 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look, board)
     fill:draw(canvas, x, y)
     -- (Clipped to the chart's left end, below the roller.)
     local left = math.max(0, l.px + CHART_LEFT)
-    -- Its rows `from` to `to`, a band at a time: rows as far from theirs.
+    -- Where the renderer scales each drawing (config direct_zoom, the
+    -- default), the chart is drawn to the screen's pixel: in his movies its
+    -- bottom edge moves a fraction of a row a frame as it springs back.
+    -- Otherwise (everything drawn small and then enlarged) to whole rows.
+    local fine = not (app.config and app.config.direct_zoom == false)
+    local s = l.scale
+    -- Clips to the chart's columns, rows `from` up to `to` (not included).
+    local function clipRows(from, to)
+      if fine then
+        canvas:scale(1)
+        local x0, y0 = math.floor(left * s + 0.5), math.floor((y + from) * s + 0.5)
+        canvas:pushClip(x0, y0, math.floor(l.px * s + 0.5) - x0, math.floor((y + to) * s + 0.5) - y0)
+        canvas:scale(s)
+      else
+        local first = math.floor(from + 0.5)
+        canvas:pushClip(left, y + first, l.px - left, math.floor(to + 0.5) - first)
+      end
+    end
+    -- How far the chart as the picture has it is drawn from row `row`.
+    local function offset(row)
+      local off = UIProfessorMenu.chartRow(row, bottom, true) - row
+      if fine then return math.floor(off * s + 0.5) / s end
+      return math.floor(off + 0.5)
+    end
+    -- Its rows `from` to `to` (a fraction where its bottom edge is between
+    -- two rows), a band at a time: rows as far from theirs.
     local function chart(from, to, light)
       local picture = side(app, loaded, "down", light, nil, movie)
+      local stop = to + 1
       local row = from
-      while row <= to do
-        local off = UIProfessorMenu.chartRow(row, bottom) - row
+      while row < stop do
+        local off = offset(row)
         local last = row
-        while last < to and UIProfessorMenu.chartRow(last + 1, bottom) - last - 1 == off do
-          last = last + 1
-        end
-        canvas:pushClip(left, y + row, l.px - left, last - row + 1)
+        while last + 1 < stop and offset(last + 1) == off do last = last + 1 end
+        clipRows(row, math.min(last + 1, stop))
         picture:draw(canvas, x, y - off)
         canvas:popClip()
         row = last + 1
@@ -1096,7 +1132,7 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look, board)
     end
     if bottom and bottom > ROLLER_BOTTOM and bottom ~= CHART_BOTTOM then
       if down and bottom < CHART_BOTTOM then
-        canvas:pushClip(left, y + ROLLER_BOTTOM + 1, l.px - left, CHART_BOTTOM - ROLLER_BOTTOM)
+        clipRows(ROLLER_BOTTOM + 1, CHART_BOTTOM + 1)
         side(app, loaded, "up"):draw(canvas, x, y)
         canvas:popClip()
       end
@@ -1124,7 +1160,7 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look, board)
       lit:draw(canvas, x, y)
       canvas:popClip()
       if bottom < CHART_BOTTOM then
-        canvas:pushClip(left, y + bottom + 1, l.px - left, CHART_BOTTOM - bottom)
+        clipRows(bottom + 1, CHART_BOTTOM + 1)
         side(app, loaded, "up", board):draw(canvas, x, y)
         canvas:popClip()
       end

@@ -134,12 +134,20 @@ describe("Professor menu", function()
     local at = UIProfessorMenu.chartInMovie
     assert.equal(21, at(false, 0))
     assert.equal(121, at(false, 8000))
-    assert.equal(159, at(false, 8286))
-    assert.equal(158, at(false, 8357))
-    assert.equal(156, at(false, 10000))
-    assert.equal(158, at(false, 11071))
-    assert.equal(159, at(false, 11143))
+    -- Springing back, a fraction of a row a frame: up three rows and down
+    -- again (measured to a tenth of a row on 2026-11-25).
+    assert.equal(158.3, at(false, 8286))
+    assert.equal(158.1, at(false, 8357))
+    assert.equal(156.1, at(false, 10000))
+    assert.equal(158.1, at(false, 11071))
+    assert.equal(158.2, at(false, 11143))
+    assert.equal(158.8, at(false, 11857))
+    assert.equal(159, at(false, 11929))
     assert.equal(159, at(false, 20000))
+    local spring = UIProfessorMenu.MOVIE_CHART.coming
+    for i = 3, #spring - 1, 2 do
+      if spring[i] > 8143 then assert.is_true(math.abs(spring[i + 1] - spring[i - 1]) <= 0.5, spring[i]) end
+    end
     assert.equal(159, at(true, 0))
     assert.equal(170, at(true, 1550))
     assert.equal(21, at(true, 1800))
@@ -255,6 +263,11 @@ describe("Professor menu", function()
         assert.is_true(r > row(y - 1, bottom) and r - y <= 159 - bottom, ("%d at %d"):format(y, bottom))
       end
     end
+    -- (Or as a fraction: the paper squeezed evenly to a bottom edge between
+    -- two rows.)
+    assert.equal(80, row(80, 156.5, true))
+    assert.near(159, row(156.5, 156.5, true), 1e-9)
+    assert.near(80 + 40 * 79 / 76.5, row(120, 156.5, true), 1e-9)
     for y = 22, 159 do assert.equal(y, row(y, 159)) end
     -- Tugged, its paper is pulled lower, its top stays and the paper
     -- between is drawn out.
