@@ -169,12 +169,13 @@ describe("Professor menu", function()
     assert.equal("sprung", look(true, 1857))
     assert.equal("rolled_high", look(true, 1950))
     assert.equal("gone", look(true, 2500))
-    -- Row by row, from the picture's edge to the chart's end.
+    -- Row by row, from the picture's edge to the chart's end (or, without
+    -- `right`, as at the picture's edge all along).
     for name, rows in pairs(UIProfessorMenu.MOVIE_ROWS) do
-      assert.equal(#rows.left, #rows.right, name)
+      if rows.right then assert.equal(#rows.left, #rows.right, name) end
       for i, colour in ipairs(rows.left) do
         assert.equal(3, #colour, name)
-        assert.equal(3, #rows.right[i], name)
+        if rows.right then assert.equal(3, #rows.right[i], name) end
       end
       assert.is_true(rows.from + #rows.left <= 192 and rows.reach < 0, name)
       -- The board's light: a row and a percent each, the rows in order.
@@ -308,6 +309,65 @@ describe("Professor menu", function()
     assert(ok, err)
     for k in pairs(asked) do assert.is_true(made[k], k) end
     for k in pairs(made) do assert.is_true(asked[k], k) end
+  end)
+
+  it("makes them in time at the game's pace, before he pulls the chart down", function()
+    -- The game draws once a timer tick (18 ms) or slower: a refresh lasts
+    -- at least that, and longer by what prepare spends in it. Making them all
+    -- took about 1 s on Jan's PC (2 s with the game running): 4 ms a refresh
+    -- made them 13 s after he came, long after frame 108.
+    local spent, t, pull = 0, 0, UIProfessorMenu.frameTime(108)
+    while t < pull do
+      local ms = UIProfessorMenu.prepareMs(false, UIProfessorMenu.movieFrame(t))
+      spent = spent + ms
+      t = t + math.max(18, ms)
+    end
+    assert.is_true(spent >= 2 * 2000, tostring(spent))
+    -- Longer only while nothing moves: before he peeks in, and until he
+    -- walks in; never as he leaves.
+    local ms, still = UIProfessorMenu.PREPARE_MS, UIProfessorMenu.PREPARE_STILL_MS
+    assert.equal(still, UIProfessorMenu.prepareMs(false, 0))
+    assert.equal(ms, UIProfessorMenu.prepareMs(false, 20))
+    assert.equal(still, UIProfessorMenu.prepareMs(false, 40))
+    assert.equal(ms, UIProfessorMenu.prepareMs(false, 50))
+    assert.equal(ms, UIProfessorMenu.prepareMs(false, 108))
+    assert.equal(ms, UIProfessorMenu.prepareMs(true, 0))
+  end)
+
+  it("moves what is under the chart's edge up with it as it springs back", function()
+    -- Each drawing: the fill's key, the screen row its row 0 is at and the
+    -- screen rows it is clipped to (all, without a clip).
+    local draws, clip, scale = {}, nil, 1
+    local loaded = {picture = {}, sides = setmetatable({}, {__index = function(_, k)
+      return {draw = function(_, _, _, y) draws[#draws + 1] = {key = k, y = y * scale, clip = clip} end}
+    end})}
+    local canvas = {getRenderSize = function() return 2560, 1080 end,
+      scale = function(_, s) scale = s return true end,
+      pushClip = function(_, _, y, _, h) clip = {y * scale, (y + h) * scale} end,
+      popClip = function() clip = nil end}
+    local art, app = UIProfessorMenu.art, _G["TheApp"]
+    UIProfessorMenu.art = function() return loaded end
+    _G["TheApp"] = {config = {}}
+    local bottom = 157.2
+    local ok, err = pcall(UIProfessorMenu.drawSide, canvas, bottom, nil, nil, nil, 72)
+    UIProfessorMenu.art, _G["TheApp"] = art, app
+    assert(ok, err)
+    -- (2560 by 1080: 6 screen pixels a row, the picture's row 0 two rows up.)
+    local s, top = 6, -2
+    for row = bottom + 1.1, 159.9, 0.2 do
+      local screen = (row + top) * s
+      local last
+      for _, d in ipairs(draws) do
+        if not d.clip or (screen >= d.clip[1] and screen < d.clip[2]) then last = d end
+      end
+      -- The blackboard as under the chart when it is down (its shadow), as
+      -- light as the movie's board, as much higher as the edge; not the bare
+      -- blackboard behind the chart (lighter).
+      local shown = (screen - last.y) / s
+      assert.equal("down/movie72", last.key, tostring(row))
+      assert.is_true(shown >= 160 and math.abs(shown - row - (159 - bottom)) < 0.25,
+          ("%.1f shows %.2f"):format(row, shown))
+    end
   end)
 
   it("draws the fill beside his movies for the frame they show", function()

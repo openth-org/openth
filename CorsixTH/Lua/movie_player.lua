@@ -306,7 +306,7 @@ function MoviePlayer:playMenuMovie(leaving, callback)
       -- The fills of the frames to come, made a little each refresh while
       -- he walks up with the chart rolled up, not all at once as he pulls
       -- it down (Jan 2026-11-25: the movie stood still there).
-      UIProfessorMenu.prepare(player.app, UIProfessorMenu.PREPARE_MS)
+      UIProfessorMenu.prepare(player.app, UIProfessorMenu.prepareMs(leaving, frame))
     end
   end
 end
