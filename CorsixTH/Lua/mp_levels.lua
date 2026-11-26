@@ -69,15 +69,19 @@ levels.LEVELS = {
   -- in 8 plots for sale; four big buildings in the middle band (4 plots
   -- each) and the square's four houses are for sale too: 68 plots of 144 to
   -- 299 tiles, land to fight over at auctions. Level 9's rooms, diseases and
-  -- research (all but the DNA fixer and the jelly vat); the climbing seasons,
-  -- the earthquakes and the doctors of the scenario "everest" (the end of
-  -- this file). With 2 to 4 players the corner districts are taken, with 5
-  -- the southern middle one is for sale.
+  -- research (all but the DNA fixer and the jelly vat); the earthquakes, the
+  -- climbers and the doctors of the scenario "everest" (the end of this
+  -- file). With 2 to 4 players the corner districts are taken, with 5 the
+  -- southern middle one is for sale. Goals (2026-11-26, harder: Argus met the
+  -- old ones, reputation 650, $150,000, value $170,000, 450 cured, 50%, in
+  -- about 19 months; at 23 months he had 824, $220,000, $261,000 and 503,
+  -- the bots' values were over $250,000 too): for about 3 to 4 years (value
+  -- $300,000: Jan).
   {campaign = 9, map = 0, cash = 70000, scenario = "everest", intro = "level_intro_everest",
     name = "MOUNT EVEREST",
     map_files = {[2] = "everest6.map", [3] = "everest6.map", [4] = "everest6.map",
       [6] = "everest6.map"},
-    goals = {reputation = 650, balance = 150000, value = 170000, cured = 450, cure_rate = 50}},
+    goals = {reputation = 800, balance = 400000, value = 300000, cured = 1000, cure_rate = 60}},
   -- Made for two against two (Matroftt's map, Levels/level40teams.map,
   -- 2026-11-02): the four hospitals in pairs in the middle of town, team
   -- mates side by side, land for sale all around; level 3's rooms and
@@ -1045,23 +1049,32 @@ end
 
 -- Level 8, "Mount Everest" --------------------------------------------------
 --
--- Six hospitals at the foot of the mountain. Twice a year, in the climbing
--- seasons (April and October), about a hundred climbers come down to every
--- hospital within the month, on top of the usual patients. Earthquakes shake
--- the valley every four months for the first four years, a little harder
--- each year (every three months until 2026-11-21: Jan, too many to deal
--- with). The hiring list starts with consultants; in the ninth month the
+-- Six hospitals at the foot of the mountain. Earthquakes shake the valley
+-- every four months for the first four years, a little harder each year
+-- (every three months until 2026-11-21: Jan, too many to deal with), and
+-- each sets off avalanches: from the day of its main shock injured climbers
+-- come down to every hospital for ten days, more after a stronger one, on
+-- top of the usual patients (Jan, 2026-11-21: the wave should follow the
+-- quake; until 2026-11-26 the climbers came in April and October whatever
+-- the earthquakes did). From the fifth year, with no more earthquakes, the
+-- climbing seasons (April and October) bring about a hundred each within
+-- the month. The hiring list starts with consultants; in the ninth month the
 -- medical university in the capital collapses (players are warned in the
 -- middle of the month), and from the second year until the end of the third
 -- only junior doctors look for work. From the fourth year a new university
 -- sends trained doctors again.
 
---! The climbing seasons: months of the year, how many climbers each
---! hospital gets (one number per season, the same for all) over how many
---! days.
+--! The climbing seasons, once the earthquakes are over (from month
+--! SEASONS_FROM): months of the year, how many climbers each hospital gets
+--! (one number per season, the same for all) over how many days.
 local SEASON_MONTHS = {4, 10}
 local SEASON_CLIMBERS = {90, 110}
 local SEASON_DAYS = 28
+local SEASONS_FROM = 49
+--! After an earthquake's main shock: AVALANCHE_PER_SIZE injured climbers for
+--! each point of its size (2 to 6) to every hospital, over AVALANCHE_DAYS
+--! days (30 to 90; about 100 to 225 a year).
+local AVALANCHE_PER_SIZE, AVALANCHE_DAYS = 15, 10
 --! The doctors: the warning (month, day), juniors only from month
 --! JUNIORS_FROM to JUNIORS_TO (the hiring list of a month is made at the end
 --! of the month before).
@@ -1145,17 +1158,29 @@ local function everestDay(world)
     state.month = month
     if month == JUNIORS_FROM then announce(world, S.level_everest_juniors_only, 3) end
     if month == JUNIORS_TO + 1 then announce(world, S.level_everest_doctors_back, 2) end
-    -- A climbing season begins.
-    if isIn(SEASON_MONTHS, (month - 1) % 12 + 1) then
+    -- A climbing season begins (once the earthquakes are over).
+    if month >= SEASONS_FROM and isIn(SEASON_MONTHS, (month - 1) % 12 + 1) then
       local climbers = between(SEASON_CLIMBERS)
       state.season = {days = SEASON_DAYS, left = {}}
       for index = 1, world.mp_coop.players do state.season.left[index] = climbers end
       announce(world, S.level_everest_season:format(climbers), 2)
     end
   end
-  -- The season's climbers: each day an even share of those still to come,
-  -- hospital by hospital (one that is not open or has no staffed desk
-  -- loses them, as with any patient).
+  -- An earthquake's main shock (Earthquake:tick: active, the warning over;
+  -- it lasts its size times 16 hours, so at least one day's end): its
+  -- avalanches send injured climbers, from today, in place of a season.
+  local quake = world.earthquake
+  if quake and quake.active and not quake.disabled and (quake.warning_timer or 1) <= 0 and
+      state.avalanche_quake ~= quake.start_month then
+    state.avalanche_quake = quake.start_month
+    local injured = AVALANCHE_PER_SIZE * math.max(1, quake.size or 1)
+    state.season = {days = AVALANCHE_DAYS, left = {}}
+    for index = 1, world.mp_coop.players do state.season.left[index] = injured end
+    announce(world, S.level_everest_avalanche:format(injured), 2)
+  end
+  -- The season's (or the avalanche's) climbers: each day an even share of
+  -- those still to come, hospital by hospital (one that is not open or has
+  -- no staffed desk loses them, as with any patient).
   local season = state.season
   if season then
     for index = 1, world.mp_coop.players do
