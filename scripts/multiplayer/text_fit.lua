@@ -54,9 +54,9 @@ local list = {
   {"save_button", S.save_button, 149},
   {"room_map", S.room_map, 64},
   {"room_map_caption", S.room_map_caption, 554},
-  {"assistants_caption", S.assistants_caption, 64},
-  {"assistant_yes", S.assistant_yes, 64},
-  {"assistant_no", S.assistant_no, 64},
+  {"assistants_caption", S.assistants_caption, 76},
+  {"assistant_yes", S.assistant_yes, 76},
+  {"assistant_no", S.assistant_no, 76},
   -- The room list's Start new game (two buttons of 185, or one of 345 with
   -- the x) and its message line.
   {"new_game_caption", S.new_game_caption, 374},
@@ -78,9 +78,9 @@ local list = {
   -- The plot hand-over window (multiplayer_plot.lua, WIDTH 380): what is
   -- sold with the plot.
   {"plot_give_sold_line", S.plot_give_sold_line:format(12, 34), 334},
-  -- The main menu's last row: Discord (56 wide) and Exit (96).
-  {"main_menu.discord", _S.main_menu.discord, 52},
-  {"main_menu.exit", _S.main_menu.exit, 92},
+  -- The main menu's last row: Discord (64 wide) and Exit (88).
+  {"main_menu.discord", _S.main_menu.discord, 60},
+  {"main_menu.exit", _S.main_menu.exit, 84},
   -- The Customise window's labels are 165 wide: the professor menu switch.
   {"customise_window.professor_menu", _S.customise_window.professor_menu, 160},
 }

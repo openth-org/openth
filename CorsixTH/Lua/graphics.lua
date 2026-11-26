@@ -87,6 +87,7 @@ function Graphics:Graphics(app, gfx_set, charset)
     palette_greyscale_ghost = {},
     money_insurance_palette = nil,
     panel_green_palette = nil,
+    menu_fonts = {},
     ghosts = {},
     anims = {},
     language_fonts = {},
@@ -892,8 +893,101 @@ function Graphics:loadFontAndSpriteTable(dir, name, complex, palette, font_optio
   if font_options.force_bitmap == nil then
     font_options.force_bitmap = (name == "Font05V" and self:arabicNumerals())
   end
+  -- The menus' white and blue text in the menu font (Graphics.MENU_FONTS).
+  local menu = dir == "QData" and Graphics.MENU_FONT_SHEETS[name]
+  local font
+  if menu and not font_options.force_bitmap then
+    local face, def = self:_menuFontFace()
+    if face then font = self:_loadMenuFont(def, face, sprite_table, font_options) end
+  end
+  font = font or self:loadFont(sprite_table, font_options)
+  if menu then
+    -- (Made again this way when the language or the UI scale changes: the
+    -- menu font, or the game's own or Unicode font for another language.)
+    self.load_info[font] = {self.loadFontAndSpriteTable, self, dir, name, complex, palette, font_options}
+  end
+  return font
+end
 
-  return self:loadFont(sprite_table, font_options)
+--! OpenTH's menu fonts (Customise > Menu Font, config menu_font): the text of
+--! the menus, the lobby and the other windows open while no game runs, in a
+--! language the game's own fonts can write, in one of these TrueType fonts
+--! (Bitmap/fonts, each with its licence, the SIL Open Font License). `scale`:
+--! its letters that much of the game font's (Press Start 2P is wide).
+--! "original": the game's own pixel font. Bungee by default (Jan, 2026-11-26).
+Graphics.MENU_FONTS = {
+  {id = "bungee", name = "Bungee", file = "Bungee-Regular.ttf"},
+  {id = "press_start", name = "Press Start 2P", file = "PressStart2P-Regular.ttf", scale = 0.8},
+  {id = "silkscreen", name = "Silkscreen", file = "Silkscreen-Regular.ttf"},
+  {id = "original", name = "Theme Hospital"},
+}
+Graphics.DEFAULT_MENU_FONT = "bungee"
+--! The game fonts the menu font stands in for: the white and the blue one.
+Graphics.MENU_FONT_SHEETS = {Font01V = true, Font02V = true}
+
+--! The menu font chosen (an entry of Graphics.MENU_FONTS).
+function Graphics.menuFontDef(id)
+  for _, def in ipairs(Graphics.MENU_FONTS) do
+    if def.id == id then return def end
+  end
+  return Graphics.menuFontDef(Graphics.DEFAULT_MENU_FONT)
+end
+
+--! The face (the font file's contents) of the menu font to use now, and its
+--! entry; nil: the game's own fonts (a game is running, the language needs
+--! the Unicode font, "original" chosen, or the file is missing).
+function Graphics:_menuFontFace()
+  if self.app.world or not self:_isLanguageSupportedByTHAssets() then return nil end
+  local def = Graphics.menuFontDef(self.app.config.menu_font)
+  if not def.file then return nil end
+  self.menu_font_data = self.menu_font_data or {}
+  local data = self.menu_font_data[def.id]
+  if data == nil then
+    local ok, contents = pcall(self.app.readDataFile, self.app, "Bitmap",
+        "fonts" .. package.config:sub(1, 1) .. def.file)
+    data = ok and contents or false
+    if not ok then print("Menu font " .. def.file .. " not found: the game's own font") end
+    self.menu_font_data[def.id] = data
+  end
+  return data or nil, def
+end
+
+--! A TrueType font in the menu font `def` (face `face`) standing in for the
+--! bitmap font `sprite_table` (cached as Graphics:_loadTrueTypeFont does).
+function Graphics:_loadMenuFont(def, face, sprite_table, font_options)
+  local options = {}
+  for k, v in pairs(font_options) do options[k] = v end
+  if def.scale then
+    -- (The game's text is as large as its font's M: TH_freetype_font.)
+    local w, h = sprite_table:size(string.byte("M") - 31)
+    if not (w and w > 1) then w, h = sprite_table:size(string.byte("0") - 31) end
+    if w and w > 1 then
+      options.ttf_width = math.max(4, math.floor(w * def.scale + 0.5))
+      options.ttf_height = math.max(4, math.floor(h * def.scale + 0.5))
+    end
+  end
+  local key = def.id .. "," .. language_font_cache_key("menu", options)
+  local cache = self.cache.menu_fonts[key]
+  local entry = cache and cache[sprite_table]
+  local s = self:getUIScale()
+  if entry and options.apply_ui_scale and entry.options.scale_factor ~= s then
+    entry.options.scale_factor = s
+    entry.font:setFontOptions(sprite_table, entry.options)
+    entry.font:clearCache()
+  elseif not entry then
+    if options.apply_ui_scale then options.scale_factor = s end
+    local font = TH.freetype_font()
+    font:setFace(face)
+    font:setFontOptions(sprite_table, options)
+    self.reload_functions_last[font] = font_reloader
+    entry = {font = font, options = options}
+    if not cache then
+      cache = {}
+      self.cache.menu_fonts[key] = cache
+    end
+    cache[sprite_table] = entry
+  end
+  return setmetatable({ _proxy = entry.font }, font_proxy_mt)
 end
 
 --- Load a font for the given sprite table.

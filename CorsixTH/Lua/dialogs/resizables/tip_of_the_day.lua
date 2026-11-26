@@ -41,7 +41,7 @@ local col_bg = Colours.PanelDefault
 -- free in the middle when nothing else is known.
 local MULTIPLAYER_WINDOWS = {"UIMultiplayer", "UIMultiplayerLevels", "UIMultiplayerRoomOptions",
   "UIMultiplayerDownload", "UILoadMultiplayerGame"}
-local MULTIPLAYER_WIDTH = 495
+local MULTIPLAYER_WIDTH = 507
 -- Ticks without any of them before the multiplayer tips close (one window
 -- replaces another in between).
 local MULTIPLAYER_GONE_TICKS = 25

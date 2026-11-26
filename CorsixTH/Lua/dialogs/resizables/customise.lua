@@ -49,6 +49,8 @@ function UICustomise:UICustomise(ui, mode)
     -- Main menu: the professor's (the original game's) or the list of
     -- buttons (CorsixTH's)
     { name = "professor_menu", func = self.buttonProfessorMenu, custom_labels = true },
+    -- The menus' font (Graphics.MENU_FONTS), a list to pick from
+    { name = "menu_font", func = self.dropdownMenuFont, raised = true },
     -- Allow user actions when paused
     { name = "allow_user_actions_while_paused" },
     -- Alien DNA from emergencies only/must stand/can knock on doors
@@ -67,6 +69,32 @@ function UICustomise:UICustomise(ui, mode)
   }
 
   self:buildDialog()
+  self.buttons.menu_font:setLabel(Graphics.menuFontDef(ui.app.config.menu_font).name)
+end
+
+--! The menu font's list (Graphics.MENU_FONTS), open or closed.
+function UICustomise:dropdownMenuFont(app, button)
+  self.keep_open = true -- (no reload: the list stays open)
+  if not self.menu_font_dropdown then
+    local items = {}
+    for _, def in ipairs(Graphics.MENU_FONTS) do items[#items + 1] = {text = def.name} end
+    self.menu_font_dropdown = UIDropdown(self.ui, self, button, items, self.selectMenuFont,
+        Colours.SettingActive, Colours.Scrollbar)
+    self:addWindow(self.menu_font_dropdown)
+  else
+    button:setToggleState(false)
+    self.menu_font_dropdown:close()
+    self.menu_font_dropdown = nil
+  end
+end
+
+--! A menu font picked in the list: the windows are made again in it.
+function UICustomise:selectMenuFont(number)
+  local app = self.ui.app
+  app.config.menu_font = Graphics.MENU_FONTS[number].id
+  app:saveConfig()
+  self.menu_font_dropdown = nil
+  self:reload()
 end
 
 function UICustomise:buttonAliens(app)
@@ -83,6 +111,10 @@ end
 
 -- So that we can see the option has been changed reload the menu
 function UICustomise:reload()
+  if self.keep_open then
+    self.keep_open = nil
+    return
+  end
   local window = UICustomise(self.ui, "menu")
   self.ui:addWindow(window)
 end

@@ -524,7 +524,9 @@ if(NOT USE_SOURCE_DATADIRS)
     )
   endif()
   install(DIRECTORY Campaigns Lua Levels Sounds DESTINATION ${CORSIX_TH_DATADIR})
-  install(DIRECTORY Bitmap DESTINATION ${CORSIX_TH_DATADIR} FILES_MATCHING REGEX ".*\\.(tab|pal|dat|png|pl8)$")
+  # (And the menu fonts with their licences, Bitmap/fonts: OpenTH, 2026-11-26.)
+  install(DIRECTORY Bitmap DESTINATION ${CORSIX_TH_DATADIR} FILES_MATCHING REGEX ".*\\.(tab|pal|dat|png|pl8)$"
+      REGEX ".*/fonts/[^/]*\\.(ttf|txt)$")
   install(FILES CorsixTH.lua ../LICENSE.txt DESTINATION ${CORSIX_TH_DATADIR})
 
   if(FETCH_SOUNDFONT)

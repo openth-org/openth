@@ -44,7 +44,8 @@ MAGIC = "OPENTH-PACK 1"
 # installed game's.
 TOP_FILES = ("CorsixTH.lua",)
 TOP_DIRS = ("Lua", "Campaigns", "Levels", "Sounds", "Bitmap")
-BITMAP_RE = re.compile(r"\.(tab|pal|dat|png|pl8)$")
+# (And the menu fonts with their licences: Bitmap/fonts, 2026-11-26.)
+BITMAP_RE = re.compile(r"\.(tab|pal|dat|png|pl8)$|^Bitmap/fonts/[^/]+\.(ttf|txt)$")
 # Bounds the game checks too (mp_pack.lua).
 MAX_RAW_BYTES = 96 * 1024 * 1024
 MAX_FILES = 5000

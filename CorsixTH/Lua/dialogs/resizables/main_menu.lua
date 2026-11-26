@@ -104,10 +104,10 @@ function UIMainMenu:UIMainMenu(ui)
   for i, item in ipairs(menu_items) do
     if i == #menu_items then
       -- The last row: OpenTH's Discord next to Exit (a tenth row would not
-      -- fit a 640x480 screen).
+      -- fit a 640x480 screen; 64 wide for "DISCORD" in the menu font).
       self:addMenuItem(_S.main_menu.discord, self.buttonDiscord, _S.tooltip.main_menu.discord,
-          next_y, 20, 56, UIMainMenu.DISCORD_COLOUR)
-      next_y = self:addMenuItem(item[1], item[2], item[3], next_y, 84, 96)
+          next_y, 20, 64, UIMainMenu.DISCORD_COLOUR)
+      next_y = self:addMenuItem(item[1], item[2], item[3], next_y, 92, 88)
     else
       next_y = self:addMenuItem(item[1], item[2], item[3], next_y)
     end

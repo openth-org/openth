@@ -84,8 +84,9 @@ end
 -- own: Argus, 2026-11-15) in a column beside the room's places, each beside
 -- its person (Jan: beside the window, not lines of their own): a button,
 -- "yes" (pressed) while the person has one, else "no", as wide as the team button
--- (Argus, 2026-11-26: the bot's name made the window wide for little).
-local ASSIST_W = 70
+-- (Argus, 2026-11-26: the bot's name made the window wide for little; 82,
+-- not quite the team button's 70, for "ASSISTENTE" in the menu font).
+local ASSIST_W = 82
 local SIDE_W = ASSIST_W + 5
 
 --! Whether the room view has the assistants' column: a new game on a server
