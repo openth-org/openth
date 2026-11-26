@@ -26,6 +26,10 @@ CorsixTH/Bitmap/fullscreen_border_topright.bmp -text
 CorsixTH/Bitmap/mainmenu1080.bmp -text
 CorsixTH/Bitmap/mainmenu1080.dat -text svneol=unset#application/octet-stream
 CorsixTH/Bitmap/mainmenu1080.pal -text
+CorsixTH/Bitmap/mainmenu1440.dat -text
+CorsixTH/Bitmap/mainmenu1440.pal -text
+CorsixTH/Bitmap/mainmenu2160.dat -text
+CorsixTH/Bitmap/mainmenu2160.pal -text
 CorsixTH/Bitmap/map_cell_outline.bmp -text
 CorsixTH/Bitmap/map_cell_outline_east.bmp -text
 CorsixTH/Bitmap/map_cell_outline_north.bmp -text
