@@ -143,6 +143,8 @@ function Graphics:_loadPalettes(gfx_set)
   self:_loadPalette("Bitmap", "mainmenu480.pal", false, false)
   self:_loadPalette("Bitmap", "mainmenu720.pal", false, false)
   self:_loadPalette("Bitmap", "winlevel.pl8", true, true)
+  self:_loadPalette("Bitmap", "mainmenu1440.pal", false, false)
+  self:_loadPalette("Bitmap", "mainmenu2160.pal", false, false)
   self:_loadPalette("Bitmap", "tree_ctrl.pal", false, false)
 
   if gfx_set == "base" then
