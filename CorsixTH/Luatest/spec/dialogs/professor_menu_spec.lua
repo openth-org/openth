@@ -359,8 +359,13 @@ describe("Professor menu", function()
     local loaded = {picture = {}, sides = setmetatable({}, {__index = function(_, k)
       return {draw = function(_, _, _, y) draws[#draws + 1] = {key = k, y = y * scale, clip = clip} end}
     end})}
+    -- (As the engine: places and clips scaled by the scale of everything;
+    -- a "bitmap" scale enlarges the pictures only.)
     local canvas = {getRenderSize = function() return 2560, 1080 end,
-      scale = function(_, s) scale = s return true end,
+      scale = function(_, s, what)
+        if what ~= "bitmap" then scale = s end
+        return true
+      end,
       pushClip = function(_, _, y, _, h) clip = {y * scale, (y + h) * scale} end,
       popClip = function() clip = nil end}
     local art, app = UIProfessorMenu.art, _G["TheApp"]
@@ -386,6 +391,47 @@ describe("Professor menu", function()
       assert.is_true(shown >= 160 and math.abs(shown - row - (159 - bottom)) < 0.25,
           ("%.1f shows %.2f"):format(row, shown))
     end
+  end)
+
+  it("draws the chart's clipped rows clipped in fullscreen too", function()
+    -- In fullscreen each scale of everything (to 1 too) starts a picture of
+    -- its own, and the clip made before does not hold on it (SDL keeps a clip
+    -- for each target). With a scale call between clip and drawing, the
+    -- fill under the chart's edge came out whole as it sprang down (Jan's
+    -- work Mac, 2026-11-26). Every drawing but the first (the whole fill)
+    -- is clipped where it lands, in every frame of both movies.
+    local held, depth, n, bad = false, 0, 0, nil
+    local bitmap = {draw = function()
+      n = n + 1
+      if n > 1 and not (depth > 0 and held) then bad = bad or n end
+    end}
+    local loaded = {picture = bitmap, sides = setmetatable({}, {__index = function() return bitmap end})}
+    local canvas = {getRenderSize = function() return 2560, 1080 end,
+      scale = function(_, _, what)
+        if what ~= "bitmap" then held = false end
+        return true
+      end,
+      pushClip = function() depth, held = depth + 1, true end,
+      popClip = function() depth = depth - 1 end}
+    local art, app = UIProfessorMenu.art, _G["TheApp"]
+    UIProfessorMenu.art = function() return loaded end
+    _G["TheApp"] = {config = {}}
+    local wrong = {}
+    local ok, err = pcall(function()
+      for _, leaving in ipairs({false, true}) do
+        for f = 0, 200 do
+          local pts = UIProfessorMenu.frameTime(f)
+          local top, low = UIProfessorMenu.lightInMovie(leaving, pts)
+          n, bad = 0, nil
+          UIProfessorMenu.drawSide(canvas, UIProfessorMenu.chartInMovie(leaving, pts), top, low,
+              UIProfessorMenu.lookInMovie(leaving, pts), UIProfessorMenu.boardInMovie(leaving, pts))
+          if bad then wrong[#wrong + 1] = ("%s frame %d drawing %d"):format(leaving and "leaving" or "coming", f, bad) end
+        end
+      end
+    end)
+    UIProfessorMenu.art, _G["TheApp"] = art, app
+    assert(ok, err)
+    assert.equal(0, #wrong, table.concat(wrong, ", "))
   end)
 
   it("draws the fill beside his movies for the frame they show", function()
