@@ -533,6 +533,7 @@ multiplayer_window = {
   assistant_named = "%s (%s's assistant)",
   assistants_caption = "Assistant",
   assistant_yes = "yes",
+  assistant_no = "no",
   add_assistant_short = "+ Add assistant",
   assistant_starting = "starting...",
   hold_year = "Waiting on %s to close the annual report...",

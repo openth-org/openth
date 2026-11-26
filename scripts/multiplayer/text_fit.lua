@@ -56,6 +56,7 @@ local list = {
   {"room_map_caption", S.room_map_caption, 554},
   {"assistants_caption", S.assistants_caption, 64},
   {"assistant_yes", S.assistant_yes, 64},
+  {"assistant_no", S.assistant_no, 64},
   -- The room list's Start new game (two buttons of 185, or one of 345 with
   -- the x) and its message line.
   {"new_game_caption", S.new_game_caption, 374},

@@ -83,7 +83,7 @@ end
 -- The assistants (bots that help in a person's hospital, no place of their
 -- own: Argus, 2026-11-15) in a column beside the room's places, each beside
 -- its person (Jan: beside the window, not lines of their own): a button,
--- pressed ("yes") while the person has one, as wide as the team button
+-- "yes" (pressed) while the person has one, else "no", as wide as the team button
 -- (Argus, 2026-11-26: the bot's name made the window wide for little).
 local ASSIST_W = 70
 local SIDE_W = ASSIST_W + 5
@@ -1090,7 +1090,8 @@ function UIMultiplayer:rowPlayer(i)
 end
 
 --! The assistants' column: beside the person on line i a button, pressed
---! ("yes") while they have an assistant (or one is starting), the
+--! ("yes") while they have an assistant (or one is starting), else "no"
+--! (Jan, 2026-11-26: an empty button did not look like one to click); the
 --! assistant's name in its tooltip; none beside a bot or an empty place.
 function UIMultiplayer:_updateSide()
   local buttons = self.side_buttons
@@ -1122,7 +1123,7 @@ function UIMultiplayer:_updateSide()
     end
     btn:setVisible(person)
     btn:setToggleState(on)
-    btn:setLabel(on and S.assistant_yes or "")
+    btn:setLabel(on and S.assistant_yes or S.assistant_no)
     btn:enable(entry ~= nil and (entry.add ~= nil or owner or tonumber(entry.helper.assists) == me))
     btn:setTooltip(tip)
     self.side_entry[i] = entry
