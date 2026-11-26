@@ -44,8 +44,12 @@ function UIMenuBar:UIMenuBar(ui, map_editor)
   self.visible = false
   local selected_label_color = { red = 40, green = 40, blue = 250 }
   self.panel_sprites = app.gfx:loadSpriteTable("Data", "PullDV", true)
-  self.white_font = app.gfx:loadFontAndSpriteTable("QData", "Font01V", nil, nil, { apply_ui_scale = true })
-  self.blue_font = app.gfx:loadFontAndSpriteTable("QData", "Font02V", nil, nil, {ttf_color = selected_label_color, apply_ui_scale = true })
+  -- (A game's menu bar, also when made while a saved game loads from the
+  -- main menu, before its map: never the menu font, Graphics.MENU_FONTS.)
+  self.white_font = app.gfx:loadFontAndSpriteTable("QData", "Font01V", nil, nil, { apply_ui_scale = true },
+      false)
+  self.blue_font = app.gfx:loadFontAndSpriteTable("QData", "Font02V", nil, nil,
+      {ttf_color = selected_label_color, apply_ui_scale = true }, false)
   -- The list of top-level menus, from left to right
   self.menus = {}
   -- The menu which the cursor was most recently over

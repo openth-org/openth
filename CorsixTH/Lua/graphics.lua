@@ -886,7 +886,7 @@ end
 --- @param complex (boolean) Whether the sprite table is complex or not.
 --- @param palette (string) The name of the palette file. If nil, the default palette will be used.
 --- @param font_options (table) A table with font options:
-function Graphics:loadFontAndSpriteTable(dir, name, complex, palette, font_options)
+function Graphics:loadFontAndSpriteTable(dir, name, complex, palette, font_options, menu_text)
   local sprite_table = self:loadSpriteTable(dir, name, complex, palette)
 
   font_options = font_options or {}
@@ -894,19 +894,32 @@ function Graphics:loadFontAndSpriteTable(dir, name, complex, palette, font_optio
     font_options.force_bitmap = (name == "Font05V" and self:arabicNumerals())
   end
   -- The menus' white and blue text in the menu font (Graphics.MENU_FONTS).
+  -- Whether it is the menus' text (no level loaded: the main menu, the
+  -- lobby) is decided when the font is first made; made again (a language
+  -- or UI scale change, a saved game loaded, a multiplayer repair) it stays
+  -- what it was, so a game's text never becomes the menu font.
   local menu = dir == "QData" and Graphics.MENU_FONT_SHEETS[name]
+  if menu and menu_text == nil then menu_text = self.app.map == nil and self.app.world == nil end
   local font
-  if menu and not font_options.force_bitmap then
+  if menu and menu_text and not font_options.force_bitmap then
     local face, def = self:_menuFontFace()
     if face then font = self:_loadMenuFont(def, face, sprite_table, font_options) end
   end
   font = font or self:loadFont(sprite_table, font_options)
   if menu then
-    -- (Made again this way when the language or the UI scale changes: the
-    -- menu font, or the game's own or Unicode font for another language.)
-    self.load_info[font] = {self.loadFontAndSpriteTable, self, dir, name, complex, palette, font_options}
+    -- (How it is made again: the menu font, or the game's own or Unicode
+    -- font for another language. One table: an argument list with nils in
+    -- it, as complex and palette often are, loses what follows them.)
+    self.load_info[font] = {self._remakeFont, self, {dir = dir, name = name, complex = complex,
+        palette = palette, font_options = font_options, menu_text = menu_text}}
   end
   return font
+end
+
+--! A font of Graphics:loadFontAndSpriteTable made again (its load_info).
+function Graphics:_remakeFont(how)
+  return self:loadFontAndSpriteTable(how.dir, how.name, how.complex, how.palette, how.font_options,
+      how.menu_text)
 end
 
 --! OpenTH's menu fonts (Customise > Menu Font, config menu_font): the text of
@@ -934,10 +947,10 @@ function Graphics.menuFontDef(id)
 end
 
 --! The face (the font file's contents) of the menu font to use now, and its
---! entry; nil: the game's own fonts (a game is running, the language needs
---! the Unicode font, "original" chosen, or the file is missing).
+--! entry; nil: the game's own fonts (the language needs the Unicode font,
+--! "original" chosen, or the file is missing).
 function Graphics:_menuFontFace()
-  if self.app.world or not self:_isLanguageSupportedByTHAssets() then return nil end
+  if not self:_isLanguageSupportedByTHAssets() then return nil end
   local def = Graphics.menuFontDef(self.app.config.menu_font)
   if not def.file then return nil end
   self.menu_font_data = self.menu_font_data or {}
