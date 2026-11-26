@@ -31,10 +31,11 @@ class "UIMainMenu" (UIResizable)
 ---@operator call: UIMainMenu
 local UIMainMenu = _G["UIMainMenu"] ---@type UIMainMenu
 
+-- Green, to go with the background (Argus's design, 2026-11-26).
 local col_bg = {
-  red = 154,
-  green = 146,
-  blue = 198,
+  red = 107,
+  green = 158,
+  blue = 97,
 }
 
 local label_ttf_col = { -- slightly translucent
