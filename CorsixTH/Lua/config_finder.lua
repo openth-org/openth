@@ -532,8 +532,9 @@ param(config_values, 'play_demo') .. [=[
 param(config_values, 'professor_menu') .. [=[
 
 -- The font of the menus (and the lobby) in languages written in the game's
--- own letters: "bungee" (the default), "press_start" (Press Start 2P),
--- "silkscreen" or "original" (Theme Hospital's own font).
+-- own letters: "bungee" (the default, a thinner Bungee), "bungee_bold",
+-- "press_start" (Press Start 2P), "silkscreen" or "original" (Theme
+-- Hospital's own font).
 --]=] .. '\n' ..
 param(config_values, 'menu_font') .. [=[
 

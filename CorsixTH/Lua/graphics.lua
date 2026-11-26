@@ -927,9 +927,12 @@ end
 --! language the game's own fonts can write, in one of these TrueType fonts
 --! (Bitmap/fonts, each with its licence, the SIL Open Font License). `scale`:
 --! its letters that much of the game font's (Press Start 2P is wide).
---! "original": the game's own pixel font. Bungee by default (Jan, 2026-11-26).
+--! "original": the game's own pixel font. Bungee by default (Jan, 2026-11-26),
+--! a thinner copy of it (Bungee OpenTH Thin, scripts/thin_font.py: Jan, "a bit
+--! thinner"); the font as made is Bungee Bold.
 Graphics.MENU_FONTS = {
-  {id = "bungee", name = "Bungee", file = "Bungee-Regular.ttf"},
+  {id = "bungee", name = "Bungee", file = "BungeeOpenTHThin-Regular.ttf"},
+  {id = "bungee_bold", name = "Bungee Bold", file = "Bungee-Regular.ttf"},
   {id = "press_start", name = "Press Start 2P", file = "PressStart2P-Regular.ttf", scale = 0.8},
   {id = "silkscreen", name = "Silkscreen", file = "Silkscreen-Regular.ttf"},
   {id = "original", name = "Theme Hospital"},
