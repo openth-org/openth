@@ -31,11 +31,9 @@ local UITipOfTheDay = _G["UITipOfTheDay"] ---@type UITipOfTheDay
 -- The size of the close button.
 local close_size = 16
 
-local col_bg = {
-  red = math.cosmetic_random(20, 200),
-  green = math.cosmetic_random(20, 200),
-  blue = math.cosmetic_random(20, 200),
-}
+-- The panel green, as every window (Jan, 2026-11-26; CorsixTH picks a
+-- random colour each time the game starts).
+local col_bg = Colours.PanelDefault
 
 -- The multiplayer windows of the main menu (UITipOfTheDay "multiplayer" stays
 -- while one of them is open), and their widest (the room view with the

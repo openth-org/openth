@@ -28,9 +28,9 @@ class "UIMenuList" (UIResizable)
 local UIMenuList = _G["UIMenuList"] ---@type UIMenuList
 
 local col_caption = {
-  red = 174,
-  green = 166,
-  blue = 218,
+  red = 127,
+  green = 178,
+  blue = 117,
 }
 
 local col_scrollbar = {
@@ -50,9 +50,9 @@ keys "name" and "tooltip" with the corresponding values.
 ]]
 function UIMenuList:UIMenuList(ui, mode, title, items, num_rows, extra_beside_list)
   self.col_bg = {
-    red = 154,
-    green = 146,
-    blue = 198,
+    red = 107,
+    green = 158,
+    blue = 97,
   }
   extra_beside_list = extra_beside_list or 0
   self:UIResizable(ui, 280 + extra_beside_list, 270, self.col_bg)

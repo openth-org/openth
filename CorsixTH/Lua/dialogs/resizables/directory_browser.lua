@@ -138,9 +138,9 @@ local UIDirectoryBrowser = _G["UIDirectoryBrowser"] ---@type UIDirectoryBrowser
 --! a path string as argument.
 function UIDirectoryBrowser:UIDirectoryBrowser(ui, mode, instruction, treenode_class, callback)
   self.col_bg = {
-    red = 154,
-    green = 146,
-    blue = 198,
+    red = 107,
+    green = 158,
+    blue = 97,
   }
   self.col_scrollbar = {
     red = 164,

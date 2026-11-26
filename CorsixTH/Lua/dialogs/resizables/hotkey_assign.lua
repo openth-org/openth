@@ -36,39 +36,39 @@ class "UIHotkeyAssignKeyPane" (Window)
 local UIHotkeyAssignKeyPane = _G["UIHotkeyAssignKeyPane"] ---@type UIHotkeyAssignKeyPane
 
 local col_bg = {
-  red = 154,
-  green = 146,
-  blue = 198,
+  red = 107,
+  green = 158,
+  blue = 97,
 }
 
 local col_hotkeybox = {
-  red = 81,
-  green = 76,
-  blue = 150,
+  red = 52,
+  green = 98,
+  blue = 46,
 }
 
 local col_hotkeybox_lowered = {
-  red = 41,
-  green = 36,
-  blue = 90,
+  red = 26,
+  green = 58,
+  blue = 22,
 }
 
 local col_highlight = {
-  red = 174,
-  green = 166,
-  blue = 218,
+  red = 127,
+  green = 178,
+  blue = 117,
 }
 
 local col_shadow = {
-  red = 134,
-  green = 126,
-  blue = 178,
+  red = 87,
+  green = 138,
+  blue = 77,
 }
 
 local col_caption = {
-  red = 174,
-  green = 166,
-  blue = 218,
+  red = 127,
+  green = 178,
+  blue = 117,
 }
 
 local hotkey_backup = {}

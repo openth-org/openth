@@ -28,9 +28,9 @@ class "UIUpdate" (UIResizable)
 local UIUpdate = _G["UIUpdate"] ---@type UIUpdate
 
 local col_bg = {
-  red = 154,
-  green = 146,
-  blue = 198,
+  red = 107,
+  green = 158,
+  blue = 97,
 }
 
 local col_old_version = {
@@ -46,15 +46,15 @@ local col_new_version = {
 }
 
 local col_shadow = {
-  red = 134,
-  green = 126,
-  blue = 178,
+  red = 87,
+  green = 138,
+  blue = 77,
 }
 
 local col_caption = {
-  red = 174,
-  green = 166,
-  blue = 218,
+  red = 127,
+  green = 178,
+  blue = 117,
 }
 
 function UIUpdate:UIUpdate(ui, this_version, new_version, brief_description, download_url)

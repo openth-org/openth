@@ -86,6 +86,7 @@ function Graphics:Graphics(app, gfx_set, charset)
     palette = {},
     palette_greyscale_ghost = {},
     money_insurance_palette = nil,
+    panel_green_palette = nil,
     ghosts = {},
     anims = {},
     language_fonts = {},
@@ -142,9 +143,9 @@ function Graphics:_loadPalettes(gfx_set)
   self:_loadPalette("Bitmap", "mainmenu1080.pal", false, false)
   self:_loadPalette("Bitmap", "mainmenu480.pal", false, false)
   self:_loadPalette("Bitmap", "mainmenu720.pal", false, false)
-  self:_loadPalette("Bitmap", "winlevel.pl8", true, true)
   self:_loadPalette("Bitmap", "mainmenu1440.pal", false, false)
   self:_loadPalette("Bitmap", "mainmenu2160.pal", false, false)
+  self:_loadPalette("Bitmap", "winlevel.pl8", true, true)
   self:_loadPalette("Bitmap", "tree_ctrl.pal", false, false)
 
   if gfx_set == "base" then
@@ -1078,6 +1079,54 @@ function Graphics:getFloatingBanknoteSpriteTable(insurance)
     self.cache.money_insurance_palette = palette
   end
   return self:loadSpriteTable("Data", "Money01V", nil, palette)
+end
+
+--- A copy of the main palette whose greens are OpenTH's panel green
+--- (Colours.PanelDefault, after Argus's main menu, 2026-11-26), for the
+--- original game's green boxes (the confirm box): its face (6-bit green 46,
+--- 61, 186, 69 on screen) becomes the panel colour, the lighter and darker
+--- greens round it keep their shading.
+--- @return (palette) # The palette
+function Graphics:_makePanelGreenPalette()
+  local green_lead = 4 -- (as for the banknote: greens only, not the greys)
+  local data = self.app:readDataFile("Data", "MPalette.dat")
+  if #data ~= 256 * 3 then
+    error("Unexpected MPalette.dat length: " .. #data)
+  end
+  local panel = Colours.PanelDefault
+  local face_green = 46 -- (the box's face in the main palette, 6-bit)
+  local scale = panel.green * 63 / 255 / face_green
+  local entries = {}
+  for i = 0, 255 do
+    local o = i * 3 + 1
+    local r, g, b = data:byte(o, o + 2)
+    if g >= r + green_lead and g >= b + green_lead then
+      local ng = math.min(63, math.floor(g * scale + 0.5))
+      entries[#entries + 1] = string.char(math.floor(ng * panel.red / panel.green + 0.5), ng,
+          math.floor(ng * panel.blue / panel.green + 0.5))
+    else
+      entries[#entries + 1] = string.char(r, g, b)
+    end
+  end
+  local palette = TH.palette(table.concat(entries), false)
+  palette:setEntry(255, 0xFF, 0x00, 0xFF)
+  self.load_info[palette] = {self._makePanelGreenPalette, self}
+  return palette
+end
+
+--- An original sprite sheet drawn in OpenTH's panel green
+--- (Graphics:_makePanelGreenPalette) instead of the game's own green.
+--- @param dir (string) The directory of the sheet
+--- @param name (string) The name of the sheet file
+--- @param complex (boolean) Whether the sheet needs the complex loading path
+--- @return (string) # The loaded sprite sheet
+function Graphics:loadPanelGreenSpriteTable(dir, name, complex)
+  local palette = self.cache.panel_green_palette
+  if not palette then
+    palette = self:_makePanelGreenPalette()
+    self.cache.panel_green_palette = palette
+  end
+  return self:loadSpriteTable(dir, name, complex, palette)
 end
 
 --- Load a sprite table, optionally with a palette of its own.

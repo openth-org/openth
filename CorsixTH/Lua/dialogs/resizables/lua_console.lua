@@ -44,15 +44,15 @@ local col_textbox = {
 }
 
 local col_highlight = {
-  red = 174,
-  green = 166,
-  blue = 218,
+  red = 127,
+  green = 178,
+  blue = 117,
 }
 
 local col_shadow = {
-  red = 134,
-  green = 126,
-  blue = 178,
+  red = 87,
+  green = 138,
+  blue = 77,
 }
 
 function UILuaConsole:UILuaConsole(ui)

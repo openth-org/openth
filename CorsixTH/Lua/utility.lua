@@ -250,36 +250,39 @@ AnimationEffect.None = 0
 AnimationEffect.Glowing = 1
 AnimationEffect.Jelly = 2
 
--- Predefined colours
+-- Predefined colours. OpenTH's panels are green, after the main menu of
+-- Argus's design (2026-11-26); CorsixTH's are purple (154, 146, 198 and
+-- shades of it), each shade here and in the dialogs' own copies the
+-- matching green.
 Colours = {}
-Colours.PanelDefault = { -- CorsixTH's default panel colour (pale purple)
-  red = 154, green = 146, blue = 198
+Colours.PanelDefault = { -- The panel colour (green)
+  red = 107, green = 158, blue = 97
 }
-Colours.Disabled = { -- Specific grey with purplish aspect
-  red = 127, green = 123, blue = 149
+Colours.Disabled = { -- Grey with a touch of green
+  red = 118, green = 130, blue = 114
 }
 Colours.Setting = Colours.PanelDefault
-Colours.SettingHover = { -- Slightly darkened from a pale purple
-  red = 133, green = 128, blue = 183,
+Colours.SettingHover = { -- A little darker than the panel
+  red = 88, green = 138, blue = 80,
 }
 Colours.SettingActive = Colours.SettingHover
-Colours.HotkeyBox = { -- Purple
-  red = 081, green = 076, blue = 150,
+Colours.HotkeyBox = { -- Dark green
+  red = 052, green = 098, blue = 046,
 }
-Colours.HotkeyBoxActive = { -- Deep purple
-  red = 041, green = 036, blue = 090,
+Colours.HotkeyBoxActive = { -- Deep green
+  red = 026, green = 058, blue = 022,
 }
 Colours.Textbox = { -- Black
   red = 000, green = 000, blue = 000
 }
-Colours.Scrollbar = { -- Purple
-  red = 081, green = 076, blue = 150,
+Colours.Scrollbar = { -- Dark green
+  red = 052, green = 098, blue = 046,
 }
-Colours.Title = { -- Very pale purple
-  red = 174, green = 166, blue = 218
+Colours.Title = { -- Pale green
+  red = 127, green = 178, blue = 117
 }
-Colours.Caption = { -- Murky purple
-  red = 134, green = 126, blue = 178
+Colours.Caption = { -- Murky green
+  red = 87, green = 138, blue = 77
 }
 Colours.AdviserPanelBackground = { -- Aqua Blue
   red = 060, green = 174, blue = 201
