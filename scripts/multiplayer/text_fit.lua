@@ -35,7 +35,7 @@ local S = _S.multiplayer_window
 local mb = function(n) return S.megabytes:format(n) end
 -- {key, the text as drawn, the panel's width} (a few pixels less than the
 -- panel: the label is drawn inside its bevel). Widths from the dialogs:
--- multiplayer.lua (WIDTH 420, SIDE_W 170), multiplayer_download.lua (400),
+-- multiplayer.lua (WIDTH 420, the assistants' column 70), multiplayer_download.lua (400),
 -- multiplayer_save.lua (360), multiplayer_levels.lua (600).
 local list = {
   {"get_version", S.get_version:format(mb("3.3")), 374},
@@ -54,9 +54,16 @@ local list = {
   {"save_button", S.save_button, 149},
   {"room_map", S.room_map, 64},
   {"room_map_caption", S.room_map_caption, 554},
-  {"assistants_caption", S.assistants_caption, 154},
-  {"add_assistant_short", S.add_assistant_short, 154},
-  {"assistant_starting", S.assistant_starting, 154},
+  {"assistants_caption", S.assistants_caption, 64},
+  {"assistant_yes", S.assistant_yes, 64},
+  -- The room list's Start new game (two buttons of 185, or one of 345 with
+  -- the x) and its message line.
+  {"new_game_caption", S.new_game_caption, 374},
+  {"select_level", S.select_level, 179},
+  {"load_game", S.load_game, 179},
+  -- (Every multiplayer level's, below: the longest. A longer one would end
+  -- its map's name in "...".)
+  {"choose_level_first", S.choose_level_first, 374},
   -- A place's menu is at most as wide as the place's line.
   {"add_assistant", S.add_assistant, 374},
   {"add_assistant_for", S.add_assistant_for:format("MATROFTT"), 374},
@@ -76,6 +83,16 @@ local list = {
   -- The Customise window's labels are 165 wide: the professor menu switch.
   {"customise_window.professor_menu", _S.customise_window.professor_menu, 160},
 }
+
+-- The Start new game button with each multiplayer level chosen.
+do
+  local levels = corsixth.require("mp_levels")
+  for level = 1, levels.COUNT do
+    local max = math.min(8, levels.maxHospitals(level))
+    list[#list + 1] = {"level_chosen " .. level,
+        S.level_chosen:format(level, UIMultiplayerLevels.nameOf(level, false, max), max), 339}
+  end
+end
 
 local font = TheApp.gfx:loadFontAndSpriteTable("QData", "Font01V", nil, nil, {ttf_shadow = true, apply_ui_scale = true})
 local over = 0

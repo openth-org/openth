@@ -1177,7 +1177,7 @@ if with_referee:
             stopped37.append('drawing a' not in text.split('building: off', 1)[1])
     ok37 = (all(lines37) and lines37[1].group(1) == '4' and lines37[1].group(2) == '0'
             and zoe37.startswith('yuri (host)') and ' | zoe ' in zoe37 and 'Bot' not in zoe37
-            and len(side37) >= 2 and side37[0].startswith('Bot ') and side37[1].startswith('Bot ')
+            and len(side37) >= 2 and side37[0].startswith('yes (Bot ') and side37[1].startswith('yes (Bot ')
             and len(names37) == 2 and names37[0].startswith('YURI + BOT') and names37[1].startswith('ZOE + BOT')
             and sorted((a, c) for a, _, c in added37) == [('yuri', 'yuri'), ('zoe', 'zoe')]
             and all(result(n).startswith('IN SYNC through step 600') for n in ('yuri', 'zoe'))

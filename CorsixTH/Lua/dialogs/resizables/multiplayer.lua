@@ -45,7 +45,11 @@ local col = {
 }
 
 local WIDTH = 420
-local ROOM_ROWS = 6
+local ROOM_ROWS = 4
+local ROOMS_SCROLL_W = 20
+-- The room list's message line (under Join) and the Start new game part.
+local ROOMS_STATUS_Y = 40 + ROOM_ROWS * 27 + 38
+local NEW_GAME_Y = ROOMS_STATUS_Y + 25
 -- The room list asks the server again every few seconds while it is shown.
 local ROOMS_REFRESH_MS = 3000
 
@@ -65,7 +69,7 @@ local CHAT_GAP = 33 -- (above the rows, and the box under them)
 local CHAT_SCROLL_W = 20
 -- (The places view: a line more for each place, as the room view. The
 -- room's height without its chat rows.)
-local heights = {connect = 225, rooms = 435, room = 295 + CHAT_GAP, seats = 185}
+local heights = {connect = 225, rooms = 370, room = 295 + CHAT_GAP, seats = 185}
 -- The room view has a line per place: 4 in that height, 27 pixels more for
 -- each more (a room for up to 8).
 local PLACE_H = 27
@@ -78,8 +82,11 @@ end
 
 -- The assistants (bots that help in a person's hospital, no place of their
 -- own: Argus, 2026-11-15) in a column beside the room's places, each beside
--- its person (Jan: beside the window, not lines of their own).
-local SIDE_W = 170
+-- its person (Jan: beside the window, not lines of their own): a button,
+-- pressed ("yes") while the person has one, as wide as the team button
+-- (Argus, 2026-11-26: the bot's name made the window wide for little).
+local ASSIST_W = 70
+local SIDE_W = ASSIST_W + 5
 
 --! Whether the room view has the assistants' column: a new game on a server
 --! that runs bots.
@@ -186,7 +193,8 @@ function UIMultiplayer:UIMultiplayer(ui, status)
   -- A line for messages (connecting, errors), shown only while it has one;
   -- in a room they go on the hint's line instead (UIMultiplayer:_updateRoom).
   if self.view ~= "room" then
-    self.status_panel = self:addBevelPanel(20, viewHeight(self.view, lobby) - 75, WIDTH - 40, 20, col.bg)
+    local status_y = self.view == "rooms" and ROOMS_STATUS_Y or viewHeight(self.view, lobby) - 75
+    self.status_panel = self:addBevelPanel(20, status_y, WIDTH - 40, 20, col.bg)
     self.status_panel.lowered = true
     self:setStatus(self.status_text)
   end
@@ -349,66 +357,130 @@ end
 
 -- Room list view ----------------------------------------------------------------
 
+-- The room list (Argus, 2026-11-26): the rooms at the top, 4 rows with a
+-- scrollbar when there are more, Join under them; under "Start new game"
+-- the level or a saved game, the password, Create and Disconnect. The new
+-- room is named after the player and has as many places as its map.
 function UIMultiplayer:_buildRooms()
   local S, T = _S.multiplayer_window, _S.tooltip.multiplayer_window
-  local lobby = self.lobby
   self.selected_room = nil
   -- A row for each room shown; the list is filled in by _updateRooms, also
   -- when it comes again from the server (every few seconds), without
   -- disturbing the rest of the window.
   self.room_rows = {}
+  self.rooms_first = 1 -- (the room on the first row)
   for i = 1, ROOM_ROWS do
     self.room_rows[i] = self:addBevelPanel(20, 40 + (i - 1) * 27, WIDTH - 40, 25, col.setting, nil, nil, nil,
         col.setting_active)
         :makeToggleButton(0, 0, WIDTH - 40, 25, nil, function(window, state, btn)
-          window:selectRoom(i, state, btn)
+          window:selectRoom(window.rooms_first + i - 1, state, btn)
         end)
   end
+  -- (Shown only while there are more rooms than rows; the mouse wheel too.)
+  local bar_base = self:addBevelPanel(WIDTH - 20 - ROOMS_SCROLL_W, 40, ROOMS_SCROLL_W, ROOM_ROWS * 27 - 2, col.bg)
+  bar_base.lowered = true
+  self.rooms_scrollbar = bar_base:makeScrollbar(col.setting, function()
+    self.rooms_first = self.rooms_scrollbar.value
+    self:_updateRooms()
+  end, 1, ROOM_ROWS, ROOM_ROWS, 1)
   self.rooms_shown = nil
   self:_updateRooms()
   self.next_rooms_refresh = MultiplayerSession.defaultClock()() + ROOMS_REFRESH_MS
-  local y = 40 + ROOM_ROWS * 27 + 5
-  label(self, 20, y, 110, S.password)
-  self.password_box = textbox(self, 135, y, 135, "", 20, {"alpha", "numbers", "misc"}, T.password)
-  button(self, 280, y - 2, 60, S.join, self.buttonJoin)
-  button(self, 345, y - 2, WIDTH - 365, S.refresh, self.buttonRefresh)
+  button(self, 20, 40 + ROOM_ROWS * 27 + 3, WIDTH - 40, S.join, self.buttonJoin)
 
-  y = y + 35
-  label(self, 20, y, 110, S.new_room)
+  -- Start new game: a level from the level browser or a saved game; once
+  -- one is chosen it fills the row, with an x beside it to choose again.
+  self:addBevelPanel(20, NEW_GAME_Y, WIDTH - 40, 20, col.title):setLabel(S.new_game_caption).lowered = true
   local form = last_room_form or {}
-  if form.password then self.password_box:setText(form.password) end
-  self.room_name_box = textbox(self, 135, y, WIDTH - 155, form.room or (lobby.name or "My") .. "'s room", 20,
-      {"alpha", "numbers", "misc"})
-  y = y + 30
-  -- (Who shares a hospital and who races whom is picked in the room: each
-  -- player's colour and team. `new_mode` is only for scripted tests: a
-  -- preset of the newcomers' colours and teams.)
+  -- (`new_mode`, `room_name` and `new_max` are for scripted tests only: a
+  -- preset of the newcomers' colours and teams, the room's name and its
+  -- number of places.)
   self.new_mode = form.mode
-  self.new_level = form.level or 1
-  -- (A room has as many places as the level has hospitals: 4, or 8 on a
-  -- level with a map for 8.)
-  self.new_max = math.min(form.max or 2, placesFor(self.new_level))
-  self.level_button = button(self, 20, y, 180, S.level:format(self.new_level), self.buttonLevel, T.level)
-  self.max_button = button(self, 205, y, WIDTH - 225, S.players:format(self.new_max), self.buttonMax, T.players)
-  -- A new game, or a saved multiplayer game picked in the Load MP game
-  -- window (x: a new game again).
+  self.room_name = form.room
+  self.new_level, self.new_shared = form.level, form.shared
+  self.new_max = form.level and math.min(form.max or placesFor(form.level), placesFor(form.level)) or nil
+  local y = NEW_GAME_Y + 30
+  local half = math.floor((WIDTH - 50) / 2)
+  self.level_button = button(self, 20, y, half, S.select_level, self.buttonLevel, T.level)
   self.saves = nil
   self.continue_index = 0
-  self.continue_button = button(self, 20, y + 35, WIDTH - 40, S.load_game, self.buttonContinue,
+  self.continue_button = button(self, WIDTH - 20 - half, y, half, S.load_game, self.buttonContinue,
       T.continue_game)
-  self.new_game_button = button(self, WIDTH - 50, y + 35, 30, "x", self.buttonNewGame, T.new_game)
-  self.new_game_button:setVisible(false)
-  if form.continue_path then self:_continueSave(form.continue_path) end
+  self.new_game_button = button(self, WIDTH - 50, y, 30, "x", self.buttonNewGame)
+  if form.continue_path then self:_continueSave(form.continue_path) else self:_showChoice() end
+
+  y = y + 40
+  label(self, 20, y, 110, S.password)
+  self.password_box = textbox(self, 135, y, WIDTH - 155, form.password or "", 20, {"alpha", "numbers", "misc"},
+      T.password)
   y = heights.rooms - 50
   button(self, 20, y, 180, S.create, self.buttonCreate)
   button(self, WIDTH - 200, y, 180, S.disconnect, self.buttonDisconnect)
 end
 
---! Show the lobby's room list in the rows. The selected room stays selected
---! if it is still there.
+--! A button's place and width (it moves when a choice fills the row).
+local function placeButton(btn, x, w)
+  local panel = btn.panel_for_sprite
+  panel.x, panel.w = x, w
+  btn.x, btn.r = x, x + w
+end
+
+--! The Start new game row as chosen: the two buttons; or the level or the
+--! saved game across the row, with the x beside it.
+function UIMultiplayer:_showChoice()
+  local S, T = _S.multiplayer_window, _S.tooltip.multiplayer_window
+  local half = math.floor((WIDTH - 50) / 2)
+  local save = self.saves and self.saves[self.continue_index]
+  local level = not save and self.new_level
+  self.level_button:setVisible(not save)
+  self.level_button:enable(not save)
+  self.continue_button:setVisible(not level)
+  self.continue_button:enable(not level)
+  self.new_game_button:setVisible(save ~= nil or level ~= nil)
+  self.new_game_button:enable(save ~= nil or level ~= nil)
+  self.new_game_button:setTooltip(save and T.new_game or nil)
+  if level then
+    placeButton(self.level_button, 20, WIDTH - 75)
+    local name = UIMultiplayerLevels.nameOf(level, self.new_shared, placesFor(level))
+    local max = self.new_max or placesFor(level)
+    -- (A long map name ends in "..." to fit the button.)
+    local font = self.level_button.panel_for_sprite.label_font
+    local room = (WIDTH - 75 - 8) * TheApp.gfx:getUIScale()
+    local text = S.level_chosen:format(level, name, max)
+    local n = #name
+    while font and font:sizeOf(text) > room and n > 4 do
+      n = n - 1
+      while n > 0 and (name:byte(n + 1) or 0) >= 128 and (name:byte(n + 1) or 0) < 192 do n = n - 1 end
+      text = S.level_chosen:format(level, (name:sub(1, n):gsub("%s+$", "")) .. "...", max)
+    end
+    self.level_button:setLabel(text)
+  else
+    placeButton(self.level_button, 20, half)
+    self.level_button:setLabel(S.select_level)
+  end
+  if save then
+    placeButton(self.continue_button, 20, WIDTH - 75)
+    self.continue_button:setLabel(S.continue_save:format(save.label))
+  else
+    placeButton(self.continue_button, WIDTH - 20 - half, half)
+    self.continue_button:setLabel(S.load_game)
+  end
+end
+
+--! How many rows the room list's lines may use, in pixels: narrower while
+--! the scrollbar shows.
+local function roomRowWidth(scrolling)
+  return WIDTH - 40 - (scrolling and ROOMS_SCROLL_W + 5 or 0)
+end
+
+--! Show the lobby's room list in the rows (from the scrollbar's place). The
+--! selected room stays selected if it is still there.
 function UIMultiplayer:_updateRooms()
   local S = _S.multiplayer_window
   local rooms = self.lobby.rooms
+  local scrolling = #rooms > ROOM_ROWS
+  local first = math.max(1, math.min(self.rooms_first or 1, #rooms - ROOM_ROWS + 1))
+  self.rooms_first = first
   local lines = {}
   -- A line fits its row (Jan, 2026-11-12: running games' lines ran out of
   -- the list): the mode's name is shortened ("...") first, then the room's
@@ -416,7 +488,7 @@ function UIMultiplayer:_updateRooms()
   local s = TheApp.gfx:getUIScale()
   local font = self.room_rows[1] and self.room_rows[1].panel_for_sprite.label_font or
       TheApp.gfx:loadFontAndSpriteTable("QData", "Font01V", nil, nil, {ttf_shadow = true, apply_ui_scale = true})
-  local room_w = (WIDTH - 40 - 10) * s
+  local room_w = (roomRowWidth(scrolling) - 10) * s
   local SHORTEST = 8
   local function cut(text, n) -- the first n bytes, whole letters only (UTF-8), and "..."
     if n >= #text then return text end
@@ -440,8 +512,8 @@ function UIMultiplayer:_updateRooms()
     end
     return line
   end
-  for i = 1, math.min(ROOM_ROWS, #rooms) do
-    local r = rooms[i]
+  for i = 1, math.min(ROOM_ROWS, #rooms - first + 1) do
+    local r = rooms[first + i - 1]
     local flags = (r.locked == "1" and S.locked or "") .. (r.build_ok == "0" and S.other_build or "")
     if r.state == "running" then
       -- A running game: how many places a newcomer may take, and its level
@@ -460,34 +532,56 @@ function UIMultiplayer:_updateRooms()
     end
   end
   -- (Labels are localised strings: compared by their text.)
-  local shown = {}
-  for i, line in ipairs(lines) do shown[i] = tostring(line) end
+  local shown = {first .. "/" .. #rooms}
+  for i, line in ipairs(lines) do shown[i + 1] = tostring(line) end
   shown = table.concat(shown, "\n")
   if shown == self.rooms_shown then return end
   self.rooms_shown = shown
+  -- The scrollbar, and the rows beside it.
+  local bar = self.rooms_scrollbar
+  if bar then
+    bar:setRange(1, math.max(#rooms, ROOM_ROWS), ROOM_ROWS, first)
+    bar.base.visible, bar.slider.visible, bar.enabled = scrolling, scrolling, scrolling
+  end
   local still_there
   for i, row in ipairs(self.room_rows) do
-    local r = rooms[i]
+    placeButton(row, 20, roomRowWidth(scrolling))
+    local r = rooms[first + i - 1]
     if i <= #lines then
       row.panel_for_sprite:setLabel(lines[i])
       row:enable(true)
       row:setToggleState(r.room == self.selected_room)
       if r.room == self.selected_room then still_there = true end
     else
-      row.panel_for_sprite:setLabel(i == 1 and S.no_rooms or "")
+      row.panel_for_sprite:setLabel(i == 1 and #rooms == 0 and S.no_rooms or "")
       row:setToggleState(false)
       row:enable(false)
     end
   end
+  -- (A selected room scrolled out of sight stays selected.)
+  for _, r in ipairs(rooms) do
+    if r.room == self.selected_room then still_there = true end
+  end
   if not still_there then self.selected_room = nil end
 end
 
+--! Select the room at `index` in the lobby's room list (its row, when one
+--! shows it, is the toggle button `btn`).
 function UIMultiplayer:selectRoom(index, state, btn)
-  for _, b in ipairs(self.buttons) do
-    if b ~= btn and b.is_toggle then b:setToggleState(false) end
+  for _, b in ipairs(self.room_rows or {}) do
+    if b ~= btn then b:setToggleState(false) end
   end
   local room = self.lobby.rooms[index]
   self.selected_room = state and room and room.room or nil
+end
+
+--! The mouse wheel scrolls the room list (in a room: its chat).
+function UIMultiplayer:_scrollRooms(rows)
+  local bar = self.rooms_scrollbar
+  if not bar or not bar.enabled then return false end
+  self.rooms_first = math.max(1, self.rooms_first + rows)
+  self:_updateRooms()
+  return true
 end
 
 function UIMultiplayer:buttonJoin()
@@ -498,47 +592,44 @@ function UIMultiplayer:buttonJoin()
   self.lobby:joinRoom(self.selected_room, self.password_box.text)
 end
 
-function UIMultiplayer:buttonRefresh() self.lobby:refreshRooms() end
-
---! The Level button: the level browser (UIMultiplayerLevels), which opens
---! this window again when done.
+--! Select level: the level browser (UIMultiplayerLevels), which opens this
+--! window again when done.
 function UIMultiplayer:buttonLevel()
   self:_rememberForm()
   local ui = self.ui
   self.rebuilding = true
   self:close()
-  ui:addWindow(UIMultiplayerLevels(ui, self.new_level, self.new_max))
+  ui:addWindow(UIMultiplayerLevels(ui, self.new_level or 1, self.new_level and placesFor(self.new_level) or 4))
 end
 
 --! The level browser chose a level (1-12: the campaign's for one shared
 --! hospital; with several hospitals a level above the multiplayer levels
---! plays the last).
-function UIMultiplayer.chooseLevel(level)
+--! plays the last). `shared`: it was picked in the campaign's list (only
+--! its name: who shares a hospital is picked in the room).
+function UIMultiplayer.chooseLevel(level, shared)
   last_room_form = last_room_form or {}
   last_room_form.level = level
+  last_room_form.shared = shared or nil
+  last_room_form.max = nil
+  last_room_form.continue_path = nil
 end
 
 --! For scripted tests: the level, as the browser would choose it.
 function UIMultiplayer:setLevel(level)
   self.new_level = math.max(1, math.min(12, level))
-  self.level_button.panel_for_sprite:setLabel(_S.multiplayer_window.level:format(self.new_level))
-  self.new_max = math.min(self.new_max, placesFor(self.new_level))
-  self.max_button.panel_for_sprite:setLabel(_S.multiplayer_window.players:format(self.new_max))
+  self.new_shared = nil
+  self.new_max = placesFor(self.new_level)
+  self.saves, self.continue_index = nil, 0
+  self:_showChoice()
 end
 
---! The number of players: the next one, up to the level's places.
-function UIMultiplayer:buttonMax()
-  self.new_max = self.new_max % placesFor(self.new_level) + 1
-  if self.new_max < 2 then self.new_max = 2 end
-  self.max_button.panel_for_sprite:setLabel(_S.multiplayer_window.players:format(self.new_max))
-end
-
---! The new room's settings so far (kept while the Load MP game window is
---! open, and for the next room).
+--! The new room's settings so far (kept while the level browser or the Load
+--! MP game window is open, and for the next room).
 function UIMultiplayer:_rememberForm()
   local save = self.saves and self.saves[self.continue_index]
-  last_room_form = {room = self.room_name_box.text, password = self.password_box.text,
-      mode = self.new_mode, level = self.new_level, max = self.new_max, continue_path = save and save.path}
+  last_room_form = {room = self.room_name, password = self.password_box and self.password_box.text,
+      mode = self.new_mode, level = self.new_level, shared = self.new_shared, max = self.new_max,
+      continue_path = save and save.path}
 end
 
 --! Load MP game: the saved multiplayer games in a file list
@@ -561,32 +652,26 @@ end
 --! The new room continues this save (a path in the multiplayer saves): it
 --! decides the level and the number of players.
 function UIMultiplayer:_continueSave(path)
-  local S = _S.multiplayer_window
   self.saves = MultiplayerLobby.listSaves()
   self.continue_index = 0
   for i, save in ipairs(self.saves) do
     if save.path == path then self.continue_index = i end
   end
   local save = self.saves[self.continue_index]
-  self.continue_button.panel_for_sprite:setLabel(save and S.continue_save:format(save.label) or S.load_game)
-  -- (As wide as the buttons above it; shorter with the x beside it.)
-  local w = save and WIDTH - 75 or WIDTH - 40
-  self.continue_button.panel_for_sprite.w = w
-  self.continue_button.r = self.continue_button.x + w
-  self.new_game_button:setVisible(save ~= nil)
   if save then
     self.new_level = tonumber(save.info.level) or 1
+    self.new_shared = nil
     self.new_max = math.max(2, tonumber(save.info.players) or 2)
-    self.level_button.panel_for_sprite:setLabel(S.level:format(self.new_level))
-    self.max_button.panel_for_sprite:setLabel(S.players:format(self.new_max))
   end
-  for _, b in ipairs({self.level_button, self.max_button}) do b:enable(not save) end
+  self:_showChoice()
   return save
 end
 
---! x: a new game instead of the saved one.
+--! x: the level or saved game chosen goes; the two buttons are back.
 function UIMultiplayer:buttonNewGame()
-  self:_continueSave(nil)
+  self.saves, self.continue_index = nil, 0
+  self.new_level, self.new_shared, self.new_max = nil, nil, nil
+  self:_showChoice()
 end
 
 --! For scripted tests: choose a saved game by label ("latest": the newest).
@@ -598,11 +683,41 @@ function UIMultiplayer:selectContinue(wanted)
   end
 end
 
+--! The new room's name: "<player>'s room", with " 2", " 3"... when a room
+--! of that name is there already.
+function UIMultiplayer:_freeRoomName(skip)
+  local base = (self.lobby.name or "My") .. "'s room"
+  local taken = {}
+  for _, r in ipairs(self.lobby.rooms or {}) do taken[r.room] = true end
+  local n = skip or 1
+  while true do
+    local name = n == 1 and base or (base .. " " .. n)
+    if not taken[name] or n >= 99 then return name, n end
+    n = n + 1
+  end
+end
+
 function UIMultiplayer:buttonCreate()
+  local save = self.saves and self.saves[self.continue_index]
+  if not save and not self.new_level then
+    self:setStatus(_S.multiplayer_window.choose_level_first)
+    return
+  end
   self:_rememberForm()
-  self.lobby:createRoom({room = self.room_name_box.text, password = self.password_box.text,
-      max = self.new_max, mode = self.new_mode, level = self.new_level, difficulty = "full",
-      continue_save = self.saves and self.saves[self.continue_index]})
+  local name = self.room_name
+  if not name then
+    -- (Named here; if the server has a room of that name already, the next
+    -- number: UIMultiplayer:onTick.)
+    name, self.auto_name_n = self:_freeRoomName()
+  end
+  self:_create(name)
+end
+
+function UIMultiplayer:_create(name)
+  self.creating = name
+  self.lobby:createRoom({room = name, password = self.password_box.text,
+      max = self.new_max or placesFor(self.new_level), mode = self.new_mode, level = self.new_level,
+      difficulty = "full", continue_save = self.saves and self.saves[self.continue_index]})
 end
 
 function UIMultiplayer:buttonDisconnect()
@@ -691,59 +806,65 @@ function UIMultiplayer:_buildRoom()
             function() self:clickTeam(i, -1) end)
         :setTooltip(T.team)
   end
-  -- The assistants' column: beside each person their assistant, or (for
-  -- this player's own line, and the host's for everybody's) a button that
-  -- adds one; a click on an assistant sends it away, a right click (the
-  -- host) picks its level.
-  self.side_panels, self.side_buttons, self.side_add = {}, {}, {}
+  -- The assistants' column: beside each person a button, pressed ("yes")
+  -- while they have an assistant. A click adds one (this player's own line,
+  -- and the host's on anybody's) or sends it away (its person or the host);
+  -- a right click (the host) picks its level.
+  self.side_panels, self.side_buttons = {}, {}
   if sideColumn(self.lobby) then
-    self:addBevelPanel(WIDTH - 10, 10, SIDE_W - 10, 20, col.title):setLabel(S.assistants_caption).lowered = true
+    local side_x = WIDTH - 15
+    self:addBevelPanel(side_x, 10, ASSIST_W, 20, col.title):setLabel(S.assistants_caption).lowered = true
     for i = 1, places do
       local y = 40 + (i - 1) * PLACE_H
-      self.side_panels[i] = label(self, WIDTH - 10, y, SIDE_W - 10, "")
-      self.side_buttons[i] = self.side_panels[i]:makeButton(0, 0, SIDE_W - 10, 25, nil,
-          function() self:clickSide(i) end, nil, function() self:sideMenu(i) end)
-      -- ("+ Add assistant": a button in the same place, shown instead.)
-      self.side_add[i] = self:addBevelPanel(WIDTH - 10, y, SIDE_W - 10, 25, col.button)
-          :setLabel(S.add_assistant_short):makeButton(0, 0, SIDE_W - 10, 25, nil, function() self:clickSide(i) end)
-          :setTooltip(T.add_assistant_button)
+      self.side_buttons[i] = self:addBevelPanel(side_x, y, ASSIST_W, 25, col.setting, nil, nil, nil,
+          col.setting_active):setLabel(""):makeToggleButton(0, 0, ASSIST_W, 25, nil, function()
+            self:clickSide(i)
+            self:_updateSide() -- (pressed as the lobby has it until the server answers)
+          end, nil, function() self:sideMenu(i) end)
+      self.side_panels[i] = self.side_buttons[i].panel_for_sprite
     end
   end
-  self.summary_panel = label(self, 20, 40 + places * PLACE_H + 5, WIDTH - 40, "")
+  -- Below the places everything is as wide as the window, the assistants'
+  -- column included (Argus, 2026-11-26: no empty corner at the bottom right).
+  local inner = self.width - 40
+  self.summary_panel = label(self, 20, 40 + places * PLACE_H + 5, inner, "")
   -- What the room plays, and its map (with who plays where) a click away.
-  self.mode_panel = label(self, 20, 40 + (places + 1) * PLACE_H + 5, WIDTH - 40 - 75, "")
-  self:addBevelPanel(WIDTH - 90, 40 + (places + 1) * PLACE_H + 5, 70, 25, col.button):setLabel(S.room_map)
+  self.mode_panel = label(self, 20, 40 + (places + 1) * PLACE_H + 5, inner - 75, "")
+  self:addBevelPanel(20 + inner - 70, 40 + (places + 1) * PLACE_H + 5, 70, 25, col.button):setLabel(S.room_map)
       :makeButton(0, 0, 70, 25, nil, self.buttonRoomMap):setTooltip(_S.tooltip.multiplayer_window.room_map)
-  self.hint_panel = label(self, 20, 40 + (places + 2) * PLACE_H + 5, WIDTH - 40, S.room_hint)
+  self.hint_panel = label(self, 20, 40 + (places + 2) * PLACE_H + 5, inner, S.room_hint)
   -- The room's chat: the last lines, and a box; Enter sends what is typed.
   local chat_y = 40 + (places + 3) * PLACE_H + 8
   local rows = chatRows(self.lobby)
   self.chat_panels = {}
   for i = 1, rows do
-    local line = self:addBevelPanel(20, chat_y + (i - 1) * CHAT_ROW_H, WIDTH - 45 - CHAT_SCROLL_W, CHAT_ROW_H,
+    local line = self:addBevelPanel(20, chat_y + (i - 1) * CHAT_ROW_H, inner - 5 - CHAT_SCROLL_W, CHAT_ROW_H,
         col.bg, col.bg, col.bg)
     line:setLabel("", nil, "left"):setAutoClip(true)
     line.lowered = true
     self.chat_panels[i] = line
   end
   -- The scrollbar: back through the room's chat (the mouse wheel too).
-  local bar_base = self:addBevelPanel(WIDTH - 20 - CHAT_SCROLL_W, chat_y, CHAT_SCROLL_W, rows * CHAT_ROW_H, col.bg)
+  local bar_base = self:addBevelPanel(20 + inner - CHAT_SCROLL_W, chat_y, CHAT_SCROLL_W, rows * CHAT_ROW_H, col.bg)
   bar_base.lowered = true
   self.chat_scrollbar = bar_base:makeScrollbar(col.setting, function() self:_showRoomChat() end, 1, 1, rows, 1)
   self.chat_at_end = true
-  self.chat_box = textbox(self, 20, chat_y + rows * CHAT_ROW_H + 4, WIDTH - 40, "", 120, {"all"},
+  self.chat_box = textbox(self, 20, chat_y + rows * CHAT_ROW_H + 4, inner, "", 120, {"all"},
       _S.tooltip.multiplayer_window.room_chat)
   self.chat_box.confirm_callback = function() self:sendRoomChat() end
   local y = viewHeight("room", self.lobby) - 50
+  -- Three buttons across the window, 10 apart.
+  local button_w = math.floor((inner - 20) / 3)
   -- The game's options (UIMultiplayerRoomOptions): the host sets them,
   -- everybody may look.
-  button(self, 150, y, 120, S.game_options, self.buttonOptions, _S.tooltip.multiplayer_window.game_options)
+  button(self, 30 + button_w, y, button_w, S.game_options, self.buttonOptions,
+      _S.tooltip.multiplayer_window.game_options)
   -- The host starts the game; the others say they are ready. Both buttons
   -- sit in the same place, and only the one for this player is shown.
-  self.ready_button = self:addBevelPanel(20, y, 120, 30, col.setting, nil, nil, nil, col.setting_active)
-      :setLabel(S.ready):makeToggleButton(0, 0, 120, 30, nil, self.buttonReady):setTooltip(T.ready)
-  self.start_button = button(self, 20, y, 120, S.start, self.buttonStart, T.start)
-  button(self, WIDTH - 140, y, 120, S.leave, self.buttonLeave)
+  self.ready_button = self:addBevelPanel(20, y, button_w, 30, col.setting, nil, nil, nil, col.setting_active)
+      :setLabel(S.ready):makeToggleButton(0, 0, button_w, 30, nil, self.buttonReady):setTooltip(T.ready)
+  self.start_button = button(self, 20, y, button_w, S.start, self.buttonStart, T.start)
+  button(self, 20 + inner - button_w, y, button_w, S.leave, self.buttonLeave)
   self:_updateRoom()
 end
 
@@ -834,6 +955,7 @@ end
 
 --! The mouse wheel scrolls the room's chat.
 function UIMultiplayer:onMouseWheel(x, y)
+  if self.view == "rooms" and y ~= 0 and self:_scrollRooms(-y) then return true end
   local bar = self.view == "room" and self.chat_scrollbar
   if not bar or y == 0 then return UIResizable.onMouseWheel(self, x, y) end
   bar:setRange(bar.min_value, bar.max_value, bar.page_size, math.max(1, bar.value - y))
@@ -967,42 +1089,42 @@ function UIMultiplayer:rowPlayer(i)
   return peer and self.lobby.players[peer] or nil
 end
 
---! The assistants' column: line i, beside the person on line i: their
---! assistant ("Bot Agnes", "starting..."), or the button that adds one.
+--! The assistants' column: beside the person on line i a button, pressed
+--! ("yes") while they have an assistant (or one is starting), the
+--! assistant's name in its tooltip; none beside a bot or an empty place.
 function UIMultiplayer:_updateSide()
-  local panels = self.side_panels
-  if not panels or not panels[1] then return end
+  local buttons = self.side_buttons
+  if not buttons or not buttons[1] then return end
   local S, T = _S.multiplayer_window, _S.tooltip.multiplayer_window
   local lobby = self.lobby
   local me, owner = tonumber(lobby.room.peer), lobby:isOwner()
   local assisted = {}
   for p in (lobby.summary and lobby.summary.assisted or ""):gmatch("%d+") do assisted[tonumber(p)] = true end
   self.side_entry = {}
-  for i, panel in ipairs(panels) do
+  for i, btn in ipairs(buttons) do
     local p = self:rowPlayer(i)
-    local text, tip, entry = "", nil, nil
-    local helper = p and p.bot ~= "1" and lobby:assistantOf(p.peer)
+    local person = p ~= nil and p.bot ~= "1"
+    local on, tip, entry = false, nil, nil
+    local helper = person and lobby:assistantOf(p.peer)
     if helper then
+      on = true
       local mine = tonumber(helper.assists) == me
-      text = helper.level and helper.level ~= "normal" and
+      local name = helper.level and helper.level ~= "normal" and
           S.bot_named:format(helper.name, MultiplayerLobby.botKind(helper.level)) or helper.name
       entry = {peer = tonumber(helper.peer), helper = helper}
-      tip = (owner and T.assistant_host) or (mine and T.assistant_mine) or T.assistant
-    elseif p and p.bot ~= "1" and assisted[tonumber(p.peer)] then
-      text = S.assistant_starting
-    elseif p and p.bot ~= "1" and lobby:mayAddAssistant(p.peer) then
-      text = S.add_assistant_short
+      tip = name .. ": " .. ((owner and T.assistant_host) or (mine and T.assistant_mine) or T.assistant)
+    elseif person and assisted[tonumber(p.peer)] then
+      on = true
+      tip = S.assistant_starting
+    elseif person and lobby:mayAddAssistant(p.peer) then
       entry = {add = tonumber(p.peer)}
       tip = T.add_assistant_button
     end
-    panel:setLabel(text)
-    local add = entry ~= nil and entry.add ~= nil
-    self.side_add[i]:setVisible(add)
-    self.side_add[i]:enable(add)
-    self.side_buttons[i]:setVisible(not add)
-    self.side_buttons[i]:enable(entry ~= nil and (entry.add ~= nil or owner or
-        tonumber(entry.helper.assists) == me))
-    self.side_buttons[i]:setTooltip(tip)
+    btn:setVisible(person)
+    btn:setToggleState(on)
+    btn:setLabel(on and S.assistant_yes or "")
+    btn:enable(entry ~= nil and (entry.add ~= nil or owner or tonumber(entry.helper.assists) == me))
+    btn:setTooltip(tip)
     self.side_entry[i] = entry
   end
 end
@@ -1213,6 +1335,14 @@ function UIMultiplayer:onTick()
     if lobby.version ~= self.seen_version then
       self.seen_version = lobby.version
       local status = lobby.error and lobby.error.text or nil
+      -- A room of the new room's name came in the meantime: the next number.
+      if self.view == "rooms" and self.creating and self.auto_name_n and lobby.error and
+          lobby.error.code == "room_exists" and self.auto_name_n < 99 then
+        local name
+        name, self.auto_name_n = self:_freeRoomName(self.auto_name_n + 1)
+        self:_create(name)
+        status = nil
+      end
       -- Theme Hospital files of another edition: say what to do (once).
       if lobby.error and lobby.error.code == "data_mismatch" and lobby.data_help_shown ~= lobby.error then
         lobby.data_help_shown = lobby.error

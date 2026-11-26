@@ -127,8 +127,8 @@ local expect_repair = os.getenv("MP_EXPECT_REPAIR") == "1"
 -- Join a running game again (this name left it earlier).
 local take_seat = tonumber(os.getenv("MP_TAKE_SEAT") or "")
 local rejoin = os.getenv("MP_REJOIN") == "1" or take_seat ~= nil
--- MP_AUTO_ROOMS=1: a joining player types the password first and never
--- clicks Refresh; the room list must show the room by itself.
+-- MP_AUTO_ROOMS=1: a joining player types the password first and waits;
+-- the room list (which has no Refresh) must show the room by itself.
 local auto_rooms = os.getenv("MP_AUTO_ROOMS") == "1"
 
 local function log(msg)
@@ -306,7 +306,10 @@ local function add_assistant(lobby)
   win:_updateRoom()
   local function column()
     local out = {}
-    for k, panel in ipairs(win.side_panels or {}) do out[k] = plain_text(panel.label or "") end
+    for k, panel in ipairs(win.side_panels or {}) do
+      local e = win.side_entry and win.side_entry[k]
+      out[k] = plain_text(panel.label or "") .. (e and e.helper and (" (" .. e.helper.name .. ")") or "")
+    end
     return table.concat(out, " | ")
   end
   local line
@@ -420,7 +423,7 @@ local function run_lobby()
 
   if role == "host" then
     w = lobby_window()
-    w.room_name_box:setText(room)
+    w.room_name = room -- (a person's room is named after them)
     if os.getenv("MP_SHOW_LOAD") then
       -- Load MP game: two saved games (made up: only listed), the file list,
       -- one picked, the lobby again with it; then "x", a new game.
@@ -445,7 +448,7 @@ local function run_lobby()
       w = lobby_window()
       local picked = tostring(w.continue_button.panel_for_sprite.label or ""):gsub("^<LocalisedString> Current value:%s*", "")
       log(string.format("UI: load window listed [%s]; picked: %s; level %d, %d players; room name kept: %s",
-          table.concat(shown, " | "), picked, w.new_level, w.new_max, tostring(w.room_name_box.text == room)))
+          table.concat(shown, " | "), picked, w.new_level, w.new_max, tostring(w.room_name == room)))
       shot("lobby-load-picked")
       w:buttonNewGame()
       log("UI: x: " .. tostring(w.continue_button.panel_for_sprite.label or ""):gsub("^<LocalisedString> Current value:%s*", "")
@@ -475,16 +478,15 @@ local function run_lobby()
       lv:buttonChoose()
       w = lobby_window()
       log(string.format("UI: levels listed [%s]; map drawn: %s; shared level 3: %s; chosen: level %d, room name kept: %s",
-          table.concat(names, " | "), tostring(mp_map), shared_name, w.new_level, tostring(w.room_name_box.text == room)))
+          table.concat(names, " | "), tostring(mp_map), shared_name, w.new_level, tostring(w.room_name == room)))
       w:setLevel(tonumber(os.getenv("MP_LEVEL") or 1))
     end
     w.password_box:setText(password)
     w.new_mode = room_mode -- (the newcomers' first colours and teams)
     w:setLevel(tonumber(os.getenv("MP_LEVEL") or 1))
-    -- Room size: MP_PLAYERS (2 to 8).
-    for _ = 1, 7 do
-      if (w.new_max or 2) ~= math.max(2, math.min(8, want_players)) then w:buttonMax() end
-    end
+    -- Room size: MP_PLAYERS (2 to 8; a person's room has as many places as
+    -- its map).
+    w.new_max = math.max(2, math.min(8, want_players))
     -- (More players than the level has hospitals: only a test server lets
     -- them in, CORSIXTH_MP_TEST_EXTRA_PLACES; the window stops at the level's.)
     if want_players > (w.new_max or 2) then w.new_max = math.min(8, want_players) end
@@ -685,7 +687,12 @@ local function run_lobby()
       wait_for("room " .. room .. " in the list", function()
         local win = lobby_window()
         for i, r in ipairs(lobby.rooms) do
-          if r.room == room and win and (win.rooms_shown or ""):find(room, 1, true) then index = i return true end
+          -- (Scrolled to it, as a person would among more rooms than rows.)
+          if r.room == room and win then
+            win.rooms_first = i
+            win:_updateRooms()
+            if (win.rooms_shown or ""):find(room, 1, true) then index = i return true end
+          end
         end
         return false
       end, 30)
