@@ -644,6 +644,13 @@ end
 function UIProfessorMenu.drawMovieStrip(canvas, bottom, drawPart)
   local l = UIProfessorMenu.layout(canvas:getRenderSize())
   if l.px <= 0 then return end
+  -- Straight onto the screen. In fullscreen the engine draws everything
+  -- after a scale, back to 1 too, into a picture of its own that it lays over
+  -- the screen as it is, see-through where nothing was drawn: a part drawn
+  -- there half see-through was laid on half see-through again, darker (Jan's
+  -- work Mac, 2026-11-26). A "bitmap" scale lays that picture down and makes
+  -- no new one.
+  canvas:scale(1, "bitmap")
   local s = l.scale
   for _, d in ipairs(UIProfessorMenu.movieStrip(bottom)) do
     if not drawPart(d.sx, d.sy, d.sw, d.sh, (l.px + d.x) * s, (l.py + d.y) * s, d.w * s,

@@ -266,6 +266,24 @@ describe("Professor menu", function()
     assert.is_true(feet(156.1) < 141)
   end)
 
+  it("draws the strip from his movie straight onto the screen", function()
+    -- In fullscreen the engine draws after any scale (to 1 too) into a
+    -- picture of its own, laid over the screen see-through where nothing was
+    -- drawn: the strip's half see-through columns came out darker there
+    -- (Jan's work Mac, 2026-11-26). A "bitmap" scale to 1 lays it down and
+    -- makes none; the strip is drawn after that.
+    local calls = {}
+    local canvas = {getRenderSize = function() return 2560, 1080 end,
+      scale = function(_, s, what) calls[#calls + 1] = ("scale %s %s"):format(s, tostring(what)) return true end}
+    UIProfessorMenu.drawMovieStrip(canvas, 159, function(_, _, _, _, _, _, _, _, _, alpha)
+      calls[#calls + 1] = "part " .. alpha
+      return true
+    end)
+    assert.equal("scale 1 bitmap", calls[1])
+    assert.is_true(#calls > 10)
+    for i = 2, #calls do assert.is_truthy(calls[i]:match("^part"), calls[i]) end
+  end)
+
   it("makes beforehand every fill drawn beside his movies", function()
     local fills = UIProfessorMenu.movieFills()
     local key = UIProfessorMenu.fillKey
