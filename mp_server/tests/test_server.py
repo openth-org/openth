@@ -392,6 +392,34 @@ def test_health_check_answers_without_hello(run):
     run(body)
 
 
+async def _http(port, request: bytes) -> bytes:
+    r, w = await asyncio.open_connection("127.0.0.1", port)
+    w.write(request)
+    answer = await asyncio.wait_for(r.read(), 5)
+    w.close()
+    return answer
+
+
+def test_web_health_check_on_the_game_port(run, monkeypatch):
+    monkeypatch.setenv("CORSIXTH_MP_RELEASE", "mp-test-0123abcd")
+
+    async def body(server, port):
+        answer = await _http(port, b"GET /health HTTP/1.1\r\nHost: eu2.openth.org\r\n"
+                                   b"User-Agent: Uptime-Kuma\r\nAccept: */*\r\n\r\n")
+        head, text = answer.split(b"\r\n\r\n", 1)
+        assert head.startswith(b"HTTP/1.1 200 OK\r\n")
+        assert b"Content-Length: %d\r\n" % len(text) in head
+        assert text == b"OK players=0 release=mp-test-0123abcd rooms=0\n"
+        # A query string is ignored; HEAD gets the head alone.
+        assert (await _http(port, b"GET /health?x=1 HTTP/1.0\r\n\r\n")).startswith(b"HTTP/1.1 200 OK")
+        head_only = await _http(port, b"HEAD /health HTTP/1.1\r\nHost: x\r\n\r\n")
+        assert head_only.startswith(b"HTTP/1.1 200 OK") and head_only.endswith(b"\r\n\r\n")
+        # Any other page is not there, and none of it made a player.
+        assert (await _http(port, b"GET / HTTP/1.1\r\n\r\n")).startswith(b"HTTP/1.1 404 Not Found")
+        assert server.players == {}
+    run(body)
+
+
 def test_connections_per_address_are_limited():
     async def main():
         server = srv.Server(max_per_address=2)

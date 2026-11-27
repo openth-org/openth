@@ -182,6 +182,21 @@ On a server set up with `setup-referee-host.sh`, the settings live in
 `/etc/openth.env`, and the API key and the webhook in
 `/etc/openth-secrets.env` (see [`SERVER-SETUP.md`](../docs/multiplayer/SERVER-SETUP.md)).
 
+## Monitoring
+
+The game port also answers a web request for its health, so a monitor such
+as Uptime Kuma can check the server itself, not only that the port is open:
+
+    curl http://eu2.openth.org:47800/health
+    OK players=0 release=mp-test-92f8a4e8 rooms=0
+
+`players` counts every connection in the lobby or a game (bots and referees
+too), `rooms` the open rooms, and `release` is `OPENTH_RELEASE` (left out if
+it is not set). Any other page answers 404. In Uptime Kuma, an
+"HTTP(s) - Keyword" monitor on that address with the keyword `OK players`
+does it. On the server itself, `echo HEALTH | nc -q 2 127.0.0.1 47800` asks
+the same.
+
 ## Security
 
 The connection is plain TCP: room passwords and the game travel

@@ -74,6 +74,9 @@ PING_INTERVAL_LOBBY = 1.0
 PING_INTERVAL_GAME = 2.0  # also how often players get the PLAYERS list
 RTT_WINDOW = 10.0  # seconds of pings averaged for the PLAYERS list
 HELLO_TIMEOUT = 15.0
+# A web health check on the game port (GET /health, for Uptime Kuma and the
+# like): at most this many header lines are read before the answer.
+HTTP_MAX_HEADERS = 64
 # A public server should not let one address (or everybody) open unlimited
 # connections. Defaults; see the CORSIXTH_MP_MAX_* environment variables.
 MAX_CONNECTIONS = 256
@@ -590,6 +593,35 @@ class Server:
         except (ConnectionError, RuntimeError):
             pass
 
+    async def _answer_http(self, first: bytes, reader: asyncio.StreamReader,
+                           writer: asyncio.StreamWriter) -> None:
+        """GET /health: 200 and "OK players=N release=... rooms=N" (release
+        from CORSIXTH_MP_RELEASE, if set); any other page: 404."""
+        parts = first.decode("latin-1").split()
+        method = parts[0]
+        path = parts[1].split("?", 1)[0] if len(parts) > 1 else ""
+        # The request's header lines are read first: a connection closed with
+        # them unread is reset, and the answer may be lost on the way.
+        try:
+            for _ in range(HTTP_MAX_HEADERS):
+                line = await asyncio.wait_for(reader.readline(), HELLO_TIMEOUT)
+                if line.strip() == b"":
+                    break
+        except (asyncio.TimeoutError, ConnectionError, ValueError):
+            await self._close_writer(writer)
+            return
+        if path == "/health":
+            status = "200 OK"
+            body = encode("OK", rooms=len(self.rooms), players=len(self.players),
+                          release=os.environ.get("CORSIXTH_MP_RELEASE") or None)
+        else:
+            status, body = "404 Not Found", "Not found"
+        data = (body + "\n").encode()
+        head = (f"HTTP/1.1 {status}\r\nContent-Type: text/plain; charset=utf-8\r\n"
+                f"Content-Length: {len(data)}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n")
+        writer.write(head.encode() + (b"" if method == "HEAD" else data))
+        await self._close_writer(writer)
+
     async def _serve_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
                                 peername: object) -> None:
         try:
@@ -601,6 +633,11 @@ class Server:
             # Health check (container HEALTHCHECK); answered quietly.
             writer.write(encode("OK", rooms=len(self.rooms), players=len(self.players)).encode() + b"\n")
             await self._close_writer(writer)
+            return
+        if first.startswith((b"GET ", b"HEAD ")):
+            # The same check asked as a web page (monitoring such as Uptime
+            # Kuma cannot send HEALTH); answered quietly too.
+            await self._answer_http(first, reader, writer)
             return
         if first.startswith(b"PACK "):
             # A player of another build downloads this server's (mp_pack.lua).
