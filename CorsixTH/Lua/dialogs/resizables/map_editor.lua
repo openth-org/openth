@@ -27,7 +27,7 @@ class "UIMapEditor" (UIResizable)
 ---@operator call: UIMapEditor
 local UIMapEditor = _G["UIMapEditor"] ---@type UIMapEditor
 
-local col_bg = {red = 154, green = 146, blue = 198}
+local col_bg = {red = 107, green = 158, blue = 97}
 
 -- {{{ Editor sprites.
 

@@ -86,6 +86,8 @@ function Graphics:Graphics(app, gfx_set, charset)
     palette = {},
     palette_greyscale_ghost = {},
     money_insurance_palette = nil,
+    panel_green_palette = nil,
+    menu_fonts = {},
     ghosts = {},
     anims = {},
     language_fonts = {},
@@ -142,6 +144,8 @@ function Graphics:_loadPalettes(gfx_set)
   self:_loadPalette("Bitmap", "mainmenu1080.pal", false, false)
   self:_loadPalette("Bitmap", "mainmenu480.pal", false, false)
   self:_loadPalette("Bitmap", "mainmenu720.pal", false, false)
+  self:_loadPalette("Bitmap", "mainmenu1440.pal", false, false)
+  self:_loadPalette("Bitmap", "mainmenu2160.pal", false, false)
   self:_loadPalette("Bitmap", "winlevel.pl8", true, true)
   self:_loadPalette("Bitmap", "tree_ctrl.pal", false, false)
 
@@ -882,15 +886,135 @@ end
 --- @param complex (boolean) Whether the sprite table is complex or not.
 --- @param palette (string) The name of the palette file. If nil, the default palette will be used.
 --- @param font_options (table) A table with font options:
-function Graphics:loadFontAndSpriteTable(dir, name, complex, palette, font_options)
+function Graphics:loadFontAndSpriteTable(dir, name, complex, palette, font_options, menu_text)
   local sprite_table = self:loadSpriteTable(dir, name, complex, palette)
 
   font_options = font_options or {}
   if font_options.force_bitmap == nil then
     font_options.force_bitmap = (name == "Font05V" and self:arabicNumerals())
   end
+  -- The menus' white and blue text in the menu font (Graphics.MENU_FONTS).
+  -- Whether it is the menus' text (no level loaded: the main menu, the
+  -- lobby) is decided when the font is first made; made again (a language
+  -- or UI scale change, a saved game loaded, a multiplayer repair) it stays
+  -- what it was, so a game's text never becomes the menu font.
+  local menu = dir == "QData" and Graphics.MENU_FONT_SHEETS[name]
+  if menu and menu_text == nil then menu_text = self.app.map == nil and self.app.world == nil end
+  local font
+  if menu and menu_text and not font_options.force_bitmap then
+    local face, def = self:_menuFontFace()
+    if face then font = self:_loadMenuFont(def, face, sprite_table, font_options) end
+  end
+  font = font or self:loadFont(sprite_table, font_options)
+  if menu then
+    -- (How it is made again: the menu font, or the game's own or Unicode
+    -- font for another language. One table: an argument list with nils in
+    -- it, as complex and palette often are, loses what follows them.)
+    self.load_info[font] = {self._remakeFont, self, {dir = dir, name = name, complex = complex,
+        palette = palette, font_options = font_options, menu_text = menu_text}}
+  end
+  return font
+end
 
-  return self:loadFont(sprite_table, font_options)
+--! A font of Graphics:loadFontAndSpriteTable made again (its load_info).
+function Graphics:_remakeFont(how)
+  return self:loadFontAndSpriteTable(how.dir, how.name, how.complex, how.palette, how.font_options,
+      how.menu_text)
+end
+
+--! OpenTH's menu fonts (Customise > Menu Font, config menu_font): the text of
+--! the menus, the lobby and the other windows open while no game runs, in a
+--! language the game's own fonts can write, in one of these TrueType fonts
+--! (Bitmap/fonts, each with its licence, the SIL Open Font License). `scale`:
+--! its letters that much of the game font's (Press Start 2P is wide), `width`:
+--! that much narrower again. (The engine draws a TrueType font at least 14
+--! pixels high and 9 wide, freetype_font::set_ideal_character_size: at UI
+--! scale 1 a smaller size grows, at 2 it does not.)
+--! "original": the game's own pixel font. Arcade by default (Jan, 2026-11-27:
+--! Press Start 2P, "less bold" so that it fits): OpenTH Arcade, Press Start
+--! 2P with thinner upright strokes, narrow letters as narrow as they are and
+--! the space half as wide, drawn at 85% (scripts/thin_font.py; its licence
+--! keeps the name Press Start 2P for the font as made). At UI scale 2 it is
+--! as high as the 2P and 0.89 as wide; at 1 (both grow to 14 pixels high
+--! there) 85% as high.
+--! Bungee: a thinner copy (Bungee OpenTH Thin); the font as made is Bungee
+--! Bold. (The thin Bungee was "bungee" while it was the default, 2026-11-26:
+--! a setting saved then gets the new default.)
+Graphics.MENU_FONTS = {
+  {id = "arcade", name = "Arcade", file = "OpenTHArcade-Regular.ttf", scale = 1, width = 0.89},
+  {id = "press_start", name = "Press Start 2P", file = "PressStart2P-Regular.ttf", scale = 0.8},
+  {id = "bungee_thin", name = "Bungee", file = "BungeeOpenTHThin-Regular.ttf"},
+  {id = "bungee_bold", name = "Bungee Bold", file = "Bungee-Regular.ttf"},
+  {id = "silkscreen", name = "Silkscreen", file = "Silkscreen-Regular.ttf"},
+  {id = "original", name = "Theme Hospital"},
+}
+Graphics.DEFAULT_MENU_FONT = "arcade"
+--! The game fonts the menu font stands in for: the white and the blue one.
+Graphics.MENU_FONT_SHEETS = {Font01V = true, Font02V = true}
+
+--! The menu font chosen (an entry of Graphics.MENU_FONTS).
+function Graphics.menuFontDef(id)
+  for _, def in ipairs(Graphics.MENU_FONTS) do
+    if def.id == id then return def end
+  end
+  return Graphics.menuFontDef(Graphics.DEFAULT_MENU_FONT)
+end
+
+--! The face (the font file's contents) of the menu font to use now, and its
+--! entry; nil: the game's own fonts (the language needs the Unicode font,
+--! "original" chosen, or the file is missing).
+function Graphics:_menuFontFace()
+  if not self:_isLanguageSupportedByTHAssets() then return nil end
+  local def = Graphics.menuFontDef(self.app.config.menu_font)
+  if not def.file then return nil end
+  self.menu_font_data = self.menu_font_data or {}
+  local data = self.menu_font_data[def.id]
+  if data == nil then
+    local ok, contents = pcall(self.app.readDataFile, self.app, "Bitmap",
+        "fonts" .. package.config:sub(1, 1) .. def.file)
+    data = ok and contents or false
+    if not ok then print("Menu font " .. def.file .. " not found: the game's own font") end
+    self.menu_font_data[def.id] = data
+  end
+  return data or nil, def
+end
+
+--! A TrueType font in the menu font `def` (face `face`) standing in for the
+--! bitmap font `sprite_table` (cached as Graphics:_loadTrueTypeFont does).
+function Graphics:_loadMenuFont(def, face, sprite_table, font_options)
+  local options = {}
+  for k, v in pairs(font_options) do options[k] = v end
+  if def.scale then
+    -- (The game's text is as large as its font's M: TH_freetype_font.)
+    local w, h = sprite_table:size(string.byte("M") - 31)
+    if not (w and w > 1) then w, h = sprite_table:size(string.byte("0") - 31) end
+    if w and w > 1 then
+      options.ttf_width = math.max(4, math.floor(w * def.scale * (def.width or 1) + 0.5))
+      options.ttf_height = math.max(4, math.floor(h * def.scale + 0.5))
+    end
+  end
+  local key = def.id .. "," .. language_font_cache_key("menu", options)
+  local cache = self.cache.menu_fonts[key]
+  local entry = cache and cache[sprite_table]
+  local s = self:getUIScale()
+  if entry and options.apply_ui_scale and entry.options.scale_factor ~= s then
+    entry.options.scale_factor = s
+    entry.font:setFontOptions(sprite_table, entry.options)
+    entry.font:clearCache()
+  elseif not entry then
+    if options.apply_ui_scale then options.scale_factor = s end
+    local font = TH.freetype_font()
+    font:setFace(face)
+    font:setFontOptions(sprite_table, options)
+    self.reload_functions_last[font] = font_reloader
+    entry = {font = font, options = options}
+    if not cache then
+      cache = {}
+      self.cache.menu_fonts[key] = cache
+    end
+    cache[sprite_table] = entry
+  end
+  return setmetatable({ _proxy = entry.font }, font_proxy_mt)
 end
 
 --- Load a font for the given sprite table.
@@ -1076,6 +1200,54 @@ function Graphics:getFloatingBanknoteSpriteTable(insurance)
     self.cache.money_insurance_palette = palette
   end
   return self:loadSpriteTable("Data", "Money01V", nil, palette)
+end
+
+--- A copy of the main palette whose greens are OpenTH's panel green
+--- (Colours.PanelDefault, after Argus's main menu, 2026-11-26), for the
+--- original game's green boxes (the confirm box): its face (6-bit green 46,
+--- 61, 186, 69 on screen) becomes the panel colour, the lighter and darker
+--- greens round it keep their shading.
+--- @return (palette) # The palette
+function Graphics:_makePanelGreenPalette()
+  local green_lead = 4 -- (as for the banknote: greens only, not the greys)
+  local data = self.app:readDataFile("Data", "MPalette.dat")
+  if #data ~= 256 * 3 then
+    error("Unexpected MPalette.dat length: " .. #data)
+  end
+  local panel = Colours.PanelDefault
+  local face_green = 46 -- (the box's face in the main palette, 6-bit)
+  local scale = panel.green * 63 / 255 / face_green
+  local entries = {}
+  for i = 0, 255 do
+    local o = i * 3 + 1
+    local r, g, b = data:byte(o, o + 2)
+    if g >= r + green_lead and g >= b + green_lead then
+      local ng = math.min(63, math.floor(g * scale + 0.5))
+      entries[#entries + 1] = string.char(math.floor(ng * panel.red / panel.green + 0.5), ng,
+          math.floor(ng * panel.blue / panel.green + 0.5))
+    else
+      entries[#entries + 1] = string.char(r, g, b)
+    end
+  end
+  local palette = TH.palette(table.concat(entries), false)
+  palette:setEntry(255, 0xFF, 0x00, 0xFF)
+  self.load_info[palette] = {self._makePanelGreenPalette, self}
+  return palette
+end
+
+--- An original sprite sheet drawn in OpenTH's panel green
+--- (Graphics:_makePanelGreenPalette) instead of the game's own green.
+--- @param dir (string) The directory of the sheet
+--- @param name (string) The name of the sheet file
+--- @param complex (boolean) Whether the sheet needs the complex loading path
+--- @return (string) # The loaded sprite sheet
+function Graphics:loadPanelGreenSpriteTable(dir, name, complex)
+  local palette = self.cache.panel_green_palette
+  if not palette then
+    palette = self:_makePanelGreenPalette()
+    self.cache.panel_green_palette = palette
+  end
+  return self:loadSpriteTable(dir, name, complex, palette)
 end
 
 --- Load a sprite table, optionally with a palette of its own.

@@ -678,7 +678,47 @@ describe("Multiplayer levels", function()
     end
   end)
 
-  it("brings about a hundred climbers to every hospital each April and October", function()
+  it("sends injured climbers to every hospital after each earthquake's main shock", function()
+    local world = fake_world(6)
+    world.map.level_config.mp_events = "everest"
+    local came = {}
+    function world:spawnPatient(hospital)
+      came[hospital.index] = came[hospital.index] or {}
+      came[hospital.index][self.day] = (came[hospital.index][self.day] or 0) + 1
+    end
+    _S.multiplayer_window.level_everest_avalanche = "avalanche %d"
+    _S.multiplayer_window.level_everest_season = "season %d"
+    _S.multiplayer_window.level_everest_university_warning = "university"
+    -- An earthquake as Earthquake has it: planned for March, its warning
+    -- from day 61, the main shock on days 85 and 86.
+    world.earthquake = {active = false, start_month = 3, size = 4, warning_timer = 600}
+    play(world, 60)
+    world.earthquake.active = true
+    play(world, 24)
+    assert.same({}, came) -- (not for the warning)
+    world.earthquake.warning_timer = 0
+    play(world, 2)
+    world.earthquake.active = false
+    play(world, 30)
+    -- 60 each (15 for each point of its size), over ten days from the main
+    -- shock, the same for every hospital.
+    for index = 1, 6 do
+      local total, first, last = 0, nil, nil
+      for day, n in pairs(came[index]) do
+        total = total + n
+        first, last = math.min(first or day, day), math.max(last or day, day)
+      end
+      assert.equal(60, total)
+      assert.equal(85, first)
+      assert.equal(94, last)
+      assert.same(came[1], came[index])
+    end
+    local told = {}
+    for _, t in ipairs(world.told) do told[#told + 1] = t.text end
+    assert.same({"avalanche 60"}, told)
+  end)
+
+  it("brings the climbing seasons back once the earthquakes are over", function()
     local world = fake_world(6)
     world.map.level_config.mp_events = "everest"
     local came = {}
@@ -691,18 +731,14 @@ describe("Multiplayer levels", function()
     _S.multiplayer_window.level_everest_university_warning = "university"
     _S.multiplayer_window.level_everest_juniors_only = "juniors"
     _S.multiplayer_window.level_everest_doctors_back = "doctors"
-    play(world, 365 * 3 + 125) -- (to the end of April in the fourth year)
-    for month = 1, 40 do
-      local season = (month - 1) % 12 + 1 == 4 or (month - 1) % 12 + 1 == 10
-      if season then
-        local n = came[month][1]
-        assert.truthy(n >= 90 and n <= 110, "month " .. month .. ": " .. n)
-        for index = 2, 6 do assert.equal(n, came[month][index]) end
-      else
-        assert.is_nil(came[month], "climbers in month " .. month)
-      end
-    end
-    -- Told: each season, the university's fall (month 9, by the 15th), the
+    play(world, 365 * 4 + 125) -- (into May of the fifth year)
+    -- No season while there are earthquakes (the first four years), then
+    -- about a hundred climbers each April and October.
+    for month = 1, 51 do assert.is_nil(came[month], "climbers in month " .. month) end
+    local n = came[52][1]
+    assert.truthy(n >= 90 and n <= 110, "April of the fifth year: " .. n)
+    for index = 2, 6 do assert.equal(n, came[52][index]) end
+    -- Told: the season, the university's fall (month 9, by the 15th), the
     -- juniors (month 13) and the new university (month 37).
     local told = {}
     for _, t in ipairs(world.told) do
@@ -710,7 +746,7 @@ describe("Multiplayer levels", function()
       told[key] = told[key] or {}
       table.insert(told[key], t.month)
     end
-    assert.same({4, 10, 16, 22, 28, 34, 40}, told.season)
+    assert.same({52}, told.season)
     assert.same({9}, told.university)
     assert.same({13}, told.juniors)
     assert.same({37}, told.doctors)

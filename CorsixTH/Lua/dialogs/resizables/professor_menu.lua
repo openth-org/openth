@@ -644,6 +644,13 @@ end
 function UIProfessorMenu.drawMovieStrip(canvas, bottom, drawPart)
   local l = UIProfessorMenu.layout(canvas:getRenderSize())
   if l.px <= 0 then return end
+  -- Straight onto the screen. In fullscreen the engine draws everything
+  -- after a scale, back to 1 too, into a picture of its own that it lays over
+  -- the screen as it is, see-through where nothing was drawn: a part drawn
+  -- there half see-through was laid on half see-through again, darker (Jan's
+  -- work Mac, 2026-11-26). A "bitmap" scale lays that picture down and makes
+  -- no new one.
+  canvas:scale(1, "bitmap")
   local s = l.scale
   for _, d in ipairs(UIProfessorMenu.movieStrip(bottom)) do
     if not drawPart(d.sx, d.sy, d.sw, d.sh, (l.px + d.x) * s, (l.py + d.y) * s, d.w * s,
@@ -1260,22 +1267,47 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look, board)
   local fill = side(app, loaded, kind, nil, kind ~= "down" and look or nil, movie)
   if canvas:scale(l.scale) then
     local x, y = l.px - SIDE_W, l.py
-    fill:draw(canvas, x, y)
-    -- (Clipped to the chart's left end, below the roller.)
-    local left = math.max(0, l.px + CHART_LEFT)
     -- Where the renderer scales each drawing (config direct_zoom, the
     -- default), the chart is drawn to the screen's pixel: in his movies its
     -- bottom edge moves a fraction of a row a frame as it springs back.
     -- Otherwise (everything drawn small and then enlarged) to whole rows.
     local fine = not (app.config and app.config.direct_zoom == false)
     local s = l.scale
+    -- Finely, everything in the screen's pixels with the fills enlarged
+    -- ("bitmap"), not a scale call between a clip and its drawing: in
+    -- fullscreen each scale of everything starts a screen-sized picture of
+    -- its own, and a clip made before does not hold on it (Jan's work Mac,
+    -- 2026-11-26: as the chart sprang down, the fill under its edge came out
+    -- whole, the rail and the chart's edge far below the chart).
+    local k = 1
+    if fine then
+      canvas:scale(1)
+      canvas:scale(s, "bitmap")
+      k = s
+    end
+    -- Draws `picture` with its row 0 at row `at` (columns as the fill's).
+    local function put(picture, at)
+      picture:draw(canvas, x * k, at * k)
+    end
+    -- Clips to columns `cx` to `cx + cw`, rows `cy` to `cy + ch` (as the
+    -- engine clips them when scaling everything: the pixels they cover).
+    local function clip(cx, cy, cw, ch)
+      if fine then
+        local function whole(v) return v < 0 and math.ceil(v) or math.floor(v) end
+        local x0, y0 = whole(cx * s), whole(cy * s)
+        canvas:pushClip(x0, y0, math.ceil((cx + cw) * s) - x0, math.ceil((cy + ch) * s) - y0)
+      else
+        canvas:pushClip(cx, cy, cw, ch)
+      end
+    end
+    put(fill, y)
+    -- (Clipped to the chart's left end, below the roller.)
+    local left = math.max(0, l.px + CHART_LEFT)
     -- Clips to the chart's columns, rows `from` up to `to` (not included).
     local function clipRows(from, to)
       if fine then
-        canvas:scale(1)
         local x0, y0 = math.floor(left * s + 0.5), math.floor((y + from) * s + 0.5)
         canvas:pushClip(x0, y0, math.floor(l.px * s + 0.5) - x0, math.floor((y + to) * s + 0.5) - y0)
-        canvas:scale(s)
       else
         local first = math.floor(from + 0.5)
         canvas:pushClip(left, y + first, l.px - left, math.floor(to + 0.5) - first)
@@ -1298,7 +1330,7 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look, board)
         local last = row
         while last + 1 < stop and offset(last + 1) == off do last = last + 1 end
         clipRows(row, math.min(last + 1, stop))
-        picture:draw(canvas, x, y - off)
+        put(picture, y - off)
         canvas:popClip()
         row = last + 1
       end
@@ -1321,12 +1353,12 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look, board)
       -- has it (Jan, 2026-11-24: a darker block under the chart's corner).
       local lit = side(app, loaded, "down", board, nil, movie)
       local from = math.max(0, x)
-      canvas:pushClip(from, y + FRAME_BOTTOM + 1, left - from, LEDGE_TOP - FRAME_BOTTOM - 1)
-      lit:draw(canvas, x, y)
+      clip(from, y + FRAME_BOTTOM + 1, left - from, LEDGE_TOP - FRAME_BOTTOM - 1)
+      put(lit, y)
       canvas:popClip()
       local under = math.max(bottom, CHART_BOTTOM) + 1
-      canvas:pushClip(left, y + under, l.px - left, LEDGE_TOP - under)
-      lit:draw(canvas, x, y)
+      clip(left, y + under, l.px - left, LEDGE_TOP - under)
+      put(lit, y)
       canvas:popClip()
     end
     if down and bottom < CHART_BOTTOM then
@@ -1336,7 +1368,7 @@ function UIProfessorMenu.drawSide(canvas, bottom, top, low, look, board)
       -- a lighter row and a thin line under the corner). It ends UNDER_EDGE
       -- rows lower, blackboard against blackboard.
       clipRows(bottom + 1, CHART_BOTTOM + 1 + UNDER_EDGE)
-      side(app, loaded, "down", board ~= 100 and board or nil, nil, movie):draw(canvas, x,
+      put(side(app, loaded, "down", board ~= 100 and board or nil, nil, movie),
           y - offset(math.ceil(bottom)))
       canvas:popClip()
     end

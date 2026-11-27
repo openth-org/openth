@@ -1679,6 +1679,18 @@ function MultiplayerLobby:_loadShared(session, step, data, peers, places)
   end
   LoadGame(raw)
   local world = app.world
+  -- The demo's Theme Hospital files cannot open a game made with the full
+  -- game's (App:checkCompatibility), and the game a server sends is its
+  -- referee's, which has the full game: a demo player starting or repaired
+  -- there would stop with an error. Leave, and say why on the main menu
+  -- (Jan, 2026-11-26).
+  if app.using_demo_files and not self.is_referee and (not world or world == old_world) then
+    self.log("multiplayer: the demo's files cannot open the server's game; back to the main menu")
+    self:disconnect()
+    app.mp_starting, app.mp_starting_ms = nil, nil
+    app:loadMainMenu({_S.multiplayer_window.demo_not_supported})
+    return
+  end
   assert(world and world ~= old_world, "the shared save could not be loaded")
   -- Windows the referee's screen had open (the level's introduction, which
   -- nobody closes there) would pop up for every player again; so would a

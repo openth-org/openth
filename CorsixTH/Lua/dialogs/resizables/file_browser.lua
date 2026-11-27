@@ -156,9 +156,9 @@ class "UIFileBrowser" (UIResizable)
 local UIFileBrowser = _G["UIFileBrowser"] ---@type UIFileBrowser
 
 local col_caption = {
-  red = 174,
-  green = 166,
-  blue = 218,
+  red = 127,
+  green = 178,
+  blue = 117,
 }
 
 --[[ Constructs the dialog.
@@ -172,9 +172,9 @@ local col_caption = {
 ]]
 function UIFileBrowser:UIFileBrowser(ui, mode, title, vertical_size, root, show_dates, submit_text)
   self.col_bg = {
-    red = 154,
-    green = 146,
-    blue = 198,
+    red = 107,
+    green = 158,
+    blue = 97,
   }
   self.col_scrollbar = {
     red = 164,

@@ -533,11 +533,14 @@ function UI:setMenuBackground()
   local _, screen_h = self.app.video:getRenderSize()
   local bg_size_idx = 1
 
-  -- Available mainmenu*.bmp sizes
+  -- Available mainmenu*.dat sizes (1440 and 2160 for big screens: OpenTH,
+  -- 2026-11-26, from Argus's picture upscaled)
   local menu_bg_sizes = {
     {640, 480},
     {1280, 720},
     {1920, 1080},
+    {2560, 1440},
+    {3840, 2160},
   }
 
   for i, bg_size in ipairs(menu_bg_sizes) do

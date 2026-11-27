@@ -29,9 +29,9 @@ class "UICallsDispatcher" (UIResizable)
 local UICallsDispatcher = _G["UICallsDispatcher"] ---@type UICallsDispatcher
 
 local col_bg = {
-  red = 154,
-  green = 146,
-  blue = 198,
+  red = 107,
+  green = 158,
+  blue = 97,
 }
 
 local col_button = {
@@ -41,9 +41,9 @@ local col_button = {
 }
 
 local col_shadow = {
-  red = 134,
-  green = 126,
-  blue = 178,
+  red = 87,
+  green = 138,
+  blue = 77,
 }
 
 function UICallsDispatcher:UICallsDispatcher(ui)

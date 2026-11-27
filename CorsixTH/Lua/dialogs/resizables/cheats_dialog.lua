@@ -30,21 +30,21 @@ class "UICheats" (UIResizable)
 local UICheats = _G["UICheats"] ---@type UICheats
 
 local col_bg = {
-  red = 154,
-  green = 146,
-  blue = 198,
+  red = 107,
+  green = 158,
+  blue = 97,
 }
 
 local col_caption = {
-  red = 174,
-  green = 166,
-  blue = 218,
+  red = 127,
+  green = 178,
+  blue = 117,
 }
 
 local col_border = {
-  red = 134,
-  green = 126,
-  blue = 178,
+  red = 87,
+  green = 138,
+  blue = 77,
 }
 
 local col_cheated_no = {

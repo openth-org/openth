@@ -269,7 +269,7 @@ end
 
 --! Back to the lobby with this level.
 function UIMultiplayerLevels:buttonChoose()
-  UIMultiplayer.chooseLevel(self.level)
+  UIMultiplayer.chooseLevel(self.level, self.shared)
   self:close()
 end
 
@@ -283,14 +283,20 @@ function UIMultiplayerLevels:close()
   end
 end
 
---! A level's name: the campaign town, or the multiplayer map's name (a
---! level with events of its own on another level's map says so).
-function UIMultiplayerLevels:levelName(i)
-  if self.shared then return plain(_S.level_names[i] or i):upper() end
-  local name = self.levels.levelName(TheApp, self.players, i) or tostring(i)
-  local def = self.levels.LEVELS[i]
+--! A level's name: the campaign town (`shared`: one shared hospital), or the
+--! multiplayer map's name for this many players (a level with events of its
+--! own on another level's map says so). Also for the lobby's Start new game.
+function UIMultiplayerLevels.nameOf(level, shared, players)
+  if shared then return plain(_S.level_names[level] or level):upper() end
+  local levels = corsixth.require("mp_levels")
+  local name = levels.levelName(TheApp, players, level) or tostring(level)
+  local def = levels.LEVELS[levels.clamp(level)]
   if def.scenario and not def.name then name = plain(_S.multiplayer_window.levels_events):format(name) end
   return name
+end
+
+function UIMultiplayerLevels:levelName(i)
+  return UIMultiplayerLevels.nameOf(i, self.shared, self.players)
 end
 
 --! The map file of the level shown (Levels folder): a campaign level's, or

@@ -139,7 +139,7 @@ page: <https://github.com/openth-org/openth/releases>
 - **Test** releases are called `mp-test-<number>` (marked *Pre-release*). eu2
   runs the newest test one.
 
-Note the name of the release you want, for example `mp-stable-18d0554f`.
+Note the name of the release you want, for example `mp-stable-a66021ad`.
 Your players download the same release for Windows, Mac or Linux. (A player
 whose game is too old or too new for your server is offered your server's
 version in the game; see step 8.)
@@ -156,7 +156,7 @@ connect) with your own:
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/openth-org/openth/master/mp_server/deploy/setup-referee-host.sh
-sudo bash setup-referee-host.sh --release mp-stable-18d0554f --data ~/themehos --motd "Welcome to my OpenTH server"
+sudo bash setup-referee-host.sh --release mp-stable-a66021ad --data ~/themehos --motd "Welcome to my OpenTH server"
 ```
 
 Add `--port 47900` if you want another port than 47800 (then open that one in
@@ -169,7 +169,7 @@ the release's game pack (step 8), and starts the server as a system service
 that also starts by itself after a reboot. It ends with:
 
 ```
-== Done: the server runs mp-stable-18d0554f with the referee on port 47800
+== Done: the server runs mp-stable-a66021ad with the referee on port 47800
 ```
 
 Once it says Done, you can delete your copy in `~/themehos` if you like
@@ -223,7 +223,7 @@ You should see these lines (the numbers differ):
 
 ```
 headless referee enabled: /opt/openth/referee/<commit>/game/openth
-players must have build 60acf5b8 (mp-stable-18d0554f)
+players must have build 7048faff (mp-stable-a66021ad)
 players must have Theme Hospital data 899c66d0
 ```
 

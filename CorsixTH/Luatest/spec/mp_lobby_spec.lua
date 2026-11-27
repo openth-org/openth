@@ -310,6 +310,34 @@ describe("MultiplayerLobby", function()
     assert.same({1, 3, 2, 4}, layout.colours)
   end)
 
+  it("goes back to the main menu with a word when the demo's files cannot open the server's game", function()
+    local saved = {app = rawget(_G, "TheApp"), S = rawget(_G, "_S"), load = rawget(_G, "LoadGame"),
+        persist = package.loaded.persist}
+    local menu_message
+    local app = {using_demo_files = true, mp_starting = 1, mp_starting_ms = 1,
+        loadMainMenu = function(_, message) menu_message = message end}
+    rawset(_G, "TheApp", app)
+    rawset(_G, "_S", {multiplayer_window = {demo_not_supported = "Needs the full game"}})
+    rawset(_G, "LoadGame", function() end) -- refused: no new world
+    package.loaded.persist = {decompress = function(data) return data end}
+    local lobby, t = make_lobby()
+    app.mp_lobby = lobby
+    t.inbox = {"WELCOME id=1 proto=1"}
+    lobby:poll()
+    local ok, err = pcall(lobby._loadShared, lobby, {}, 0, "save")
+    rawset(_G, "TheApp", saved.app)
+    rawset(_G, "_S", saved.S)
+    rawset(_G, "LoadGame", saved.load)
+    package.loaded.persist = saved.persist
+    assert.is_true(ok, tostring(err))
+    assert.same({"Needs the full game"}, menu_message)
+    assert.equal("closed", lobby.state)
+    assert.is_true(t.closed)
+    assert.equal("QUIT", t.sent[#t.sent])
+    assert.is_nil(app.mp_lobby)
+    assert.is_nil(app.mp_starting)
+  end)
+
   it("leaves a room and asks for the room list again", function()
     local lobby, t = make_lobby()
     t.inbox = {"WELCOME id=1 proto=1", "JOINED max=2 mode=shared owner=1 peer=1 room=r"}

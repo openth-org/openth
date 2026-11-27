@@ -54,7 +54,8 @@ function UIConfirmDialog:UIConfirmDialog(ui, must_pause, text, callback_ok, call
   self.width = 183
   self.height = 199
   self:setDefaultPosition(0.5, 0.5)
-  self.panel_sprites = app.gfx:loadSpriteTable("QData", "Req04V", true)
+  -- (In OpenTH's panel green, as the other windows: Jan, 2026-11-26.)
+  self.panel_sprites = app.gfx:loadPanelGreenSpriteTable("QData", "Req04V", true)
   self.white_font = app.gfx:loadFontAndSpriteTable("QData", "Font01V", nil, nil, { apply_ui_scale = true })
   self.text = text
   self.callback_ok = callback_ok  -- Callback function to launch if user chooses ok

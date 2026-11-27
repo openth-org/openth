@@ -157,6 +157,7 @@ local function new_config_defaults()
     play_intro = true,
     play_demo = true,
     professor_menu = true,
+    menu_font = "arcade",
     allow_user_actions_while_paused = false,
     volume_opens_casebook = false,
     alien_dna_only_by_emergency = true,
@@ -529,6 +530,13 @@ param(config_values, 'play_demo') .. [=[
 -- With the intro on, he comes to his chart after it.
 --]=] .. '\n' ..
 param(config_values, 'professor_menu') .. [=[
+
+-- The font of the menus (and the lobby) in languages written in the game's
+-- own letters: "arcade" (the default, a thinner Press Start 2P),
+-- "press_start" (Press Start 2P), "bungee_thin" (a thinner Bungee),
+-- "bungee_bold", "silkscreen" or "original" (Theme Hospital's own font).
+--]=] .. '\n' ..
+param(config_values, 'menu_font') .. [=[
 
 -------------------------------------------------------------------------------
 -- Allow user actions while game is paused
