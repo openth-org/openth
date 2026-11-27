@@ -1,8 +1,9 @@
 Copyright 2012 The Press Start 2P Project Authors (cody@zone38.net), with Reserved Font Name "Press Start 2P".
 OpenTH Arcade: a modified version of that font by the OpenTH contributors, 2026
-(upright strokes 80 units thinner, every letter as wide as it is with one of
-its pixels after it, the space half as wide, drawn at 85%: scripts/thin_font.py),
-under the same licence. It does not use the Reserved Font Name.
+(each glyph made again from its pixels with strokes of two pixels 80 units
+thinner, every letter as wide as it is with one of its pixels after it, the
+space half as wide, drawn at 85%: scripts/thin_font.py), under the same
+licence. It does not use the Reserved Font Name.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
