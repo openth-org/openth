@@ -11,13 +11,17 @@ instructions dropped (they belong to the old outlines), renamed.
 much as the upright ones; 0: as they are). --tight <gap>: every letter as
 wide as its outline and <gap> units more (a font of letters all as wide,
 like Press Start 2P, gets narrow ones: i, l, the full stop), --space <units>:
-the space that wide. --width: every letter and gap that much as wide
+the space that wide. --pixel <unit>: a pixel font (its pixels <unit> font
+units), each glyph made again from its pixels with only runs of two or
+more pixels thinner (instead of FreeType's thinning, which takes as much
+off a stroke of one pixel). --width: every letter and gap that much as wide
 afterwards (narrower letters, as high). --size: the whole font drawn that
 much as large (its units per em larger). Needs fontTools
 and freetype-py (pip). The menu fonts in CorsixTH/Bitmap/fonts: Bungee
 OpenTH Thin is Bungee-Regular.ttf at strength 70; OpenTH Arcade is
-PressStart2P-Regular.ttf at strength 80, y strength 0 (its upright strokes
-are two of its pixels wide, the others one), --tight 125 (one of its pixels)
+PressStart2P-Regular.ttf at strength 80, y strength 0, --pixel 125 (its
+pixels are 125 units; strokes of two pixels thinner, those of one as they
+are: Argus, the m looked cut off), --tight 125 (one of its pixels)
 --space 500 --size 0.85.
 """
 import argparse
@@ -28,6 +32,7 @@ import freetype.raw as ftraw
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._g_l_y_f import GlyphCoordinates
 from fontTools.ttLib.tables import ttProgram
+from fontTools.pens.ttGlyphPen import TTGlyphPen
 
 
 def stem(glyf, name):
@@ -44,6 +49,7 @@ def main():
     parser.add_argument("strength", type=int)
     parser.add_argument("family")
     parser.add_argument("y_strength", type=int, nargs="?")
+    parser.add_argument("--pixel", type=int)
     parser.add_argument("--tight", type=int)
     parser.add_argument("--space", type=int)
     parser.add_argument("--width", type=float, default=1.0)
@@ -59,9 +65,49 @@ def main():
     i_name = font.getBestCmap().get(ord("I"))
     before = stem(glyf, i_name)
     changed = skipped = 0
+    unit = a.pixel
+    if unit:
+        face.set_pixel_sizes(0, font["head"].unitsPerEm // unit)
     for gid, gname in enumerate(order):
         g = glyf[gname]
         if g.isComposite() or g.numberOfContours <= 0:
+            continue
+        if unit and all(x % unit == 0 and y % unit == 0 for x, y in g.getCoordinates(glyf)[0]):
+            # A pixel font: the glyph made again from its pixels, row by row;
+            # a run of two pixels or more is `strength` narrower (half of it
+            # on each side), a single pixel stays whole (a thin stem would
+            # all but go: the m's first stroke).
+            face.load_glyph(gid, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_TARGET_MONO |
+                            freetype.FT_LOAD_NO_HINTING)
+            bm, left, top = face.glyph.bitmap, face.glyph.bitmap_left, face.glyph.bitmap_top
+            pen = TTGlyphPen(None)
+            for j in range(bm.rows):
+                bits = [bool(bm.buffer[j * bm.pitch + i // 8] & (0x80 >> (i % 8))) for i in range(bm.width)]
+                y0 = (top - 1 - j) * unit
+                i = 0
+                while i < bm.width:
+                    if not bits[i]:
+                        i += 1
+                        continue
+                    k = i
+                    while k < bm.width and bits[k]:
+                        k += 1
+                    x0, x1 = (left + i) * unit, (left + k) * unit
+                    if k - i >= 2:
+                        x0, x1 = x0 + strength // 2, x1 - strength // 2
+                    # (Clockwise, as TrueType fills.)
+                    pen.moveTo((x0, y0))
+                    pen.lineTo((x0, y0 + unit))
+                    pen.lineTo((x1, y0 + unit))
+                    pen.lineTo((x1, y0))
+                    pen.closePath()
+                    i = k
+            new = pen.glyph()
+            new.recalcBounds(glyf)
+            glyf[gname] = new
+            advance, _ = hmtx[gname]
+            hmtx[gname] = (max(0, advance - strength), getattr(new, "xMin", 0))
+            changed += 1
             continue
         face.load_glyph(gid, freetype.FT_LOAD_NO_SCALE | freetype.FT_LOAD_NO_HINTING)
         outline = face.glyph.outline

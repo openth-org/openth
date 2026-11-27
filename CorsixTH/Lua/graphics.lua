@@ -927,7 +927,8 @@ end
 --! language the game's own fonts can write, in one of these TrueType fonts
 --! (Bitmap/fonts, each with its licence, the SIL Open Font License). `scale`:
 --! its letters that much of the game font's (Press Start 2P is wide), `width`:
---! that much narrower again. (The engine draws a TrueType font at least 14
+--! that much narrower again, `thin_shadow`: the shadow one pixel away at any
+--! UI scale (Graphics:_loadMenuFont). (The engine draws a TrueType font at least 14
 --! pixels high and 9 wide, freetype_font::set_ideal_character_size: at UI
 --! scale 1 a smaller size grows, at 2 it does not.)
 --! "original": the game's own pixel font. Arcade by default (Jan, 2026-11-27:
@@ -941,7 +942,7 @@ end
 --! Bold. (The thin Bungee was "bungee" while it was the default, 2026-11-26:
 --! a setting saved then gets the new default.)
 Graphics.MENU_FONTS = {
-  {id = "arcade", name = "Arcade", file = "OpenTHArcade-Regular.ttf", scale = 1, width = 0.89},
+  {id = "arcade", name = "Arcade", file = "OpenTHArcade-Regular.ttf", scale = 1, width = 0.89, thin_shadow = true},
   {id = "press_start", name = "Press Start 2P", file = "PressStart2P-Regular.ttf", scale = 0.8},
   {id = "bungee_thin", name = "Bungee", file = "BungeeOpenTHThin-Regular.ttf"},
   {id = "bungee_bold", name = "Bungee Bold", file = "Bungee-Regular.ttf"},
@@ -993,10 +994,20 @@ function Graphics:_loadMenuFont(def, face, sprite_table, font_options)
       options.ttf_height = math.max(4, math.floor(h * def.scale + 0.5))
     end
   end
-  local key = def.id .. "," .. language_font_cache_key("menu", options)
+  local s = self:getUIScale()
+  -- (`thin_shadow`: the size times the UI scale made here, not by the
+  -- engine, which would put the shadow as many pixels away: at 2, two pixels
+  -- from strokes hardly wider showed the window between letter and shadow;
+  -- one pixel at any scale. Argus, 2026-11-27.)
+  local own_scale = def.thin_shadow and options.apply_ui_scale and options.ttf_width
+  if own_scale then
+    options.ttf_width = math.max(4, math.floor(options.ttf_width * s + 0.5))
+    options.ttf_height = math.max(4, math.floor(options.ttf_height * s + 0.5))
+    options.apply_ui_scale = nil
+  end
+  local key = def.id .. "," .. (own_scale and (s .. ",") or "") .. language_font_cache_key("menu", options)
   local cache = self.cache.menu_fonts[key]
   local entry = cache and cache[sprite_table]
-  local s = self:getUIScale()
   if entry and options.apply_ui_scale and entry.options.scale_factor ~= s then
     entry.options.scale_factor = s
     entry.font:setFontOptions(sprite_table, entry.options)
