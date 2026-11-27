@@ -11,7 +11,7 @@
 #   --ref REF       git branch/commit to take compose.yaml from (default master)
 #   --motd TEXT     message shown to players when they connect
 #   --ufw           also set up the ufw firewall: allow SSH and the game port only
-#   --dir DIR       install directory (default /opt/corsixth-mp)
+#   --dir DIR       install directory (default /opt/openth)
 #
 # What it does: installs Docker Engine with the Compose plugin from Docker's
 # repository (if missing), optionally configures ufw, writes DIR/compose.yaml
@@ -24,7 +24,7 @@ TAG=latest
 REF=master
 MOTD=""
 UFW=0
-DIR=/opt/corsixth-mp
+DIR=/opt/openth
 REPO=openth-org/openth
 
 while [[ $# -gt 0 ]]; do
@@ -90,16 +90,23 @@ fi
 say "Writing ${DIR}/compose.yaml and ${DIR}/.env"
 mkdir -p "$DIR"
 curl -fsSL "https://raw.githubusercontent.com/${REPO}/${REF}/mp_server/compose.yaml" -o "${DIR}/compose.yaml.new"
-grep -q "corsixth-mp-server" "${DIR}/compose.yaml.new" || die "downloaded compose.yaml looks wrong"
+grep -q "openth-server" "${DIR}/compose.yaml.new" || die "downloaded compose.yaml looks wrong"
 mv "${DIR}/compose.yaml.new" "${DIR}/compose.yaml"
 umask 077
 {
   echo "# Written by setup-vps.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ); edit and run 'docker compose up -d'."
-  echo "CORSIXTH_MP_TAG=${TAG}"
-  echo "CORSIXTH_MP_PUBLISH=${PORT}"
-  echo "CORSIXTH_MP_MOTD=${MOTD}"
-  echo "CORSIXTH_MP_LOG=INFO"
+  echo "OPENTH_TAG=${TAG}"
+  echo "OPENTH_PUBLISH=${PORT}"
+  echo "OPENTH_MOTD=${MOTD}"
+  echo "OPENTH_LOG=INFO"
 } > "${DIR}/.env"
+
+# Until 2026-11-27 the container was corsixth-mp-server (folder /opt/corsixth-mp):
+# take it down, as it holds the port. Its folder stays for going back.
+if docker ps -a --format '{{.Names}}' | grep -qx corsixth-mp-server; then
+  say "Removing the old container corsixth-mp-server"
+  docker rm -f corsixth-mp-server >/dev/null
+fi
 
 say "Pulling and starting the server (image tag ${TAG})"
 cd "$DIR"
@@ -109,7 +116,7 @@ docker compose up -d --remove-orphans
 say "Waiting for the health check"
 status=""
 for _ in $(seq 1 30); do
-  status=$(docker inspect -f '{{.State.Health.Status}}' corsixth-mp-server 2>/dev/null || true)
+  status=$(docker inspect -f '{{.State.Health.Status}}' openth-server 2>/dev/null || true)
   [[ "$status" == healthy ]] && break
   sleep 2
 done
@@ -117,7 +124,7 @@ if [[ "$status" != healthy ]]; then
   docker compose logs --tail 20
   die "the server did not become healthy (status: ${status:-none})"
 fi
-docker exec corsixth-mp-server python -m corsixth_mp.health | sed 's/^/   /'
+docker exec openth-server python -m corsixth_mp.health | sed 's/^/   /'
 
 # IPv4 addresses of real interfaces (not Docker's bridges).
 addresses=$(ip -4 -o addr show scope global 2>/dev/null |

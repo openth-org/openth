@@ -151,7 +151,7 @@ export MP_LUA_PATH="$LUASOCKET_TREE/share/lua/$lua_ver/?.lua"
 
 # By default a server is started here. MP_EXTERNAL_SERVER=host:port uses a
 # running one instead (e.g. the Docker container); MP_SERVER_LOG_CMD then
-# prints its log for the checks (e.g. "docker logs corsixth-mp-server").
+# prints its log for the checks (e.g. "docker logs openth-server").
 # All test players connect from one address, above the default limit of 8.
 if [[ -n "${MP_EXTERNAL_SERVER:-}" ]]; then
   export MP_SERVER="$MP_EXTERNAL_SERVER"

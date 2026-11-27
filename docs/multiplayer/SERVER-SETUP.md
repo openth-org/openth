@@ -159,7 +159,7 @@ Add `--port 47900` if you want another port than 47800 (then open that one in
 step 2 instead).
 
 The script installs what the server needs, makes a service account
-`corsixth`, copies your game files to `/opt/corsixth-mp/thdata` (readable only
+`openth`, copies your game files to `/opt/openth/thdata` (readable only
 by that account), downloads the server code, the game for the referee and
 the release's game pack (step 8), and starts the server as a system service
 that also starts by itself after a reboot. It ends with:
@@ -199,8 +199,8 @@ memory is short.)
 The crash guard:
 
 ```bash
-sudo mkdir -p /etc/systemd/system/corsixth-mp.service.d
-printf '[Service]\nOOMPolicy=continue\n' | sudo tee /etc/systemd/system/corsixth-mp.service.d/oom.conf
+sudo mkdir -p /etc/systemd/system/openth.service.d
+printf '[Service]\nOOMPolicy=continue\n' | sudo tee /etc/systemd/system/openth.service.d/oom.conf
 sudo systemctl daemon-reload
 ```
 
@@ -212,13 +212,13 @@ Both stay after a reboot and after every update with the script. Check with
 Look at the server's log:
 
 ```bash
-sudo journalctl -u corsixth-mp -n 30
+sudo journalctl -u openth -n 30
 ```
 
 You should see these lines (the numbers differ):
 
 ```
-headless referee enabled: /opt/corsixth-mp/referee/<commit>/game/openth
+headless referee enabled: /opt/openth/referee/<commit>/game/openth
 players must have build 60acf5b8 (mp-stable-18d0554f)
 players must have Theme Hospital data 899c66d0
 ```
@@ -234,7 +234,7 @@ domain pointing at the server), your name, **Connect**. Make a room, click an
 empty place to add a bot, and start: if the bot plays along, the referee
 works.
 
-To watch the log live while people play: `sudo journalctl -u corsixth-mp -f`
+To watch the log live while people play: `sudo journalctl -u openth -f`
 (Ctrl+C to stop watching).
 
 ## 8. Updating to a new release
@@ -247,6 +247,13 @@ curl -fsSLO https://raw.githubusercontent.com/openth-org/openth/master/mp_server
 sudo bash setup-referee-host.sh --release mp-stable-NEWNUMBER --motd "Welcome to my OpenTH server"
 ```
 
+- **Servers set up before 27 November 2026** have the first names: the
+  service `corsixth-mp` (and `corsixth-mp-learn`, `corsixth-mp-report`),
+  `/opt/corsixth-mp`, `/etc/corsixth-mp.env` and `-secrets.env`, the account
+  `corsixth` and `/var/lib/corsixth`. The next run of the script moves them
+  all to the `openth` names in this guide, with your secrets, the bots'
+  learning and any drop-ins (like the crash guard of step 6). Settings with
+  their first names (`CORSIXTH_MP_...`) still work.
 - **Updating restarts the server and drops everybody who is playing.** Check
   that nobody is in a game first (the log shows the rooms).
 - After the update, players with another version are offered **"Get the
@@ -259,7 +266,7 @@ sudo bash setup-referee-host.sh --release mp-stable-NEWNUMBER --motd "Welcome to
   CorsixTH underneath can) cannot be fetched this way by games from before
   it. Players who cannot switch are told which release to download, with a
   link; they do that once.
-- **Never** pass `--data /opt/corsixth-mp/thdata/...`: the script empties that
+- **Never** pass `--data /opt/openth/thdata/...`: the script empties that
   folder first, and your game files would be gone. To change the game files,
   copy them to `~/themehos` again as in step 3 and pass `--data ~/themehos`.
 
@@ -267,29 +274,29 @@ sudo bash setup-referee-host.sh --release mp-stable-NEWNUMBER --motd "Welcome to
 
 | What | Command |
 |---|---|
-| Is it running? | `systemctl status corsixth-mp` |
-| Last 50 log lines | `sudo journalctl -u corsixth-mp -n 50` |
-| Watch the log | `sudo journalctl -u corsixth-mp -f` |
-| Restart (drops players) | `sudo systemctl restart corsixth-mp` |
-| Stop | `sudo systemctl stop corsixth-mp` |
+| Is it running? | `systemctl status openth` |
+| Last 50 log lines | `sudo journalctl -u openth -n 50` |
+| Watch the log | `sudo journalctl -u openth -f` |
+| Restart (drops players) | `sudo systemctl restart openth` |
+| Stop | `sudo systemctl stop openth` |
 | Memory and swap in use | `free -m` |
 | Addresses blocked by fail2ban | `sudo fail2ban-client status sshd` |
-| Settings (welcome text, release) | `/etc/corsixth-mp.env` (restart after a change) |
-| One game's referee log | `/var/lib/corsixth/referee-work/<room>-<number>/referee.log` |
-| What the bots learnt last | `sudo journalctl -u corsixth-mp-learn -n 20` |
-| Let the bots learn now (not wait for the morning) | `sudo systemctl start corsixth-mp-learn` |
+| Settings (welcome text, release) | `/etc/openth.env` (restart after a change) |
+| One game's referee log | `/var/lib/openth/referee-work/<room>-<number>/referee.log` |
+| What the bots learnt last | `sudo journalctl -u openth-learn -n 20` |
+| Let the bots learn now (not wait for the morning) | `sudo systemctl start openth-learn` |
 
 ## 10. When something goes wrong
 
 - **The game cannot connect at all:** the port is closed. Check the
   provider's firewall and `ufw` (step 2), and that the service runs
-  (`systemctl status corsixth-mp`).
+  (`systemctl status openth`).
 - **"Other game version: get ... on GitHub":** the player's game is not the
   release the server runs, and it cannot fetch it by itself (too old, or the
   server's release has another engine; step 8). They download the release
   it names, once.
 - **"Your Theme Hospital files differ from this server's":** only on a
-  server without the referee (`CORSIXTH_MP_DATA` set): the player's edition
+  server without the referee (`OPENTH_DATA` set): the player's edition
   differs from the server's. With the referee such players are let in.
 - **The script stops with "the game binary misses libraries":** the server
   is not Ubuntu 24.04+/Debian 13, or not x86_64.
@@ -306,7 +313,7 @@ sudo bash setup-referee-host.sh --release mp-stable-NEWNUMBER --motd "Welcome to
   it. Add the swap and the crash guard (step 6), or play with fewer bots.
 - **The bots do not build like your experts (section 11):** only normal and
   hard bots do, in games started after the morning's learning. See what it
-  learnt with `sudo journalctl -u corsixth-mp-learn -n 20` (a save it could
+  learnt with `sudo journalctl -u openth-learn -n 20` (a save it could
   not read is named there and tried again the next morning). Nothing is
   saved while an expert plays under another name, or in a hospital a bot
   played for a while (for a player who left).
@@ -327,13 +334,13 @@ sudo bash setup-referee-host.sh --release mp-stable-NEWNUMBER --experts "Argus,M
 ```
 
 The names are kept for later updates; `--experts none` stops it. (Or edit
-`CORSIXTH_MP_EXPERTS=` in `/etc/corsixth-mp.env` and restart the service.)
+`OPENTH_EXPERTS=` in `/etc/openth.env` and restart the service.)
 
 What happens then:
 
 - While one of them plays, the game's referee saves the game at the end of
   every game year and when the game ends, into
-  `/var/lib/corsixth/learn/saves` (a few MB each), if they did something in
+  `/var/lib/openth/learn/saves` (a few MB each), if they did something in
   the game since the last save. A hospital a bot played for a while, for a
   player who left, is never learnt from.
 - **Sharing a hospital:** an expert who plays with an assistant bot, or
@@ -343,7 +350,7 @@ What happens then:
   (22 November 2026) or newer; older releases save nothing for a shared
   hospital.
 - Every morning at 6:30 (Prague time) the server reads the new saves and
-  writes what the bots learnt to `/var/lib/corsixth/learn/learned.lua`. Each
+  writes what the bots learnt to `/var/lib/openth/learn/learned.lua`. Each
   game counts once, as its latest save has it (a game continued from a save
   is saved again: its saves are recognised by the rooms and corridor objects
   they share). Normal and hard bots of games started after that build that
@@ -356,12 +363,12 @@ What happens then:
 
 Tell the players you name that their games are saved on your server for
 this. To start over, stop the service and delete
-`/var/lib/corsixth/learn/layouts.jsonl` and `learned.lua` (the saves stay;
+`/var/lib/openth/learn/layouts.jsonl` and `learned.lua` (the saves stay;
 delete `state.json` too to learn from them again).
 
 To give another server what this one learnt, copy `layouts.jsonl` there
-(into the same folder, owned by `corsixth`) and run
-`sudo systemctl start corsixth-mp-learn` on it.
+(into the same folder, owned by `openth`) and run
+`sudo systemctl start openth-learn` on it.
 
 ## 12. Good to know
 
@@ -381,21 +388,21 @@ To give another server what this one learnt, copy `layouts.jsonl` there
 
 ## 13. Optional: advice for the bots, and Discord messages
 
-Both read their secrets from `/etc/corsixth-mp-secrets.env`, a file the script
+Both read their secrets from `/etc/openth-secrets.env`, a file the script
 never writes. Make it yourself, readable only by root and the service:
 
 ```bash
-sudo touch /etc/corsixth-mp-secrets.env
-sudo chown root:corsixth /etc/corsixth-mp-secrets.env
-sudo chmod 640 /etc/corsixth-mp-secrets.env
-sudo nano /etc/corsixth-mp-secrets.env
+sudo touch /etc/openth-secrets.env
+sudo chown root:openth /etc/openth-secrets.env
+sudo chmod 640 /etc/openth-secrets.env
+sudo nano /etc/openth-secrets.env
 ```
 
 - **Advice for the bots:** normal and hard bots ask a language model
   (Claude Haiku, through the Anthropic API) for a plan now and then, and use
   it to answer players in the chat. Add a line `ANTHROPIC_API_KEY=...` with
-  your key. Optional in the same file: `CORSIXTH_MP_AI_MODEL` (default
-  `claude-haiku-5-5`) and `CORSIXTH_MP_AI_DAILY_USD`, the most it may cost a
+  your key. Optional in the same file: `OPENTH_AI_MODEL` (default
+  `claude-haiku-5-5`) and `OPENTH_AI_DAILY_USD`, the most it may cost a
   day (default 3 dollars). Without a key, or over the budget, the bots play on
   their own rules; easy bots never ask.
 - **Daily report to Discord** at 7:00 (Europe/Prague): yesterday's games, how
@@ -411,4 +418,4 @@ sudo nano /etc/corsixth-mp-secrets.env
   script installs another release than the one before.
 
 Restart the service after changing the file:
-`sudo systemctl restart corsixth-mp` (this drops everybody who is playing).
+`sudo systemctl restart openth` (this drops everybody who is playing).

@@ -1,9 +1,9 @@
 ---
 # Test the multiplayer relay/lobby server (mp_server/) and publish its
 # container image to the GitHub container registry:
-#   ghcr.io/<owner>/corsixth-mp-server:<branch>   every push to an mp/* branch
-#   ghcr.io/<owner>/corsixth-mp-server:sha-<sha>  every push
-#   ghcr.io/<owner>/corsixth-mp-server:latest     pushes to mp/dev or master
+#   ghcr.io/<owner>/openth-server:<branch>   every push to an mp/* branch
+#   ghcr.io/<owner>/openth-server:sha-<sha>  every push
+#   ghcr.io/<owner>/openth-server:latest     pushes to mp/dev or master
 # The image contains no game code and no Theme Hospital data.
 name: Multiplayer server image
 
@@ -48,7 +48,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/corsixth-mp-server
+          images: ghcr.io/${{ github.repository_owner }}/openth-server
           tags: |
             type=ref,event=branch
             type=sha

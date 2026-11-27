@@ -2,7 +2,7 @@
 """Who was in a different place, or doing something else, at a desync?
 
 Usage: python3 scripts/multiplayer/compare_states.py SERVER_LOG [ROOM]
-       journalctl -u corsixth-mp | python3 scripts/multiplayer/compare_states.py - [ROOM]
+       journalctl -u openth | python3 scripts/multiplayer/compare_states.py - [ROOM]
 
 After a desync every game sends its state to the server log ("state of
 '<player>' ... part N: ..."), ending with what it looked like at the desync

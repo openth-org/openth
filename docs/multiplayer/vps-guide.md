@@ -24,7 +24,7 @@ sudo bash setup-vps.sh --motd "Welcome"            # add --ufw to set up the fir
 
 It does sections 2 to 6 below: installs Docker (from Docker's repository) if
 needed, optionally configures `ufw` (keeping every SSH port open), writes
-`/opt/corsixth-mp/compose.yaml` and `.env`, starts the server and waits for
+`/opt/openth/compose.yaml` and `.env`, starts the server and waits for
 its health check. Run it again to update. Options: `--port`, `--tag`,
 `--ref`, `--motd`, `--ufw`, `--dir` (see `--help`). Tested on the Debian 13
 dev VM, and its Docker installation in fresh Debian 12, Debian 13 and Ubuntu
@@ -69,26 +69,26 @@ thinking about it.
 ## 4. Get the compose file
 
 ```bash
-sudo mkdir -p /opt/corsixth-mp && cd /opt/corsixth-mp
+sudo mkdir -p /opt/openth && cd /opt/openth
 sudo curl -fsSLo compose.yaml \
   https://raw.githubusercontent.com/openth-org/openth/master/mp_server/compose.yaml
 ```
 
 `master` is the newest tested state of OpenTH.
 
-Optional settings go in `/opt/corsixth-mp/.env` (all have defaults):
+Optional settings go in `/opt/openth/.env` (all have defaults):
 
 ```ini
 # Which image to run: latest (built from master), a branch name (/ becomes -), or sha-<commit>
-CORSIXTH_MP_TAG=latest
+OPENTH_TAG=latest
 # Port players connect to
-CORSIXTH_MP_PUBLISH=47800
+OPENTH_PUBLISH=47800
 # Shown to players when they connect
-CORSIXTH_MP_MOTD=Welcome to our hospital server
-CORSIXTH_MP_LOG=INFO
+OPENTH_MOTD=Welcome to our hospital server
+OPENTH_LOG=INFO
 # Connection limits (in total, and from one IP address)
-CORSIXTH_MP_MAX_CONNECTIONS=256
-CORSIXTH_MP_MAX_PER_ADDRESS=8
+OPENTH_MAX_CONNECTIONS=256
+OPENTH_MAX_PER_ADDRESS=8
 ```
 
 `:latest` is built from `master`, the newest tested state. Players need the
@@ -97,17 +97,18 @@ Windows build of the same commit (see `PLAYING.md`).
 ## 5. Access to the image
 
 GitHub Actions publishes the image to
-`ghcr.io/lbakyl/corsixth-mp-server`. It takes its visibility from the
-public repository, so `docker compose pull` works without logging in (checked
-2026-10-18). If it is ever made private (GitHub, your profile, Packages,
-`corsixth-mp-server`, Package settings), log in on the VPS with a personal
-access token that has only `read:packages`:
-`echo <token> | docker login ghcr.io -u lbakyl --password-stdin`
+`ghcr.io/openth-org/openth-server` (until 27 November 2026:
+`ghcr.io/lbakyl/corsixth-mp-server`, which is no longer updated).
+`docker compose pull` works without logging in while the package is public
+(GitHub, the openth-org organization, Packages, `openth-server`, Package
+settings, Change visibility). If it is private, log in on the VPS with a
+personal access token that has only `read:packages`:
+`echo <token> | docker login ghcr.io -u <your GitHub name> --password-stdin`
 
 ## 6. Start and check
 
 ```bash
-cd /opt/corsixth-mp
+cd /opt/openth
 sudo docker compose up -d
 sudo docker compose ps            # STATUS should say (healthy) after a few seconds
 sudo docker compose logs -f       # "listening on 0.0.0.0:47800"
@@ -138,11 +139,11 @@ python3 -m corsixth_mp.health <vps-ip> 47800    # run in mp_server/; prints "OK 
 ## 8. Updating
 
 ```bash
-cd /opt/corsixth-mp
+cd /opt/openth
 sudo docker compose pull && sudo docker compose up -d
 ```
 
-Pin a version by setting `CORSIXTH_MP_TAG=sha-<commit>` in `.env`. Players
+Pin a version by setting `OPENTH_TAG=sha-<commit>` in `.env`. Players
 must update their game to the matching build at the same time.
 
 ## 9. Security notes
@@ -163,6 +164,6 @@ must update their game to the matching build at the same time.
 |---|---|
 | The game cannot connect | Port open in the provider's firewall? `docker compose ps` healthy? Right address and port? |
 | `build_mismatch` when joining | Players run different builds or languages. Everybody uses the same CI download. |
-| `busy` error | Too many connections from one address (`CORSIXTH_MP_MAX_PER_ADDRESS`). |
+| `busy` error | Too many connections from one address (`OPENTH_MAX_PER_ADDRESS`). |
 | The game is slow or waits for the other player | A higher ping lowers the allowed speed; the room screen shows it. |
 | Players go out of sync | Both games show a message. Note the step and send the server log (`docker compose logs`). Recovery comes with milestone S4. |

@@ -372,7 +372,7 @@ release; https://openth.org/play lists them) each run:
 ```mermaid
 flowchart TB
   subgraph HOST["One server machine"]
-    SVC["corsixth-mp service<br/>Python server, port 47800"]
+    SVC["openth service<br/>Python server, port 47800"]
     BIN["The release's Linux build<br/>and its Lua source"]
     DATA["Theme Hospital data<br/>read only"]
     REF["Referee process<br/>one per running game"]
