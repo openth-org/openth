@@ -346,6 +346,9 @@ function MultiplayerPack.switchTo(app, build, address, name)
     os.remove(builds .. "installed.txt")
   end
   if address then writeFile(builds .. "rejoin.txt", address .. "\n" .. (name or "") .. "\n") end
+  -- (This game runs, so it started: nothing of its start may send the next
+  -- one to the installed game.)
+  MultiplayerPack.started(app)
   app:saveConfig()
   app:reset()
 end
@@ -358,11 +361,21 @@ function MultiplayerPack.rejoinPending(app)
   return address, name
 end
 
+--! This build has started: it loaded, so it starts again next time
+--! (builds/starting.txt gone, mp_pack_start.lua). Called once the game has
+--! loaded, before the intro, and again by afterStart: only after the main
+--! menu, a start cut short (the game closed during the intro) left the file,
+--! and the next start, the one after a download too, was the installed game's
+--! (Jan, 2026-11-27: "I got back to the purple menu").
+function MultiplayerPack.started(app)
+  os.remove(MultiplayerPack.buildsDir(app) .. "starting.txt")
+end
+
 --! After the main menu is up: this build started fine (so it starts again
 --! next time), and join the server it was started for.
 function MultiplayerPack.afterStart(app)
   local builds = MultiplayerPack.buildsDir(app)
-  os.remove(builds .. "starting.txt")
+  MultiplayerPack.started(app)
   local address, name = MultiplayerPack.rejoinPending(app)
   if not address then return end
   os.remove(builds .. "rejoin.txt")

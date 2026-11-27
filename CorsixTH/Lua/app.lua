@@ -458,6 +458,9 @@ function App:init()
   -- Finished init, save any config changes applied
   TheApp:saveConfig()
   TheApp:saveHotkeys()
+  -- (A build downloaded from a multiplayer server has loaded: it starts again
+  -- next time, also when the game closes during the intro.)
+  corsixth.require("mp_pack").started(self)
 
   -- The professor comes to his chart (the original's movie, MMENU1) when his
   -- is the main menu, after the intro when that is on (Jan: with the intro
