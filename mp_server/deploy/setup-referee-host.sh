@@ -98,6 +98,16 @@ apt-get install -y -q --no-install-recommends python3 python3-venv git curl ca-c
   libxi6 libxfixes3 libxrandr2 libxss1 libgbm1 libwayland-egl1 libwayland-client0 \
   libwayland-cursor0 libdecor-0-0 >/dev/null
 
+# This script writes the settings as OPENTH_...; server code from before
+# 2026-11-27 reads only CORSIXTH_MP_... and would start without its referee
+# and bots. Check before anything on this server changes.
+ref=${CODE:-$RELEASE}
+init=$(curl -fsSL "https://raw.githubusercontent.com/$REPO/$ref/mp_server/corsixth_mp/__init__.py") ||
+  die "cannot read the server code of $ref from GitHub"
+if ! grep -q "OPENTH_" <<<"$init"; then
+  die "the server code of $ref is from before 2026-11-27 and does not know the OPENTH_ settings this script writes: use a newer release, or add --code master"
+fi
+
 # The first names (until 2026-11-27): move them to openth once.
 if [[ -e /etc/systemd/system/corsixth-mp.service || -d /opt/corsixth-mp || -f /etc/corsixth-mp.env ]] ||
    id corsixth >/dev/null 2>&1; then
