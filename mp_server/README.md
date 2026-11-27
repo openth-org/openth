@@ -35,7 +35,7 @@ referee (below).
 3. Check from a second terminal (same folder) that it answers:
 
    ```bash
-   python3 -m corsixth_mp.health         # prints: OK players=0 rooms=0
+   python3 -m corsixth_mp.health         # prints: OK players=0 rooms=0 cpu=2 mem=9 disk=8
    ```
 
 4. In the game: main menu, **Multiplayer**, type the server's address with the

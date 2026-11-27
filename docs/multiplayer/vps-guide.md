@@ -118,7 +118,7 @@ From home, check that the port is reachable (any machine with Python and this
 checkout):
 
 ```bash
-python3 -m corsixth_mp.health <vps-ip> 47800    # run in mp_server/; prints "OK players=0 rooms=0"
+python3 -m corsixth_mp.health <vps-ip> 47800    # run in mp_server/; prints "OK players=0 rooms=0 cpu=2 mem=9 disk=8"
 ```
 
 ## 7. Playing
