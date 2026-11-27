@@ -926,18 +926,29 @@ end
 --! the menus, the lobby and the other windows open while no game runs, in a
 --! language the game's own fonts can write, in one of these TrueType fonts
 --! (Bitmap/fonts, each with its licence, the SIL Open Font License). `scale`:
---! its letters that much of the game font's (Press Start 2P is wide).
---! "original": the game's own pixel font. Bungee by default (Jan, 2026-11-26),
---! a thinner copy of it (Bungee OpenTH Thin, scripts/thin_font.py: Jan, "a bit
---! thinner"); the font as made is Bungee Bold.
+--! its letters that much of the game font's (Press Start 2P is wide), `width`:
+--! that much narrower again. (The engine draws a TrueType font at least 14
+--! pixels high and 9 wide, freetype_font::set_ideal_character_size: at UI
+--! scale 1 a smaller size grows, at 2 it does not.)
+--! "original": the game's own pixel font. Arcade by default (Jan, 2026-11-27:
+--! Press Start 2P, "less bold" so that it fits): OpenTH Arcade, Press Start
+--! 2P with thinner upright strokes, narrow letters as narrow as they are and
+--! the space half as wide, drawn at 85% (scripts/thin_font.py; its licence
+--! keeps the name Press Start 2P for the font as made). At UI scale 2 it is
+--! as high as the 2P and 0.89 as wide; at 1 (both grow to 14 pixels high
+--! there) 85% as high.
+--! Bungee: a thinner copy (Bungee OpenTH Thin); the font as made is Bungee
+--! Bold. (The thin Bungee was "bungee" while it was the default, 2026-11-26:
+--! a setting saved then gets the new default.)
 Graphics.MENU_FONTS = {
-  {id = "bungee", name = "Bungee", file = "BungeeOpenTHThin-Regular.ttf"},
-  {id = "bungee_bold", name = "Bungee Bold", file = "Bungee-Regular.ttf"},
+  {id = "arcade", name = "Arcade", file = "OpenTHArcade-Regular.ttf", scale = 1, width = 0.89},
   {id = "press_start", name = "Press Start 2P", file = "PressStart2P-Regular.ttf", scale = 0.8},
+  {id = "bungee_thin", name = "Bungee", file = "BungeeOpenTHThin-Regular.ttf"},
+  {id = "bungee_bold", name = "Bungee Bold", file = "Bungee-Regular.ttf"},
   {id = "silkscreen", name = "Silkscreen", file = "Silkscreen-Regular.ttf"},
   {id = "original", name = "Theme Hospital"},
 }
-Graphics.DEFAULT_MENU_FONT = "bungee"
+Graphics.DEFAULT_MENU_FONT = "arcade"
 --! The game fonts the menu font stands in for: the white and the blue one.
 Graphics.MENU_FONT_SHEETS = {Font01V = true, Font02V = true}
 
@@ -978,7 +989,7 @@ function Graphics:_loadMenuFont(def, face, sprite_table, font_options)
     local w, h = sprite_table:size(string.byte("M") - 31)
     if not (w and w > 1) then w, h = sprite_table:size(string.byte("0") - 31) end
     if w and w > 1 then
-      options.ttf_width = math.max(4, math.floor(w * def.scale + 0.5))
+      options.ttf_width = math.max(4, math.floor(w * def.scale * (def.width or 1) + 0.5))
       options.ttf_height = math.max(4, math.floor(h * def.scale + 0.5))
     end
   end

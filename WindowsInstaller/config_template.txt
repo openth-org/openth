@@ -217,11 +217,11 @@ play_demo = true
 professor_menu = true
 
 -- The font of the menus (and the lobby) in languages written in the game's
--- own letters: "bungee" (the default, a thinner Bungee), "bungee_bold",
--- "press_start" (Press Start 2P), "silkscreen" or "original" (Theme
--- Hospital's own font).
+-- own letters: "arcade" (the default, a thinner Press Start 2P),
+-- "press_start" (Press Start 2P), "bungee_thin" (a thinner Bungee),
+-- "bungee_bold", "silkscreen" or "original" (Theme Hospital's own font).
 --
-menu_font = [[bungee]]
+menu_font = [[arcade]]
 
 -------------------------------------------------------------------------------
 -- Allow user actions while game is paused

@@ -85,6 +85,28 @@ local list = {
   {"customise_window.professor_menu", _S.customise_window.professor_menu, 160},
 }
 
+-- The room's lines (multiplayer.lua _buildRoom): a place's line is 270 wide
+-- (Jan, 2026-11-27: "waiting for a player... (click: add a bot)" ran out of
+-- it in Press Start 2P), the speed and the hint 380, the mode 305 (the Map
+-- button beside it).
+do
+  local function room_list(key, text, room) list[#list + 1] = {key, text, room} end
+  room_list("add_bot", S.add_bot, 264)
+  room_list("waiting_player", S.waiting_player, 264)
+  room_list("bot_starting", S.bot_starting, 264)
+  room_list("player_line host", S.player_line:format("MATROFTT", S.owner_mark, "307", ""), 264)
+  room_list("player_line", S.player_line:format("MATROFTT", "", "307", S.not_ready), 264)
+  room_list("bot_named", S.bot_named:format("Bot Florence", S.bot_kind_normal), 264)
+  room_list("room_hint", S.room_hint, 374)
+  room_list("measuring", S.measuring, 374)
+  for _, speed in ipairs({"Slowest", "Slower", "Normal", "Max speed", "And then some more"}) do
+    room_list("recommendation " .. speed, S.recommendation:format(MultiplayerLobby.speedName(speed), "270"), 374)
+  end
+  for _, mode in ipairs({"shared", "coop", "competitive", "teams", "teamshared", "mixed"}) do
+    room_list("mode " .. mode, MultiplayerLobby.modeLabel(mode) .. ", " .. S.level:format(12), 299)
+  end
+end
+
 -- The Start new game button with each multiplayer level chosen.
 do
   local levels = corsixth.require("mp_levels")
@@ -100,7 +122,8 @@ local over = 0
 for _, item in ipairs(list) do
   -- (The font takes the localised string itself; tostring() would add the
   -- proxy's "<LocalisedString> Current value:" for the print only.)
-  local key, room = item[1], item[3]
+  -- (The widths are UI units, the text's pixels: at UI scale 2 twice as many.)
+  local key, room = item[1], item[3] * TheApp.gfx:getUIScale()
   local w = font:sizeOf(item[2])
   local text = tostring(item[2]):gsub("^<LocalisedString> Current value:", "")
   if w > room then over = over + 1 end

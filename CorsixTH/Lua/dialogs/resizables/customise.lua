@@ -93,6 +93,10 @@ function UICustomise:selectMenuFont(number)
   local app = self.ui.app
   app.config.menu_font = Graphics.MENU_FONTS[number].id
   app:saveConfig()
+  -- The fonts of the windows already open (the tips beside the menu) made
+  -- again in the new one, as for a new language (Jan: the tips stayed in
+  -- the old font).
+  app.gfx:onChangeLanguage()
   self.menu_font_dropdown = nil
   self:reload()
 end
