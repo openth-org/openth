@@ -144,6 +144,10 @@ Your players download the same release for Windows, Mac or Linux. (A player
 whose game is too old or too new for your server is offered your server's
 version in the game; see step 8.)
 
+The script in this guide needs a release from 27 November 2026 or later: an
+older one reads its settings under other names, so the script stops and
+says so (add `--code master` to run an older release anyway).
+
 ## 5. Install the server
 
 Log in to the server with SSH and run these two commands. Replace the
