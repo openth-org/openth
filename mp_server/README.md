@@ -188,11 +188,16 @@ The game port also answers a web request for its health, so a monitor such
 as Uptime Kuma can check the server itself, not only that the port is open:
 
     curl http://eu2.openth.org:47800/health
-    OK players=0 release=mp-test-92f8a4e8 rooms=0
+    OK players=0 release=mp-test-92f8a4e8 rooms=0 cpu=2 mem=9 disk=8
 
 `players` counts every connection in the lobby or a game (bots and referees
 too), `rooms` the open rooms, and `release` is `OPENTH_RELEASE` (left out if
-it is not set). Any other page answers 404. In Uptime Kuma, an
+it is not set). The last three say how busy the machine is, in whole percents:
+`cpu` is the one-minute load average per CPU core (over 100 when processes
+wait for a core), `mem` the memory in use (MemTotal minus MemAvailable) and
+`disk` the space used on the disk that holds `/` (`CORSIXTH_MP_DISK_PATH`
+names another path). A value the system cannot give (no `/proc`) is left out.
+The website shows them on its /play page. Any other page answers 404. In Uptime Kuma, an
 "HTTP(s) - Keyword" monitor on that address with the keyword `OK players`
 does it. On the server itself, `echo HEALTH | nc -q 2 127.0.0.1 47800` asks
 the same.

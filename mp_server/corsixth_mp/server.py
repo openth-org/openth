@@ -32,7 +32,7 @@ import signal
 import time
 from dataclasses import dataclass, field
 
-from . import pacing, stats
+from . import machine, pacing, stats
 from .advisor import Advisor
 from .builds import BuildCheck, DataCheck
 from .packs import ServedPack
@@ -593,10 +593,18 @@ class Server:
         except (ConnectionError, RuntimeError):
             pass
 
+    def _health_line(self, **extra: object) -> str:
+        """"OK players=N rooms=N cpu=N mem=N disk=N": the machine's percents
+        (machine.py; one that cannot be read here is left out) come last, so
+        the line still starts "OK players=" for monitors that look for it."""
+        line = encode("OK", rooms=len(self.rooms), players=len(self.players), **extra)
+        load = machine.load()
+        return " ".join([line] + [f"{k}={load[k]}" for k in ("cpu", "mem", "disk") if load.get(k) is not None])
+
     async def _answer_http(self, first: bytes, reader: asyncio.StreamReader,
                            writer: asyncio.StreamWriter) -> None:
-        """GET /health: 200 and "OK players=N release=... rooms=N" (release
-        from CORSIXTH_MP_RELEASE, if set); any other page: 404."""
+        """GET /health: 200 and the HEALTH line plus release=... (from
+        CORSIXTH_MP_RELEASE, if set); any other page: 404."""
         parts = first.decode("latin-1").split()
         method = parts[0]
         path = parts[1].split("?", 1)[0] if len(parts) > 1 else ""
@@ -612,8 +620,7 @@ class Server:
             return
         if path == "/health":
             status = "200 OK"
-            body = encode("OK", rooms=len(self.rooms), players=len(self.players),
-                          release=os.environ.get("CORSIXTH_MP_RELEASE") or None)
+            body = self._health_line(release=os.environ.get("CORSIXTH_MP_RELEASE") or None)
         else:
             status, body = "404 Not Found", "Not found"
         data = (body + "\n").encode()
@@ -630,8 +637,8 @@ class Server:
             await self._close_writer(writer)
             return
         if first.strip() == b"HEALTH":
-            # Health check (container HEALTHCHECK); answered quietly.
-            writer.write(encode("OK", rooms=len(self.rooms), players=len(self.players)).encode() + b"\n")
+            # Health check (container HEALTHCHECK, the website); answered quietly.
+            writer.write(self._health_line().encode() + b"\n")
             await self._close_writer(writer)
             return
         if first.startswith((b"GET ", b"HEAD ")):

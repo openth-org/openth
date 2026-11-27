@@ -3,7 +3,7 @@ import zlib
 
 import pytest
 
-from corsixth_mp import builds, pacing, server as srv
+from corsixth_mp import builds, machine, pacing, server as srv
 from corsixth_mp.builds import BuildCheck
 from corsixth_mp.protocol import decode, encode
 
@@ -381,12 +381,16 @@ def test_cosmetic_show_is_relayed_with_sender(run):
     run(body)
 
 
-def test_health_check_answers_without_hello(run):
+def test_health_check_answers_without_hello(run, monkeypatch):
+    # A value the machine cannot give (here: no load average) is left out.
+    monkeypatch.setattr(machine, "load", lambda: {"cpu": None, "mem": 45, "disk": 11})
+
     async def body(server, port):
         r, w = await asyncio.open_connection("127.0.0.1", port)
         w.write(b"HEALTH\n")
         verb, fields = decode((await r.readline()).decode())
         assert verb == "OK" and fields["rooms"] == "0"
+        assert fields["mem"] == "45" and fields["disk"] == "11" and "cpu" not in fields
         w.close()
         assert server.players == {}
     run(body)
@@ -402,6 +406,7 @@ async def _http(port, request: bytes) -> bytes:
 
 def test_web_health_check_on_the_game_port(run, monkeypatch):
     monkeypatch.setenv("CORSIXTH_MP_RELEASE", "mp-test-0123abcd")
+    monkeypatch.setattr(machine, "load", lambda: {"cpu": 12, "mem": 45, "disk": 11})
 
     async def body(server, port):
         answer = await _http(port, b"GET /health HTTP/1.1\r\nHost: eu2.openth.org\r\n"
@@ -409,7 +414,8 @@ def test_web_health_check_on_the_game_port(run, monkeypatch):
         head, text = answer.split(b"\r\n\r\n", 1)
         assert head.startswith(b"HTTP/1.1 200 OK\r\n")
         assert b"Content-Length: %d\r\n" % len(text) in head
-        assert text == b"OK players=0 release=mp-test-0123abcd rooms=0\n"
+        # The machine's load comes last: monitors look for "OK players".
+        assert text == b"OK players=0 release=mp-test-0123abcd rooms=0 cpu=12 mem=45 disk=11\n"
         # A query string is ignored; HEAD gets the head alone.
         assert (await _http(port, b"GET /health?x=1 HTTP/1.0\r\n\r\n")).startswith(b"HTTP/1.1 200 OK")
         head_only = await _http(port, b"HEAD /health HTTP/1.1\r\nHost: x\r\n\r\n")
