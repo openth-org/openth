@@ -21,18 +21,18 @@ player who left cannot come back.
 
 ## Turning it on
 
-The referee is off unless `CORSIXTH_MP_REFEREE_BINARY` is set. It needs a
+The referee is off unless `OPENTH_REFEREE_BINARY` is set. It needs a
 game build of the same version as the players (the build id must match;
 it includes the Lua code checksum and the language), its source tree, Theme
 Hospital data and LuaSocket.
 
 | Variable | Meaning |
 |---|---|
-| `CORSIXTH_MP_REFEREE_BINARY` | the game program: `openth` in the Linux package (`corsix-th` in older ones and in a source build) |
-| `CORSIXTH_MP_REFEREE_SOURCE` | OpenTH checkout (for `CorsixTH/` and `scripts/multiplayer/referee.lua`) |
-| `CORSIXTH_MP_REFEREE_DATA` | Theme Hospital data folder (read only is enough) |
-| `CORSIXTH_MP_REFEREE_LUA_CPATH`, `..._LUA_PATH` | where LuaSocket is, if not in the standard paths |
-| `CORSIXTH_MP_REFEREE_WORKDIR` | configs and logs, one folder per game (default `/tmp/corsixth-referee`) |
+| `OPENTH_REFEREE_BINARY` | the game program: `openth` in the Linux package (`corsix-th` in older ones and in a source build) |
+| `OPENTH_REFEREE_SOURCE` | OpenTH checkout (for `CorsixTH/` and `scripts/multiplayer/referee.lua`) |
+| `OPENTH_REFEREE_DATA` | Theme Hospital data folder (read only is enough) |
+| `OPENTH_REFEREE_LUA_CPATH`, `..._LUA_PATH` | where LuaSocket is, if not in the standard paths |
+| `OPENTH_REFEREE_WORKDIR` | configs and logs, one folder per game (default `/tmp/openth-referee`) |
 
 ### Only the referee's build may connect
 
@@ -46,9 +46,9 @@ the release page.
 
 | Variable | Meaning |
 |---|---|
-| `CORSIXTH_MP_RELEASE` | the release players must get, e.g. `mp-test-6d85201a` (`setup-referee-host.sh` writes it) |
-| `CORSIXTH_MP_RELEASE_URL` | its download page (default: the GitHub release page of `CORSIXTH_MP_RELEASE`) |
-| `CORSIXTH_MP_BUILD` | the checksum players must have; default: computed from `<CORSIXTH_MP_REFEREE_SOURCE>/CorsixTH/Lua` at start; `any`: let every build in |
+| `OPENTH_RELEASE` | the release players must get, e.g. `mp-test-6d85201a` (`setup-referee-host.sh` writes it) |
+| `OPENTH_RELEASE_URL` | its download page (default: the GitHub release page of `OPENTH_RELEASE`) |
+| `OPENTH_BUILD` | the checksum players must have; default: computed from `<OPENTH_REFEREE_SOURCE>/CorsixTH/Lua` at start; `any`: let every build in |
 
 The server log says `players must have build <checksum> (<release>)` at
 start, and `refused: build ...` for each player turned away.
@@ -56,10 +56,10 @@ start, and `refused: build ...` for each player turned away.
 Example on the dev VM (see `README.md`, section 6, for the build):
 
 ```
-export CORSIXTH_MP_REFEREE_BINARY=$BIN CORSIXTH_MP_REFEREE_SOURCE=~/CorsixTH
-export CORSIXTH_MP_REFEREE_DATA=$THDATA
-export CORSIXTH_MP_REFEREE_LUA_CPATH="$LUASOCKET_TREE/lib/lua/5.4/?.so"
-export CORSIXTH_MP_REFEREE_LUA_PATH="$LUASOCKET_TREE/share/lua/5.4/?.lua"
+export OPENTH_REFEREE_BINARY=$BIN OPENTH_REFEREE_SOURCE=~/CorsixTH
+export OPENTH_REFEREE_DATA=$THDATA
+export OPENTH_REFEREE_LUA_CPATH="$LUASOCKET_TREE/lib/lua/5.4/?.so"
+export OPENTH_REFEREE_LUA_PATH="$LUASOCKET_TREE/share/lua/5.4/?.lua"
 PYTHONPATH=mp_server python3 -m corsixth_mp --port 47123
 ```
 
@@ -139,17 +139,17 @@ settings (`NET00.SAM`, `FULL02`-`04.SAM`), and games with both drift apart
 (desyncs the referee keeps repairing). The game sends a CRC-32 of its
 `FULLnn.SAM`, `NETnn.SAM` and `LEVEL.Ln` files in `HELLO` (`data`,
 `MultiplayerLobby.dataId`); a server with a referee computes the same over
-`CORSIXTH_MP_REFEREE_DATA`. A player with other data (`Player.other_data`) is
+`OPENTH_REFEREE_DATA`. A player with other data (`Player.other_data`) is
 let in, but their game never loads a level from their own files: at the start
 of a new game their `START` has `resume=1`, everybody else holds at step 0
 (`why=rejoin`), and all load the referee's game at step 0 (the log: `started
 from the referee's game`); desync repairs, rejoins and continued games load
 saves anyway. In a race of two teams the player's hospital then comes from
 the save's hospital names (`MultiplayerLobby:_seatsFromSave`), since their own
-map could seat the teams differently. Without a referee (`CORSIXTH_MP_DATA`
+map could seat the teams differently. Without a referee (`OPENTH_DATA`
 set) other data is refused ("Your Theme Hospital files differ from this
 server's"; newer games explain it in a window). Older games send no `data`
-and are let in. `CORSIXTH_MP_DATA` sets the value (8 hex digits)
+and are let in. `OPENTH_DATA` sets the value (8 hex digits)
 or `any`. The GOG version is `899c66d0`. The server log says
 `players must have Theme Hospital data <id>` at start.
 
@@ -163,7 +163,7 @@ after a desync each game's diagnostics in the server log end with that list
 ("random <n> draws, the last ..."). To see which line drew in one game only:
 
 ```
-sudo journalctl -u corsixth-mp --since today | python3 scripts/multiplayer/compare_draws.py - "<room>"
+sudo journalctl -u openth --since today | python3 scripts/multiplayer/compare_draws.py - "<room>"
 ```
 
 It compares each game's list with the referee's; the extra (`+`) or missing
@@ -179,7 +179,7 @@ those of the desync step itself ("AT STEP <n>: ..."), the same step in every
 report. To list what differs from the referee's game:
 
 ```
-sudo journalctl -u corsixth-mp --since today | python3 scripts/multiplayer/compare_states.py - "<room>"
+sudo journalctl -u openth --since today | python3 scripts/multiplayer/compare_states.py - "<room>"
 ```
 
 Fax answers are logged with what they answered (`fax_choice -> ok (mp_offer:
@@ -187,7 +187,7 @@ mp_offer_accept)`), so a desync after one can be traced to it.
 
 ## Learning from expert players
 
-With `CORSIXTH_MP_LEARN_DIR` and `CORSIXTH_MP_EXPERTS` (player names) set
+With `OPENTH_LEARN_DIR` and `OPENTH_EXPERTS` (player names) set
 for the server (setup-referee-host.sh `--experts`), the referee
 (scripts/multiplayer/referee.lua) saves its game for learning while a person
 named like an expert plays their own hospital: at the end of every game year

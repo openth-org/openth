@@ -100,7 +100,7 @@ Status: on `mp/team-hospitals`; first released in mp-test-d5a471a7 (eu2).
 ## Limits and open points
 
 - **Bots:** every bot is a whole game on the server. The server runs at most
-  `CORSIXTH_MP_MAX_BOTS` (7) at once, in all rooms together: one room of 8
+  `OPENTH_MAX_BOTS` (7) at once, in all rooms together: one room of 8
   with one person. A bigger server can raise it.
 - **Speed:** 8 hospitals means 8 times the patients in every player's game
   (and the referee's). The slowest computer paces the game.

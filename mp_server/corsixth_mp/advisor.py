@@ -20,10 +20,11 @@ Off unless ANTHROPIC_API_KEY is set (and the anthropic package installed).
 A daily budget (CORSIXTH_MP_AI_DAILY_USD, default 3) stops the advice for
 the rest of the day (UTC); the bots then play on their own rules.
 
-Settings (environment): ANTHROPIC_API_KEY, CORSIXTH_MP_AI_MODEL (default
+Settings (environment; OPENTH_AI_MODEL and so on in /etc/openth.env, see
+__init__.py): ANTHROPIC_API_KEY, CORSIXTH_MP_AI_MODEL (default
 claude-haiku-5-5), CORSIXTH_MP_AI_DAILY_USD, CORSIXTH_MP_AI_STATE (a file
-that keeps the day's spending across restarts; default
-/var/lib/corsixth/ai-spend.json if that folder exists).
+that keeps the day's spending across restarts; default ai-spend.json in
+/var/lib/openth if that folder exists).
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ import pathlib
 import re
 import time
 
-from . import stats
+from . import service_dir, stats
 
 log = logging.getLogger("corsixth_mp.advisor")
 
@@ -165,8 +166,8 @@ class Advisor:
         self.model = env.get("CORSIXTH_MP_AI_MODEL", DEFAULT_MODEL)
         self.daily_usd = float(env.get("CORSIXTH_MP_AI_DAILY_USD", "3") or 3)
         state = env.get("CORSIXTH_MP_AI_STATE")
-        if not state and pathlib.Path("/var/lib/corsixth").is_dir():
-            state = "/var/lib/corsixth/ai-spend.json"
+        if not state and service_dir():
+            state = str(service_dir() / "ai-spend.json")
         self.state_path = pathlib.Path(state) if state else None
         self.day, self.spent = "", 0.0
         self._load()

@@ -11,7 +11,7 @@ advice from a language model through the server (below).
 A bot is a whole game, run by the server without a screen, the same way as the
 headless referee (`referee.md`): the server starts
 `scripts/multiplayer/bot.lua` with the referee's build and game data
-(`CORSIXTH_MP_REFEREE_*`), and the bot connects back and joins the room as a
+(`OPENTH_REFEREE_*`), and the bot connects back and joins the room as a
 player. It plays through the same game windows and lockstep commands as a
 person (it reuses the scripted player's helpers in `probe_builder.lua`), so the
 other games need nothing new apart from the lobby button. A server without a
@@ -59,7 +59,7 @@ referee build cannot run bots (the button is not shown there).
   connects (`HELLO role=bot room token`) or `BOT_START_TIMEOUT` passes. The bot
   joins ready; `PLAYER` lines say `bot=1`, `LOBBY` says how many are still
   `starting`. When the last person leaves a room, its bots are stopped. At most
-  `CORSIXTH_MP_MAX_BOTS` (default 7: a room of 8 with one person) run on a server at once.
+  `OPENTH_MAX_BOTS` (default 7: a room of 8 with one person) run on a server at once.
 - Lobby window (`dialogs/resizables/multiplayer.lua`): the player places are
   buttons; `UIMultiplayer:clickPlace` adds or removes a bot
   (`MultiplayerLobby:addBot`, `removeBot`, `canAddBots`).
@@ -273,7 +273,7 @@ rooms side by side for a game year, one bot each.
 
 ## Building like expert players (`scripts/multiplayer/bot_learned.lua`)
 
-A server can name expert players (`CORSIXTH_MP_EXPERTS`, SERVER-SETUP.md
+A server can name expert players (`OPENTH_EXPERTS`, SERVER-SETUP.md
 section 10); the referee saves their games and a nightly job
 (`corsixth_mp/learn.py`, `layout_learn.py`) writes `learned.lua`. A normal or
 hard bot reads it when it starts; easy bots, and a bot standing in for a
@@ -321,9 +321,9 @@ checks the turning of layouts (each door wall, mirrored) on any Lua.
 
 ## Advice from a language model (`mp_server/corsixth_mp/advisor.py`)
 
-With an Anthropic API key on the server (`/etc/corsixth-mp-secrets.env`,
+With an Anthropic API key on the server (`/etc/openth-secrets.env`,
 `ANTHROPIC_API_KEY=...`; `setup-referee-host.sh` lets the service read it and
-installs the `anthropic` package in `/opt/corsixth-mp/venv`) the bots ask the
+installs the `anthropic` package in `/opt/openth/venv`) the bots ask the
 server, never the API (the key is removed from the bots' and referee's
 environment):
 
@@ -357,8 +357,8 @@ environment):
   `text` (and `wish`, a menu item, a room with a place `room:x@near:y`; `give`,
   the sum an ally asks for, 0 for none named); `error=off|busy|none|failed`. Only
   bots may ask, a plan at most every 20 seconds and a chat line every 3 seconds per bot.
-- A daily budget (`CORSIXTH_MP_AI_DAILY_USD`, default $3; kept in
-  `/var/lib/corsixth/ai-spend.json` across restarts) stops the advice for the
+- A daily budget (`OPENTH_AI_DAILY_USD`, default $3; kept in
+  `/var/lib/openth/ai-spend.json` across restarts) stops the advice for the
   rest of the day (UTC). Without a key, or over the budget, the bots play on
   the manager's own rules. Haiku 5.5 costs about $0.001 a plan.
 

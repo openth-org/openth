@@ -173,7 +173,7 @@ bash scripts/multiplayer/run_sync_probe.sh   $BIN $THDATA 6000
 `run_sp_regression.sh` against a build of the previous commit.
 
 Running the server: `python3 -m corsixth_mp --port 47800` in `mp_server/`,
-or on a VPS with Docker: see `vps-guide.md` (image `ghcr.io/lbakyl/corsixth-mp-server`,
+or on a VPS with Docker: see `vps-guide.md` (image `ghcr.io/openth-org/openth-server`,
 `mp_server/compose.yaml`). In the game: main menu, Multiplayer, server address.
 
 ## 7. Lessons learned

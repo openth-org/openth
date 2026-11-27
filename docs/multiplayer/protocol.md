@@ -48,7 +48,7 @@ referee it sends `DESYNC` when they differ; with one it repairs the games
 |---|---|
 | `WELCOME proto id server motd` | accepted |
 | `ERROR code text` | request refused; codes: `expected_hello`, `protocol`, `bad_room`, `room_exists`, `no_room`, `bad_password`, `build_mismatch`, `running`, `busy`, `room_full`, `in_room`, `not_owner`, `not_ready`, `not_enough`, `bad_speed`, `too_fast`, `bad_report`, `bad_command`, `unknown_verb`, `bad_message`, `not_referee`, `bad_seat`, `locked` |
-| `ERROR code=data_mismatch text need` | answer to `HELLO` with `data` (the Theme Hospital level files' CRC-32, `MultiplayerLobby.dataId`) other than the server's (`CORSIXTH_MP_DATA`) on a server without a referee; the server then hangs up. A server with a referee lets such a player in: in a new game their `START` has `resume=1` (no level is loaded), the others get `HOLD step=0 why=rejoin`, and everybody loads the referee's game at step 0 |
+| `ERROR code=data_mismatch text need` | answer to `HELLO` with `data` (the Theme Hospital level files' CRC-32, `MultiplayerLobby.dataId`) other than the server's (`OPENTH_DATA`) on a server without a referee; the server then hangs up. A server with a referee lets such a player in: in a new game their `START` has `resume=1` (no level is loaded), the others get `HOLD step=0 why=rejoin`, and everybody loads the referee's game at step 0 |
 | `ERROR code=build_mismatch text need release url` | answer to `HELLO` on a server that only lets in its referee's build (`referee.md`): `need` is the Lua code checksum it wants (the last part of the build id), `release` and `url` the release to get and its download page (both optional); the server then hangs up. The game offers `url` only if it is a `https://github.com/` page. A server with its build's signed game pack adds `pack` (its size in bytes), `pack_api` and `pack_engine` (what the pack's scripts need from the engine); a game that can take packs offers to download it instead (see Game packs below) |
 | `ROOM room players max mode level locked state build_ok continue` | one per room after `LIST`, then `ROOMS_END count`; `continue=1` for a saved game |
 | `JOINED room peer owner mode free level difficulty max continue date bots` | you are in the room as player `peer` (`free=1`: a new game, colours and teams can change; `mode`: what they make now; `continue`, `date`: a saved game; `bots=1`: this server can add bots) |
@@ -126,18 +126,18 @@ started with). A newcomer who takes one (`JOIN seat=`) gets `JOINED` (with
 `standin=1` for a stand-in bot) and `START resume=1`; a bot playing the place
 gets `LEFT replaced=1` and is stopped; the others get `HOLD why=rejoin`, and
 everybody loads the referee's game. A person who leaves gets a stand-in bot
-after `CORSIXTH_MP_STAND_IN_DELAY` seconds (20): the server starts it with
+after `OPENTH_STAND_IN_DELAY` seconds (20): the server starts it with
 `MP_BOT_STANDIN=1` under their name. When nobody plays, the bots stop and
-the room closes; with `CORSIXTH_MP_EMPTY_WAIT` seconds (default 0) the referee
+the room closes; with `OPENTH_EMPTY_WAIT` seconds (default 0) the referee
 gets `HOLD why=empty` instead (alone it would run on) and the room waits that
 long: the first person back starts the bots again, and one load gives
 everybody the game. If the last person's connection was lost (it closed
 without `QUIT` or `LEAVE`, or went silent) the room waits
-`CORSIXTH_MP_DROP_WAIT` seconds (default 300) that way. The game sends `QUIT`
+`OPENTH_DROP_WAIT` seconds (default 300) that way. The game sends `QUIT`
 when it leaves a multiplayer game or closes.
 
 The server closes a person's connection it has heard nothing from (no `PONG`
-to its `PING`s) for `CORSIXTH_MP_SILENT_DROP` seconds (default 20; 0: never),
+to its `PING`s) for `OPENTH_SILENT_DROP` seconds (default 20; 0: never),
 as if it had dropped: a connection can die without closing, through a proxy
 say. Somebody who joins a room under the name of a person in it whose
 connection has been silent for 5 seconds is that person, back: in a room

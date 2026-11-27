@@ -15,15 +15,15 @@
 #            server-side changes the players' build does not need (bots, the
 #            server itself). Default: the release's own commit.
 # --data     your Theme Hospital folder (the one with DATA, QDATA, ...), the
-#            first time: it is copied to /opt/corsixth-mp/thdata, readable only
+#            first time: it is copied to /opt/openth/thdata, readable only
 #            by the service account. It is not part of any release.
 #
 # Advice for the bots from a language model (mp_server/corsixth_mp/advisor.py):
-# put the Anthropic API key into /etc/corsixth-mp-secrets.env yourself, as
-#   ANTHROPIC_API_KEY=...   (root:corsixth, mode 640)
+# put the Anthropic API key into /etc/openth-secrets.env yourself, as
+#   ANTHROPIC_API_KEY=...   (root:openth, mode 640)
 # This script never writes that file; the service reads it if it is there,
 # and without it the bots play on their own rules. Optional settings there
-# too: CORSIXTH_MP_AI_MODEL, CORSIXTH_MP_AI_DAILY_USD (default 3).
+# too: OPENTH_AI_MODEL, OPENTH_AI_DAILY_USD (default 3).
 #
 # A daily report to Discord at 7:00 (Europe/Prague): yesterday's games, how
 # long, people and bots, and what the advice cost (corsixth_mp/daily_report.py).
@@ -42,13 +42,20 @@
 # Bots that learn from expert players (corsixth_mp/learn.py): --experts lists
 # their player names (kept from the last run; --experts none: nobody). While
 # one of them plays, the referee saves the game at every year's end and at
-# the game's end into /var/lib/corsixth/learn; every morning at 6:30 (Prague)
+# the game's end into /var/lib/openth/learn; every morning at 6:30 (Prague)
 # the bots learn from the new saves (hard bots build that way), and the
 # daily report says whose.
 #
 # The game pack of the release (openth-pack-<build>.bin and .sig, made and
 # signed by the release maker; corsixth_mp/packs.py), if it has one: players
 # of another build download it in the game instead of the release's page.
+#
+# The service is openth (logs: journalctl -u openth), its settings
+# /etc/openth.env (OPENTH_... names), its account openth (/var/lib/openth).
+# Servers set up before 2026-11-27 had the first names (service corsixth-mp,
+# /opt/corsixth-mp, /etc/corsixth-mp.env, account corsixth): this script moves
+# them to the new names once, drop-ins included. The server code still reads
+# the first setting names (CORSIXTH_MP_...) too.
 #
 # Safe to run again, e.g. with the next release. Restarting the service drops
 # every connected player: check that nobody is playing first.
@@ -62,7 +69,7 @@ MOTD="OpenTH server (with referee)"
 NAME=""
 EXPERTS="-"
 REPO=openth-org/openth
-BASE=/opt/corsixth-mp
+BASE=/opt/openth
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -91,11 +98,61 @@ apt-get install -y -q --no-install-recommends python3 python3-venv git curl ca-c
   libxi6 libxfixes3 libxrandr2 libxss1 libgbm1 libwayland-egl1 libwayland-client0 \
   libwayland-cursor0 libdecor-0-0 >/dev/null
 
-say "Service account corsixth"
-id corsixth >/dev/null 2>&1 || useradd --system --home /var/lib/corsixth --create-home \
-  --shell /usr/sbin/nologin corsixth
-mkdir -p "$BASE/referee" /var/lib/corsixth/referee-work /var/lib/corsixth/learn
-chown -R corsixth:corsixth /var/lib/corsixth
+# The first names (until 2026-11-27): move them to openth once.
+if [[ -e /etc/systemd/system/corsixth-mp.service || -d /opt/corsixth-mp || -f /etc/corsixth-mp.env ]] ||
+   id corsixth >/dev/null 2>&1; then
+  say "Moving the server from its first names (corsixth-mp) to openth"
+  for u in corsixth-mp-report.timer corsixth-mp-learn.timer corsixth-mp.service \
+           corsixth-mp-report.service corsixth-mp-learn.service; do
+    systemctl disable --now "$u" >/dev/null 2>&1 || true
+  done
+  for u in corsixth-mp.service corsixth-mp-report.service corsixth-mp-report.timer \
+           corsixth-mp-learn.service corsixth-mp-learn.timer; do
+    new=openth${u#corsixth-mp}
+    # Drop-ins (OOMPolicy, the shared bot learning, ...) go with their unit.
+    if [[ -d /etc/systemd/system/$u.d ]]; then
+      mkdir -p "/etc/systemd/system/$new.d"
+      for f in "/etc/systemd/system/$u.d"/*; do
+        [[ -e "$f" ]] || continue
+        if [[ -e "/etc/systemd/system/$new.d/${f##*/}" ]]; then
+          die "both $f and /etc/systemd/system/$new.d/${f##*/} exist: keep one"
+        fi
+        mv "$f" "/etc/systemd/system/$new.d/"
+        echo "   drop-in $f -> $new.d/"
+      done
+      rmdir "/etc/systemd/system/$u.d"
+    fi
+    rm -f "/etc/systemd/system/$u"
+  done
+  systemctl daemon-reload
+  if [[ -d /opt/corsixth-mp ]]; then
+    [[ -e "$BASE" ]] && die "both /opt/corsixth-mp and $BASE exist: keep one"
+    mv /opt/corsixth-mp "$BASE"
+    rm -rf "$BASE/venv" # (its scripts name the old folder: made again below)
+  fi
+  for f in "" -secrets; do
+    if [[ -f /etc/corsixth-mp$f.env ]]; then
+      [[ -e /etc/openth$f.env ]] && die "both /etc/corsixth-mp$f.env and /etc/openth$f.env exist: keep one"
+      mv "/etc/corsixth-mp$f.env" "/etc/openth$f.env"
+    fi
+  done
+  if id corsixth >/dev/null 2>&1; then
+    id openth >/dev/null 2>&1 && die "both accounts corsixth and openth exist: keep one"
+    left=$(pgrep -u corsixth -a || true)
+    [[ -z "$left" ]] || die "programs of the account corsixth still run: $left"
+    # (Same user and group ids: every file it owned stays its own.)
+    usermod -l openth -d /var/lib/openth -m corsixth
+    groupmod -n openth corsixth
+  fi
+  if [[ -d /var/lib/corsixth && ! -e /var/lib/openth ]]; then mv /var/lib/corsixth /var/lib/openth; fi
+  echo "   now: service openth, $BASE, /etc/openth.env, account openth, /var/lib/openth"
+fi
+
+say "Service account openth"
+id openth >/dev/null 2>&1 || useradd --system --home /var/lib/openth --create-home \
+  --shell /usr/sbin/nologin openth
+mkdir -p "$BASE/referee" /var/lib/openth/referee-work /var/lib/openth/learn
+chown -R openth:openth /var/lib/openth
 
 if [[ -n "$DATA" ]]; then
   say "Game data from $DATA"
@@ -104,7 +161,7 @@ if [[ -n "$DATA" ]]; then
   cp -r "$DATA" "$BASE/thdata/themehos"
 fi
 [[ -d "$BASE/thdata/themehos" ]] || die "no game data yet: pass --data once"
-chown -R root:corsixth "$BASE/thdata" && chmod -R u=rwX,g=rX,o= "$BASE/thdata"
+chown -R root:openth "$BASE/thdata" && chmod -R u=rwX,g=rX,o= "$BASE/thdata"
 
 say "Server code at ${CODE:-$SHA}"
 if [[ ! -d "$BASE/src/.git" ]]; then git clone -q "https://github.com/$REPO.git" "$BASE/src"; fi
@@ -146,7 +203,7 @@ ln -s game "$R/CorsixTH" # referee.lua loads <source>/CorsixTH/CorsixTH.lua
 for f in referee.lua probe_builder.lua bot.lua bot_manager.lua bot_learned.lua bot_chat.lua layout_dump.lua layout_learn.py; do
   if [[ -f "$BASE/src/scripts/multiplayer/$f" ]]; then cp "$BASE/src/scripts/multiplayer/$f" "$R/scripts/multiplayer/"; fi
 done
-chown -R root:corsixth "$BASE/referee" "$BASE/src" && chmod -R g+rX,o= "$BASE/referee"
+chown -R root:openth "$BASE/referee" "$BASE/src" && chmod -R g+rX,o= "$BASE/referee"
 missing=$(LD_LIBRARY_PATH="$R/game/lib" ldd "$BIN" | grep "not found" || true)
 [[ -z "$missing" ]] || die "the game binary misses libraries: $missing"
 
@@ -173,51 +230,53 @@ else
   rm -f "$P/openth-pack-$build".*
   echo "no game pack in $RELEASE: players of other builds are sent to its page"
 fi
-chown -R root:corsixth "$P" && chmod -R g+rX,o= "$P"
+chown -R root:openth "$P" && chmod -R g+rX,o= "$P"
 
-say "Settings (/etc/corsixth-mp.env) and the service"
+say "Settings (/etc/openth.env) and the service"
 # (The release this server ran until now: a new one is announced at the end.)
-OLD_RELEASE=$( (sed -n 's/^CORSIXTH_MP_RELEASE=//p' /etc/corsixth-mp.env 2>/dev/null || true) | head -1)
-if [[ -z "$NAME" && -f /etc/corsixth-mp.env ]]; then
-  NAME=$(sed -n 's/^CORSIXTH_MP_SERVER_NAME=//p' /etc/corsixth-mp.env)
+# (Kept settings may still have their first names, CORSIXTH_MP_...)
+setting() { (sed -n -E "s/^(OPENTH|CORSIXTH_MP)_$1=//p" /etc/openth.env 2>/dev/null || true) | head -1; }
+OLD_RELEASE=$(setting RELEASE)
+if [[ -z "$NAME" ]]; then
+  NAME=$(setting SERVER_NAME)
 fi
 NAME=${NAME:-$(hostname)}
 if [[ "$EXPERTS" == "-" ]]; then
-  EXPERTS=$( (sed -n 's/^CORSIXTH_MP_EXPERTS=//p' /etc/corsixth-mp.env 2>/dev/null || true) | head -1)
+  EXPERTS=$(setting EXPERTS)
 fi
 [[ "$EXPERTS" == "none" ]] && EXPERTS=""
-cat > /etc/corsixth-mp.env <<EOF
+cat > /etc/openth.env <<EOF
 # Written by setup-referee-host.sh for $RELEASE. The referee build must match
 # the players' build: players of other builds are told to get this release.
-CORSIXTH_MP_MOTD=$MOTD
-CORSIXTH_MP_RELEASE=$RELEASE
+OPENTH_MOTD=$MOTD
+OPENTH_RELEASE=$RELEASE
 # Signed game pack of this build, downloaded by players of other builds.
-CORSIXTH_MP_PACKS=$PACKS
-CORSIXTH_MP_REFEREE_BINARY=$BIN
-CORSIXTH_MP_REFEREE_SOURCE=$R
-CORSIXTH_MP_REFEREE_DATA=$BASE/thdata/themehos
-CORSIXTH_MP_REFEREE_LUA_CPATH=$R/game/lua/?.so
-CORSIXTH_MP_REFEREE_LUA_PATH=$R/game/lua/?.lua;$R/game/lua/?/init.lua
-CORSIXTH_MP_REFEREE_WORKDIR=/var/lib/corsixth/referee-work
+OPENTH_PACKS=$PACKS
+OPENTH_REFEREE_BINARY=$BIN
+OPENTH_REFEREE_SOURCE=$R
+OPENTH_REFEREE_DATA=$BASE/thdata/themehos
+OPENTH_REFEREE_LUA_CPATH=$R/game/lua/?.so
+OPENTH_REFEREE_LUA_PATH=$R/game/lua/?.lua;$R/game/lua/?/init.lua
+OPENTH_REFEREE_WORKDIR=/var/lib/openth/referee-work
 LD_LIBRARY_PATH=$R/game/lib
-CORSIXTH_MP_SERVER_NAME=$NAME
+OPENTH_SERVER_NAME=$NAME
 # Bots learn from these players' games (setup --experts; empty: nobody).
-CORSIXTH_MP_LEARN_DIR=/var/lib/corsixth/learn
-CORSIXTH_MP_EXPERTS=$EXPERTS
+OPENTH_LEARN_DIR=/var/lib/openth/learn
+OPENTH_EXPERTS=$EXPERTS
 EOF
-chmod 644 /etc/corsixth-mp.env
-cat > /etc/systemd/system/corsixth-mp.service <<EOF
+chmod 644 /etc/openth.env
+cat > /etc/systemd/system/openth.service <<EOF
 [Unit]
 Description=OpenTH multiplayer server (with the headless referee)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=corsixth
-Group=corsixth
+User=openth
+Group=openth
 WorkingDirectory=$BASE/src/mp_server
-EnvironmentFile=/etc/corsixth-mp.env
-EnvironmentFile=-/etc/corsixth-mp-secrets.env
+EnvironmentFile=/etc/openth.env
+EnvironmentFile=-/etc/openth-secrets.env
 ExecStart=$BASE/venv/bin/python -m corsixth_mp --host 0.0.0.0 --port $PORT
 Restart=on-failure
 RestartSec=5
@@ -225,7 +284,7 @@ KillMode=control-group
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/var/lib/corsixth
+ReadWritePaths=/var/lib/openth
 PrivateTmp=yes
 PrivateDevices=yes
 ProtectKernelTunables=yes
@@ -240,29 +299,31 @@ WantedBy=multi-user.target
 EOF
 
 # The Docker server (setup-vps.sh) uses the same port: stop it.
-if command -v docker >/dev/null && docker ps --format '{{.Names}}' | grep -qx corsixth-mp-server; then
-  say "Stopping the Docker server (kept for going back: docker compose up -d in $BASE)"
-  docker stop corsixth-mp-server >/dev/null
-fi
+for c in openth-server corsixth-mp-server; do
+  if command -v docker >/dev/null && docker ps --format '{{.Names}}' | grep -qx "$c"; then
+    say "Stopping the Docker server $c (kept for going back: docker compose up -d in its folder)"
+    docker stop "$c" >/dev/null
+  fi
+done
 # The daily report (posted only if DISCORD_WEBHOOK_URL is in the secrets).
-cat > /etc/systemd/system/corsixth-mp-report.service <<EOF
+cat > /etc/systemd/system/openth-report.service <<EOF
 [Unit]
 Description=OpenTH: yesterday's games to Discord
 
 [Service]
 Type=oneshot
-User=corsixth
-Group=corsixth
+User=openth
+Group=openth
 WorkingDirectory=$BASE/src/mp_server
-EnvironmentFile=/etc/corsixth-mp.env
-EnvironmentFile=-/etc/corsixth-mp-secrets.env
+EnvironmentFile=/etc/openth.env
+EnvironmentFile=-/etc/openth-secrets.env
 ExecStart=$BASE/venv/bin/python -m corsixth_mp.daily_report
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
 EOF
-cat > /etc/systemd/system/corsixth-mp-report.timer <<EOF
+cat > /etc/systemd/system/openth-report.timer <<EOF
 [Unit]
 Description=OpenTH: the daily report at 7:00 Prague time
 
@@ -274,26 +335,26 @@ Persistent=true
 WantedBy=timers.target
 EOF
 # The bots learn from the night's saves of expert players, before the report.
-cat > /etc/systemd/system/corsixth-mp-learn.service <<EOF
+cat > /etc/systemd/system/openth-learn.service <<EOF
 [Unit]
 Description=OpenTH: the bots learn from expert players' saved games
 
 [Service]
 Type=oneshot
-User=corsixth
-Group=corsixth
+User=openth
+Group=openth
 WorkingDirectory=$BASE/src/mp_server
-EnvironmentFile=/etc/corsixth-mp.env
+EnvironmentFile=/etc/openth.env
 ExecStart=$BASE/venv/bin/python -m corsixth_mp.learn
 Nice=10
 TimeoutStartSec=2h
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/var/lib/corsixth
+ReadWritePaths=/var/lib/openth
 PrivateTmp=yes
 EOF
-cat > /etc/systemd/system/corsixth-mp-learn.timer <<EOF
+cat > /etc/systemd/system/openth-learn.timer <<EOF
 [Unit]
 Description=OpenTH: the bots learn at 6:30 Prague time
 
@@ -305,12 +366,12 @@ Persistent=true
 WantedBy=timers.target
 EOF
 systemctl daemon-reload
-systemctl enable --now corsixth-mp-report.timer >/dev/null 2>&1
-systemctl enable --now corsixth-mp-learn.timer >/dev/null 2>&1
-systemctl enable corsixth-mp.service >/dev/null 2>&1
-systemctl restart corsixth-mp.service
+systemctl enable --now openth-report.timer >/dev/null 2>&1
+systemctl enable --now openth-learn.timer >/dev/null 2>&1
+systemctl enable openth.service >/dev/null 2>&1
+systemctl restart openth.service
 sleep 2
-systemctl is-active --quiet corsixth-mp.service || die "the service did not start: journalctl -u corsixth-mp"
+systemctl is-active --quiet openth.service || die "the service did not start: journalctl -u openth"
 python3 - "$PORT" <<'PY'
 import socket, sys, time
 # The server listens after a few seconds (eu1 2026-11-12: 3.4 s).
@@ -330,7 +391,7 @@ find "$BASE/referee" -mindepth 1 -maxdepth 1 -type d ! -name "$SHA" -exec rm -rf
 say "Done: the server runs $RELEASE with the referee on port $PORT"
 # One line in #development when the release changed (DISCORD_DEV_WEBHOOK_URL
 # in the secrets; the address is never printed).
-DEV_HOOK=$( (sed -n 's/^DISCORD_DEV_WEBHOOK_URL=//p' /etc/corsixth-mp-secrets.env 2>/dev/null || true) | head -1)
+DEV_HOOK=$( (sed -n 's/^DISCORD_DEV_WEBHOOK_URL=//p' /etc/openth-secrets.env 2>/dev/null || true) | head -1)
 if [[ -n "$DEV_HOOK" && "$RELEASE" != "$OLD_RELEASE" ]]; then
   where=${NAME:-$(hostname)}
   [[ "$where" =~ ^[a-z]{2,4}[0-9]+$ ]] && where="$where ($where.openth.org)"
@@ -363,7 +424,7 @@ urllib.request.urlopen(req, timeout=15).read()
 print("   Posted in #development: " + text)
 PY
 fi
-echo "   Logs: journalctl -u corsixth-mp -f; referee logs in /var/lib/corsixth/referee-work"
+echo "   Logs: journalctl -u openth -f; referee logs in /var/lib/openth/referee-work"
 if [[ -n "$EXPERTS" ]]; then
-  echo "   Bots learn from: $EXPERTS (saves in /var/lib/corsixth/learn; journalctl -u corsixth-mp-learn)"
+  echo "   Bots learn from: $EXPERTS (saves in /var/lib/openth/learn; journalctl -u openth-learn)"
 fi

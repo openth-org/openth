@@ -12,7 +12,7 @@ Configuration (environment variables; the referee is off without BINARY):
   CORSIXTH_MP_REFEREE_DATA     Theme Hospital data folder (read only is enough)
   CORSIXTH_MP_REFEREE_LUA_CPATH, CORSIXTH_MP_REFEREE_LUA_PATH
                                where LuaSocket is, if not in the standard paths
-  CORSIXTH_MP_REFEREE_WORKDIR  scratch folder for configs and logs (default /tmp/corsixth-referee)
+  CORSIXTH_MP_REFEREE_WORKDIR  scratch folder for configs and logs (default /tmp/openth-referee)
 
 The referee and the bots get the server's whole environment, so also:
   CORSIXTH_MP_LEARN_DIR        bots learn from expert players' games there
@@ -40,7 +40,7 @@ class RefereeConfig:
     data: str
     lua_cpath: str = ""
     lua_path: str = ""
-    workdir: str = "/tmp/corsixth-referee"
+    workdir: str = "/tmp/openth-referee"
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> "RefereeConfig | None":
@@ -53,7 +53,7 @@ class RefereeConfig:
                    data=env.get("CORSIXTH_MP_REFEREE_DATA", ""),
                    lua_cpath=env.get("CORSIXTH_MP_REFEREE_LUA_CPATH", ""),
                    lua_path=env.get("CORSIXTH_MP_REFEREE_LUA_PATH", ""),
-                   workdir=env.get("CORSIXTH_MP_REFEREE_WORKDIR", "/tmp/corsixth-referee"))
+                   workdir=env.get("CORSIXTH_MP_REFEREE_WORKDIR", "/tmp/openth-referee"))
 
 
 def _safe(name: str) -> str:

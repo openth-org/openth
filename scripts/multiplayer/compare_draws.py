@@ -2,7 +2,7 @@
 """Where did one game draw a random number the others did not?
 
 Usage: python3 scripts/multiplayer/compare_draws.py SERVER_LOG [ROOM]
-       journalctl -u corsixth-mp | python3 scripts/multiplayer/compare_draws.py - [ROOM]
+       journalctl -u openth | python3 scripts/multiplayer/compare_draws.py - [ROOM]
 
 After a desync every game sends its state to the server log ("state of
 '<player>' ... part N: ..."), and its last random draws ("random <n> draws,

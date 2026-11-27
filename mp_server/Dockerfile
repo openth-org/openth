@@ -1,27 +1,27 @@
 # Relay and lobby server for OpenTH multiplayer (mp_server/).
 # Standard library only; no game code and no Theme Hospital data in the image.
 #
-#   docker build -t corsixth-mp-server mp_server
-#   docker run -p 47800:47800 corsixth-mp-server
+#   docker build -t openth-server mp_server
+#   docker run -p 47800:47800 openth-server
 FROM python:3.13-slim
 
-LABEL org.opencontainers.image.title="corsixth-mp-server" \
+LABEL org.opencontainers.image.title="openth-server" \
       org.opencontainers.image.description="Relay and lobby server for OpenTH, CorsixTH with network multiplayer" \
       org.opencontainers.image.source="https://github.com/openth-org/openth" \
       org.opencontainers.image.licenses="MIT"
 
 # Unprivileged user with a fixed id (the compose file runs as it too).
-RUN groupadd --system --gid 10001 corsixth \
- && useradd --system --uid 10001 --gid corsixth --home-dir /srv --no-create-home corsixth
+RUN groupadd --system --gid 10001 openth \
+ && useradd --system --uid 10001 --gid openth --home-dir /srv --no-create-home openth
 
 WORKDIR /srv
 COPY corsixth_mp ./corsixth_mp
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    CORSIXTH_MP_HOST=0.0.0.0 \
-    CORSIXTH_MP_PORT=47800 \
-    CORSIXTH_MP_LOG=INFO
+    OPENTH_HOST=0.0.0.0 \
+    OPENTH_PORT=47800 \
+    OPENTH_LOG=INFO
 
 USER 10001:10001
 EXPOSE 47800/tcp

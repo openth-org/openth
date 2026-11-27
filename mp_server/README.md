@@ -73,7 +73,7 @@ Good to know on a LAN:
   and level settings (GOG, CD, EA...), and games with different ones drift
   apart. A plain server does not check this. To have it turn away players
   with another edition, start it with that edition's identity in
-  `CORSIXTH_MP_DATA`. This prints the identity of a Theme Hospital folder
+  `OPENTH_DATA`. This prints the identity of a Theme Hospital folder
   (the one with DATA, LEVELS, ...); run it in the `mp_server` folder (on
   Windows with `py -3` instead of `python3`):
 
@@ -98,18 +98,18 @@ bots. Set four environment variables before you start the server:
 
 | Variable | What to set it to |
 |---|---|
-| `CORSIXTH_MP_REFEREE_BINARY` | The game program of the same release: `OpenTH.exe` in the unpacked Windows download (`CorsixTH.exe` in older ones) |
-| `CORSIXTH_MP_REFEREE_SOURCE` | The unpacked **Source code (zip)** of that release: the folder with `CorsixTH`, `mp_server` and `scripts` in it |
-| `CORSIXTH_MP_REFEREE_DATA` | Your Theme Hospital folder (the one with DATA, LEVELS, ...) |
-| `CORSIXTH_MP_REFEREE_WORKDIR` | A folder for the referee's saves and logs, for example `C:\CorsixTH-referee` (the default, `/tmp/corsixth-referee`, is meant for Linux) |
+| `OPENTH_REFEREE_BINARY` | The game program of the same release: `OpenTH.exe` in the unpacked Windows download (`CorsixTH.exe` in older ones) |
+| `OPENTH_REFEREE_SOURCE` | The unpacked **Source code (zip)** of that release: the folder with `CorsixTH`, `mp_server` and `scripts` in it |
+| `OPENTH_REFEREE_DATA` | Your Theme Hospital folder (the one with DATA, LEVELS, ...) |
+| `OPENTH_REFEREE_WORKDIR` | A folder for the referee's saves and logs, for example `C:\OpenTH-referee` (the default, `/tmp/openth-referee`, is meant for Linux) |
 
 In PowerShell, in the `mp_server` folder (change the paths to yours):
 
 ```powershell
-$env:CORSIXTH_MP_REFEREE_BINARY  = "C:\Games\OpenTH\OpenTH.exe"
-$env:CORSIXTH_MP_REFEREE_SOURCE  = "C:\Games\OpenTH-mp-stable-a03adfdc"
-$env:CORSIXTH_MP_REFEREE_DATA    = "C:\GOG Games\Theme Hospital"
-$env:CORSIXTH_MP_REFEREE_WORKDIR = "C:\CorsixTH-referee"
+$env:OPENTH_REFEREE_BINARY  = "C:\Games\OpenTH\OpenTH.exe"
+$env:OPENTH_REFEREE_SOURCE  = "C:\Games\OpenTH-mp-stable-a03adfdc"
+$env:OPENTH_REFEREE_DATA    = "C:\GOG Games\Theme Hospital"
+$env:OPENTH_REFEREE_WORKDIR = "C:\OpenTH-referee"
 py -3 -m corsixth_mp
 ```
 
@@ -140,43 +140,47 @@ Command line options, or the same as environment variables:
 
 | Option | Environment variable | Default | What it does |
 |---|---|---|---|
-| `--host` | `CORSIXTH_MP_HOST` | `0.0.0.0` | Address to listen on: `0.0.0.0` every network, `127.0.0.1` this computer only |
-| `--port` | `CORSIXTH_MP_PORT` | `47800` | TCP port players connect to |
-| `--motd` | `CORSIXTH_MP_MOTD` | (none) | Welcome text players see when they connect |
-| `--log-level` | `CORSIXTH_MP_LOG` | `INFO` | `DEBUG`, `INFO`, `WARNING`, ... |
-| `--max-connections` | `CORSIXTH_MP_MAX_CONNECTIONS` | `256` | Connections at once |
-| `--max-per-address` | `CORSIXTH_MP_MAX_PER_ADDRESS` | `8` | Connections from one IP address (on the internet, players behind one router share one) |
-| `--max-bots` | `CORSIXTH_MP_MAX_BOTS` | `7` | Bots at once (only with the referee) |
+| `--host` | `OPENTH_HOST` | `0.0.0.0` | Address to listen on: `0.0.0.0` every network, `127.0.0.1` this computer only |
+| `--port` | `OPENTH_PORT` | `47800` | TCP port players connect to |
+| `--motd` | `OPENTH_MOTD` | (none) | Welcome text players see when they connect |
+| `--log-level` | `OPENTH_LOG` | `INFO` | `DEBUG`, `INFO`, `WARNING`, ... |
+| `--max-connections` | `OPENTH_MAX_CONNECTIONS` | `256` | Connections at once |
+| `--max-per-address` | `OPENTH_MAX_PER_ADDRESS` | `8` | Connections from one IP address (on the internet, players behind one router share one) |
+| `--max-bots` | `OPENTH_MAX_BOTS` | `7` | Bots at once (only with the referee) |
 
 Environment variables only:
 
+(Until 27 November 2026 these were named `CORSIXTH_MP_...`, for example
+`CORSIXTH_MP_BUILD`. The server still reads those names; the new one wins
+if both are set.)
+
 | Variable | What it does |
 |---|---|
-| `CORSIXTH_MP_BUILD` | The build checksum players must have (8 hex digits), or `any`. Default: the referee's; no check without a referee |
-| `CORSIXTH_MP_RELEASE`, `CORSIXTH_MP_RELEASE_URL` | The release players with another build are told to download, and its page |
-| `CORSIXTH_MP_DATA` | The Theme Hospital edition players must have (8 hex digits, see above), or `any`. Without a referee, other editions are turned away; with a referee they are let in and get the referee's level files. Default: the referee's edition; no check without a referee |
-| `CORSIXTH_MP_REFEREE_BINARY`, `_SOURCE`, `_DATA`, `_LUA_CPATH`, `_LUA_PATH`, `_WORKDIR` | The referee (and bots): the game to run, its source, the Theme Hospital files. `setup-referee-host.sh` sets them; details in [`referee.md`](../docs/multiplayer/referee.md) |
+| `OPENTH_BUILD` | The build checksum players must have (8 hex digits), or `any`. Default: the referee's; no check without a referee |
+| `OPENTH_RELEASE`, `OPENTH_RELEASE_URL` | The release players with another build are told to download, and its page |
+| `OPENTH_DATA` | The Theme Hospital edition players must have (8 hex digits, see above), or `any`. Without a referee, other editions are turned away; with a referee they are let in and get the referee's level files. Default: the referee's edition; no check without a referee |
+| `OPENTH_REFEREE_BINARY`, `_SOURCE`, `_DATA`, `_LUA_CPATH`, `_LUA_PATH`, `_WORKDIR` | The referee (and bots): the game to run, its source, the Theme Hospital files. `setup-referee-host.sh` sets them; details in [`referee.md`](../docs/multiplayer/referee.md) |
 | `ANTHROPIC_API_KEY` | Optional advice for normal and hard bots from a language model (needs the `anthropic` package and the internet). Without it the bots play on their own rules |
-| `CORSIXTH_MP_AI_MODEL`, `CORSIXTH_MP_AI_DAILY_USD` | The model (default `claude-haiku-5-5`) and the most the advice may cost a day (default 3 dollars) |
-| `DISCORD_WEBHOOK_URL`, `CORSIXTH_MP_SERVER_NAME` | The daily report to Discord (`python3 -m corsixth_mp.daily_report`), and the server's name in it |
-| `CORSIXTH_MP_STATS_DIR`, `CORSIXTH_MP_REPORT_TZ` | Where the games are noted for the report (default `/var/lib/corsixth` if it exists) and its time zone (default `Europe/Prague`) |
+| `OPENTH_AI_MODEL`, `OPENTH_AI_DAILY_USD` | The model (default `claude-haiku-5-5`) and the most the advice may cost a day (default 3 dollars) |
+| `DISCORD_WEBHOOK_URL`, `OPENTH_SERVER_NAME` | The daily report to Discord (`python3 -m corsixth_mp.daily_report`), and the server's name in it |
+| `OPENTH_STATS_DIR`, `OPENTH_REPORT_TZ` | Where the games are noted for the report (default `/var/lib/openth` if it exists) and its time zone (default `Europe/Prague`) |
 
 In the test builds (`mp-test-...` releases from the `mp/team-hospitals`
 branch; not in the stable release `mp-stable-a03adfdc` yet) there are also:
 
 | Variable | What it does |
 |---|---|
-| `CORSIXTH_MP_EXPERTS` | The players hard bots learn to build from: their names in the game, any case, separated by commas (`Argus,Matroftt`). While one of them plays their own hospital, the referee saves the game every game year and when it ends; a job every night learns from the new saves (`python3 -m corsixth_mp.learn`). Needs `CORSIXTH_MP_LEARN_DIR` too. Default: none, no learning. `setup-referee-host.sh --experts "..."` sets it; see [`SERVER-SETUP.md`](../docs/multiplayer/SERVER-SETUP.md) section 10 |
-| `CORSIXTH_MP_LEARN_DIR` | The folder for that learning: the experts' saves, what was learnt from them (`learned.lua`, which the bots read) and a line per night's run (the daily report names it). `/var/lib/corsixth/learn` with `setup-referee-host.sh`. Default: none |
-| `CORSIXTH_MP_STAND_IN_DELAY` | Seconds after a person leaves a running game before a bot plays their hospital under their name, until somebody takes the place. Default `20` |
-| `CORSIXTH_MP_SILENT_DROP` | Seconds a person's connection may stay silent (no answer to the server's ping) before it counts as dropped. A dropped player who joins again under the same name gets their place back. `0`: never. Default `20` |
-| `CORSIXTH_MP_DROP_WAIT` | Seconds a game waits for the last person when their connection dropped (they did not quit), before the room closes. Default `300` |
-| `CORSIXTH_MP_EMPTY_WAIT` | Seconds a game is kept for somebody to come back once the last person quit, before the room closes. Default `0`: it closes at once |
-| `CORSIXTH_MP_KEEP_PLACES` | `0`: nobody can join a running game, a player who leaves gets no bot in their place, and a room closes once nobody plays (the behaviour before these test builds; some older test scripts need it). Default `1` |
+| `OPENTH_EXPERTS` | The players hard bots learn to build from: their names in the game, any case, separated by commas (`Argus,Matroftt`). While one of them plays their own hospital, the referee saves the game every game year and when it ends; a job every night learns from the new saves (`python3 -m corsixth_mp.learn`). Needs `OPENTH_LEARN_DIR` too. Default: none, no learning. `setup-referee-host.sh --experts "..."` sets it; see [`SERVER-SETUP.md`](../docs/multiplayer/SERVER-SETUP.md) section 10 |
+| `OPENTH_LEARN_DIR` | The folder for that learning: the experts' saves, what was learnt from them (`learned.lua`, which the bots read) and a line per night's run (the daily report names it). `/var/lib/openth/learn` with `setup-referee-host.sh`. Default: none |
+| `OPENTH_STAND_IN_DELAY` | Seconds after a person leaves a running game before a bot plays their hospital under their name, until somebody takes the place. Default `20` |
+| `OPENTH_SILENT_DROP` | Seconds a person's connection may stay silent (no answer to the server's ping) before it counts as dropped. A dropped player who joins again under the same name gets their place back. `0`: never. Default `20` |
+| `OPENTH_DROP_WAIT` | Seconds a game waits for the last person when their connection dropped (they did not quit), before the room closes. Default `300` |
+| `OPENTH_EMPTY_WAIT` | Seconds a game is kept for somebody to come back once the last person quit, before the room closes. Default `0`: it closes at once |
+| `OPENTH_KEEP_PLACES` | `0`: nobody can join a running game, a player who leaves gets no bot in their place, and a room closes once nobody plays (the behaviour before these test builds; some older test scripts need it). Default `1` |
 
 On a server set up with `setup-referee-host.sh`, the settings live in
-`/etc/corsixth-mp.env`, and the API key and the webhook in
-`/etc/corsixth-mp-secrets.env` (see [`SERVER-SETUP.md`](../docs/multiplayer/SERVER-SETUP.md)).
+`/etc/openth.env`, and the API key and the webhook in
+`/etc/openth-secrets.env` (see [`SERVER-SETUP.md`](../docs/multiplayer/SERVER-SETUP.md)).
 
 ## Security
 
@@ -189,6 +193,6 @@ SSH); the guides above show how.
 
 ```bash
 python3 -m pytest -q                          # tests (needs pytest)
-docker build -t corsixth-mp-server mp_server  # container (from the repository root)
-docker run -p 47800:47800 corsixth-mp-server
+docker build -t openth-server mp_server  # container (from the repository root)
+docker run -p 47800:47800 openth-server
 ```

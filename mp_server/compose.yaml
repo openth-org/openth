@@ -7,19 +7,19 @@
 # To build from this checkout instead of pulling: docker compose up -d --build
 
 services:
-  corsixth-mp-server:
-    image: ghcr.io/lbakyl/corsixth-mp-server:${CORSIXTH_MP_TAG:-latest}
+  openth-server:
+    image: ghcr.io/openth-org/openth-server:${OPENTH_TAG:-latest}
     build: .
-    container_name: corsixth-mp-server
+    container_name: openth-server
     restart: unless-stopped
     ports:
       # Players connect here; the server port inside stays 47800.
-      - "${CORSIXTH_MP_PUBLISH:-47800}:47800/tcp"
+      - "${OPENTH_PUBLISH:-47800}:47800/tcp"
     environment:
-      CORSIXTH_MP_LOG: ${CORSIXTH_MP_LOG:-INFO}
-      CORSIXTH_MP_MOTD: ${CORSIXTH_MP_MOTD:-}
-      CORSIXTH_MP_MAX_CONNECTIONS: ${CORSIXTH_MP_MAX_CONNECTIONS:-256}
-      CORSIXTH_MP_MAX_PER_ADDRESS: ${CORSIXTH_MP_MAX_PER_ADDRESS:-8}
+      OPENTH_LOG: ${OPENTH_LOG:-INFO}
+      OPENTH_MOTD: ${OPENTH_MOTD:-}
+      OPENTH_MAX_CONNECTIONS: ${OPENTH_MAX_CONNECTIONS:-256}
+      OPENTH_MAX_PER_ADDRESS: ${OPENTH_MAX_PER_ADDRESS:-8}
     # The server needs nothing from the host: no writable files, no
     # capabilities, no privileges.
     user: "10001:10001"
@@ -40,4 +40,4 @@ services:
     # Later (headless referee, milestone S3): the referee needs Theme Hospital
     # data from your own copy, mounted read-only, never baked into the image:
     # volumes:
-    #   - /srv/corsixth/themehos:/data/themehos:ro
+    #   - /srv/openth/themehos:/data/themehos:ro

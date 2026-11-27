@@ -7,7 +7,7 @@ Discord webhook.
     python -m corsixth_mp.daily_report [--date YYYY-MM-DD] [--dry-run]
 
 Without --date: yesterday (local day, CORSIXTH_MP_REPORT_TZ). The webhook is
-DISCORD_WEBHOOK_URL (in /etc/corsixth-mp-secrets.env on a server; never in
+DISCORD_WEBHOOK_URL (in /etc/openth-secrets.env on a server; never in
 a log). CORSIXTH_MP_SERVER_NAME names the server in the report (default:
 the host's name). --dry-run prints the report instead of posting it.
 A systemd timer runs it every morning (deploy/setup-referee-host.sh).
@@ -95,7 +95,7 @@ def report(day: str, env: dict[str, str] | None = None) -> str:
 def post(url: str, text: str) -> None:
     body = json.dumps({"username": "OpenTH", "content": text}).encode("utf-8")
     request = urllib.request.Request(url, data=body, method="POST", headers={
-        "Content-Type": "application/json", "User-Agent": "corsixth-mp-report/1"})
+        "Content-Type": "application/json", "User-Agent": "openth-report/1"})
     with urllib.request.urlopen(request, timeout=20) as response:
         response.read()
 

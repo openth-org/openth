@@ -2,7 +2,7 @@
 played (games.jsonl, a line per game when its room closes) and what the
 bots' advice cost (ai-daily.json, per local day).
 
-The files go to CORSIXTH_MP_STATS_DIR, by default /var/lib/corsixth if that
+The files go to CORSIXTH_MP_STATS_DIR, by default /var/lib/openth if that
 folder exists (else nothing is kept). Days are local days in
 CORSIXTH_MP_REPORT_TZ (default Europe/Prague), as the report is read.
 """
@@ -15,6 +15,8 @@ import logging
 import os
 import pathlib
 
+from . import service_dir
+
 log = logging.getLogger("corsixth_mp.stats")
 
 DEFAULT_TZ = "Europe/Prague"
@@ -26,8 +28,7 @@ def stats_dir(env: dict[str, str] | None = None) -> pathlib.Path | None:
     folder = env.get("CORSIXTH_MP_STATS_DIR")
     if folder:
         return pathlib.Path(folder)
-    default = pathlib.Path("/var/lib/corsixth")
-    return default if default.is_dir() else None
+    return service_dir()
 
 
 def timezone(env: dict[str, str] | None = None) -> datetime.tzinfo:
