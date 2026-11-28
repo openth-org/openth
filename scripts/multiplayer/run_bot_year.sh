@@ -31,6 +31,9 @@
 # Needs LuaSocket (LUASOCKET_TREE, a LuaRocks tree containing it, or
 # MP_LUA_CPATH/MP_LUA_PATH set) and python3 (MP_PYTHON).
 set -euo pipefail
+# (Many games at once on one test machine, on purpose: the server adds bots
+# whatever its load, Server._bots_fit.)
+export CORSIXTH_MP_BOT_CPU_MAX="${CORSIXTH_MP_BOT_CPU_MAX:-10000}" CORSIXTH_MP_BOT_MEM_SPARE_MB="${CORSIXTH_MP_BOT_MEM_SPARE_MB:--100000}"
 if [[ $# -lt 2 ]]; then
   echo "Usage: $0 BINARY GAME_DATA [LEVEL] [STEPS]" >&2
   exit 2

@@ -48,3 +48,15 @@ def test_readings_are_kept_for_a_few_seconds(monkeypatch):
     monkeypatch.setattr(machine, "_cached_at", machine._cached_at - machine.CACHE_SECONDS)
     machine.load()
     assert len(calls) == 2
+
+
+def test_capacity_for_the_bot_check(tmp_path, monkeypatch):
+    meminfo = tmp_path / "meminfo"
+    meminfo.write_text("MemTotal:        4000000 kB\nMemAvailable:     1024000 kB\n")
+    assert machine.mem_available_mb(str(meminfo)) == 1000
+    assert machine.mem_available_mb(str(tmp_path / "missing")) is None
+    monkeypatch.setattr(os, "getloadavg", lambda: (1.5, 1.0, 0.5), raising=False)
+    monkeypatch.setattr(os, "cpu_count", lambda: 2)
+    monkeypatch.setattr(machine, "_capacity", {})
+    cap = machine.capacity()
+    assert cap["cores"] == 2 and cap["busy"] == 1.5

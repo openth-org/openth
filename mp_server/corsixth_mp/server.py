@@ -32,6 +32,7 @@ import secrets
 import signal
 import time
 from dataclasses import dataclass, field
+from typing import Callable
 
 from . import machine, pacing, stats
 from .advisor import Advisor
@@ -160,10 +161,35 @@ GAME_OPTIONS = {"auctions": ("1", "2", "0"), "tricks": ("1", "0", "2"), "sharing
 # A player the room owner removed (KICK) may not come back to that room for
 # this many seconds.
 KICK_BLOCK_SECONDS = 300.0
-# Each bot is a whole game running on this server: at most this many at once
-# (all rooms together; CORSIXTH_MP_MAX_BOTS). Seven: a room of 8 with one
-# person in it.
-MAX_BOTS = 7
+# Bots on this server at most, all rooms together (CORSIXTH_MP_MAX_BOTS). The
+# bots of a room share one game (BotHost), so what limits them is how busy the
+# machine is (Server._bots_fit); this is a ceiling above that, three rooms of
+# eight. (Seven until 2026-11-28, when each bot was a whole game.)
+MAX_BOTS = 24
+# Does one more bot fit (Jan, 2026-11-28: "a check of the server's actual CPU
+# and memory usage")? The cores busy now (the one-minute load average) and
+# what rooms whose bots have not started playing yet will take, plus the new
+# bot, must stay under BOT_CPU_MAX percent of the cores
+# (CORSIXTH_MP_BOT_CPU_MAX), and the free memory less what those rooms and
+# the new bot will take must stay above BOT_MEM_SPARE_MB
+# (CORSIXTH_MP_BOT_MEM_SPARE_MB). What a room with bots takes at the highest
+# speed, measured on the dev VM (2026-11-28; six bots in one shared game:
+# about 0.35 core and 160 MB, the room's referee 0.12 core and 140 MB): the
+# room BOT_ROOM_CORES and BOT_ROOM_MB, and each bot BOT_CORES and BOT_MB
+# more. A bot for a running game's place is a game of its own: it counts as
+# a room. Games that started less than BOT_LOAD_LAG seconds ago still count
+# as to come: the one-minute load does not show them yet.
+BOT_CPU_MAX = 85
+BOT_MEM_SPARE_MB = 400
+BOT_ROOM_CORES, BOT_CORES = 0.15, 0.06
+BOT_ROOM_MB, BOT_MB = 250, 15
+BOT_LOAD_LAG = 60.0
+
+
+def _machine_capacity() -> dict:
+    """How busy this machine is (machine.capacity): looked up when a Server
+    is made, so tests can give another."""
+    return machine.capacity()
 # A bot asks the language model (advisor.py) at most this often (seconds).
 ASK_INTERVAL = {"plan": 20.0, "chat": 3.0, "rescue": 30.0}
 # Gameplay settings every peer must use (lesson 4 in the handover README).
@@ -549,7 +575,9 @@ class Server:
                  referee: RefereeConfig | None = None, max_bots: int = MAX_BOTS,
                  build_check: BuildCheck | None = None,
                  data_check: DataCheck | None = None, advisor: Advisor | None = None,
-                 packs_dir: str | None = None, shared_bots: bool = True) -> None:
+                 packs_dir: str | None = None, shared_bots: bool = True,
+                 bot_cpu_max: int = BOT_CPU_MAX, bot_mem_spare_mb: int = BOT_MEM_SPARE_MB,
+                 capacity: Callable[[], dict] | None = None) -> None:
         self.referee_config = referee
         # The bots of a room added before its game starts play in one game
         # (BotHost: one copy of the game for all of them, not one each), if
@@ -568,6 +596,10 @@ class Server:
         # Only players with the referee's Theme Hospital level files (builds.py).
         self.data_check = data_check
         self.max_bots = max_bots
+        # How busy the machine may get with bots (Server._bots_fit), and where
+        # it reads how busy it is (machine.capacity; tests give their own).
+        self.bot_cpu_max, self.bot_mem_spare_mb = bot_cpu_max, bot_mem_spare_mb
+        self.capacity = capacity or _machine_capacity
         self.port = 0
         self.max_connections = max_connections
         self.max_per_address = max_per_address
@@ -1260,11 +1292,10 @@ class Server:
             return None
         if any(e[2] == peer for e in room.bots_pending.values()) or peer in room.players:
             return None
-        running = sum(len(r.bots_pending) + sum(1 for p in r.players.values() if p.is_bot)
-                      for r in self.rooms.values())
-        if running >= self.max_bots:
-            log.info("room %r: no bot for place %d (the server runs as many as it can)",
-                     room.name, peer)
+        # (A game of its own: it counts as a room.)
+        why = self._bots_fit(room, new_game=True)
+        if why:
+            log.info("room %r: no bot for place %d (%s)", room.name, peer, why)
             return None
         token = secrets.token_hex(16)
         level = "normal" if stand_in else room.bot_levels.get(peer, "normal")
@@ -1519,6 +1550,47 @@ class Server:
 
     # ------------------------------------------------------------------ bots
 
+    @staticmethod
+    def _room_bots(room: Room) -> int:
+        return len(room.bots_pending) + sum(1 for p in room.players.values() if p.is_bot)
+
+    def _in_shared_game(self, room: Room) -> bool:
+        """Would a new bot of this room join its bots' shared game (one is
+        running or starting), rather than start a game?"""
+        return self.shared_bots and room.state == "lobby" and self._room_bots(room) > 0
+
+    def _bots_fit(self, room: Room, new_game: bool) -> str | None:
+        """None if this server can run one more bot for `room`, else why not
+        (the player sees it). `new_game`: the bot needs a game of its own (the
+        room's first, or a bot for a running game's place) rather than a turn in
+        the room's shared game. See MAX_BOTS and BOT_CPU_MAX."""
+        if sum(self._room_bots(r) for r in self.rooms.values()) >= self.max_bots:
+            return "This server runs as many bots as it can"
+        now = time.time()
+        cores_due, mb_due = BOT_CORES, float(BOT_MB)
+        if new_game:
+            cores_due, mb_due = cores_due + BOT_ROOM_CORES, mb_due + BOT_ROOM_MB
+        for r in self.rooms.values():
+            n = self._room_bots(r)
+            if not n:
+                continue
+            # (Not playing yet, or so lately that the load does not show it.)
+            if r.state == "lobby" or (r.started_at or 0) > now - BOT_LOAD_LAG:
+                cores_due += BOT_ROOM_CORES + BOT_CORES * n
+            if r.state == "lobby":
+                mb_due += BOT_ROOM_MB + BOT_MB * n
+        cap = self.capacity()
+        cores, busy, free = cap.get("cores") or 1, cap.get("busy"), cap.get("free_mb")
+        if busy is not None and busy + cores_due > cores * self.bot_cpu_max / 100:
+            log.info("room %r: no more bots: %.2f cores busy and %.2f to come, of %d (at most %d%%)",
+                     room.name, busy, cores_due, cores, self.bot_cpu_max)
+            return "This server is too busy for more bots right now"
+        if free is not None and free - mb_due < self.bot_mem_spare_mb:
+            log.info("room %r: no more bots: %d MB free and %d MB to come (%d MB kept free)",
+                     room.name, free, mb_due, self.bot_mem_spare_mb)
+            return "This server has no memory to spare for more bots right now"
+        return None
+
     def _bot_name(self, room: Room) -> str:
         """A name for a new bot: in a continued game the first saved
         hospital nobody has taken (the bot plays it), else the next free one
@@ -1573,10 +1645,9 @@ class Server:
         if room.is_full():
             self._error(player, "room_full", "The room is full")
             return
-        running = sum(len(r.bots_pending) + sum(1 for p in r.players.values() if p.is_bot)
-                      for r in self.rooms.values())
-        if running >= self.max_bots:
-            self._error(player, "too_many_bots", "This server runs as many bots as it can")
+        why = self._bots_fit(room, new_game=not self._in_shared_game(room))
+        if why:
+            self._error(player, "too_many_bots", why)
             return
         name = self._bot_name(room)
         token = secrets.token_hex(16)
@@ -1623,10 +1694,9 @@ class Server:
         if room.total() >= MAX_PLACES:
             self._error(player, "room_full", "The game has as many players as it can")
             return True
-        running = sum(len(r.bots_pending) + sum(1 for p in r.players.values() if p.is_bot)
-                      for r in self.rooms.values())
-        if running >= self.max_bots:
-            self._error(player, "too_many_bots", "This server runs as many bots as it can")
+        why = self._bots_fit(room, new_game=not self._in_shared_game(room))
+        if why:
+            self._error(player, "too_many_bots", why)
             return True
         name = self._bot_name(room)
         token = secrets.token_hex(16)
@@ -2589,6 +2659,12 @@ def main(argv: list[str] | None = None) -> None:
                         default=int(os.environ.get("CORSIXTH_MP_MAX_PER_ADDRESS", MAX_PER_ADDRESS)))
     parser.add_argument("--max-bots", type=int,
                         default=int(os.environ.get("CORSIXTH_MP_MAX_BOTS", MAX_BOTS)))
+    parser.add_argument("--bot-cpu-max", type=int,
+                        default=int(os.environ.get("CORSIXTH_MP_BOT_CPU_MAX", BOT_CPU_MAX)),
+                        help="no new bot once the cores would be this busy (percent)")
+    parser.add_argument("--bot-mem-spare-mb", type=int,
+                        default=int(os.environ.get("CORSIXTH_MP_BOT_MEM_SPARE_MB", BOT_MEM_SPARE_MB)),
+                        help="no new bot that would leave less free memory than this (MB)")
     parser.add_argument("--shared-bots", type=int, choices=(0, 1),
                         default=int(os.environ.get("CORSIXTH_MP_SHARED_BOTS", "1") or 1),
                         help="1: a room's bots play in one game (0: one game each)")
@@ -2611,9 +2687,13 @@ def main(argv: list[str] | None = None) -> None:
         server = Server(motd=args.motd, max_connections=args.max_connections,
                         max_per_address=args.max_per_address, referee=referee,
                         max_bots=args.max_bots, build_check=build_check, data_check=data_check,
-                        advisor=Advisor(), packs_dir=packs_dir, shared_bots=bool(args.shared_bots))
+                        advisor=Advisor(), packs_dir=packs_dir, shared_bots=bool(args.shared_bots),
+                        bot_cpu_max=args.bot_cpu_max, bot_mem_spare_mb=args.bot_mem_spare_mb)
         if server.shared_bots:
             log.info("the bots of a room play in one shared game (bot_host.lua)")
+        if referee:
+            log.info("bots: at most %d, while the cores stay under %d%% busy and %d MB stay free",
+                     server.max_bots, server.bot_cpu_max, server.bot_mem_spare_mb)
         if build_check and server.pack(build_check.checksum):
             log.info("players of other builds can download build %s here", build_check.checksum)
         await server.start(args.host, args.port)

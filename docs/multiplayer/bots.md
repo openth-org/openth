@@ -61,6 +61,32 @@ closes.
   room's referee. Names are given per room, so two rooms may each have a Bot
   Agnes: the same character, each with its own hospital and memory.
 
+**How many bots a server runs (since 2026-11-28).** Jan wanted the limit to
+follow the server's actual CPU and memory, for several rooms with bots at once
+(4 rooms of 5 or 6 bots, say). A new bot is added only if
+`Server._bots_fit` says it fits; otherwise the player gets `ERROR
+code=too_many_bots` with the reason as its text (the game shows the text):
+
+- The cores busy now (the one-minute load average, `machine.capacity`) plus
+  what is still to come must stay under `OPENTH_BOT_CPU_MAX` percent of the
+  cores (default 85). Still to come: every room whose bots do not play yet
+  (in the lobby, or started less than a minute ago, which the load does not
+  show yet) at what it takes at the highest speed, and the new bot.
+- The free memory (MemAvailable) less what the rooms in the lobby and the
+  new bot will take must stay above `OPENTH_BOT_MEM_SPARE_MB` (default 400).
+- What a room takes, measured on the dev VM with six bots in one shared game
+  at the highest speed: the shared game about 0.35 core and 160 MB, the
+  room's referee 0.12 core and 140 MB. The server counts a room as 0.15 core
+  and 250 MB and each bot as 0.06 core and 15 MB more; the room's first bot,
+  and a bot for a running game's place (a game of its own), bring the room's
+  part.
+- `OPENTH_MAX_BOTS` (default 24) stays a ceiling for all rooms together.
+
+So a two-core server (eu1) takes about three rooms of six bots at once, a
+one-core one (us1) one room, a four-core one about six; fewer while games
+already run at the highest speed, more while they run slower. A game that
+speeds up after its bots were added is not checked again.
+
 **Characters (since 2026-11-28).** Each bot name plays and talks in a way of
 its own (`scripts/multiplayer/bot_personality.lua`; Jan wanted the bots to
 keep their personalities in a shared game). A character changes how a bot
@@ -127,8 +153,9 @@ character, `"Bot 9=clive"` gives a bot another one.
   process (`referee.start_bot`) with a token, and keeps the place until the bot
   connects (`HELLO role=bot room token`) or `BOT_START_TIMEOUT` passes. The bot
   joins ready; `PLAYER` lines say `bot=1`, `LOBBY` says how many are still
-  `starting`. When the last person leaves a room, its bots are stopped. At most
-  `OPENTH_MAX_BOTS` (default 7: a room of 8 with one person) run on a server at once.
+  `starting`. When the last person leaves a room, its bots are stopped. A new
+  bot needs room on the machine (`Server._bots_fit`, below), and there are
+  never more than `OPENTH_MAX_BOTS` (default 24) on a server at once.
 - Lobby window (`dialogs/resizables/multiplayer.lua`): the player places are
   buttons; `UIMultiplayer:clickPlace` adds or removes a bot
   (`MultiplayerLobby:addBot`, `removeBot`, `canAddBots`).

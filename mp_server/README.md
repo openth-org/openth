@@ -149,7 +149,9 @@ Command line options, or the same as environment variables:
 | `--log-level` | `OPENTH_LOG` | `INFO` | `DEBUG`, `INFO`, `WARNING`, ... |
 | `--max-connections` | `OPENTH_MAX_CONNECTIONS` | `256` | Connections at once |
 | `--max-per-address` | `OPENTH_MAX_PER_ADDRESS` | `8` | Connections from one IP address (on the internet, players behind one router share one) |
-| `--max-bots` | `OPENTH_MAX_BOTS` | `7` | Bots at once (only with the referee) |
+| `--max-bots` | `OPENTH_MAX_BOTS` | `24` | Bots at once in all rooms, a ceiling (only with the referee); below it a bot is added only while the machine has room for it (next two rows) |
+| `--bot-cpu-max` | `OPENTH_BOT_CPU_MAX` | `85` | No new bot once the cores would be this busy, in percent (the one-minute load plus the rooms whose bots do not play yet) |
+| `--bot-mem-spare-mb` | `OPENTH_BOT_MEM_SPARE_MB` | `400` | No new bot that would leave less free memory than this, in MB |
 | `--shared-bots` | `OPENTH_SHARED_BOTS` | `1` | 1: the bots of a room play in one game (`bot_host.lua`); 0: one game each |
 
 Environment variables only:

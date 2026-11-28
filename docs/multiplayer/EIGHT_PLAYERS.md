@@ -99,9 +99,10 @@ Status: on `mp/team-hospitals`; first released in mp-test-d5a471a7 (eu2).
 
 ## Limits and open points
 
-- **Bots:** every bot is a whole game on the server. The server runs at most
-  `OPENTH_MAX_BOTS` (7) at once, in all rooms together: one room of 8
-  with one person. A bigger server can raise it.
+- **Bots:** a room's bots share one game on the server (`bot_host.lua`), and
+  the server adds a bot only while its CPU and memory have room for it
+  (`docs/multiplayer/bots.md`, "How many bots a server runs"), at most
+  `OPENTH_MAX_BOTS` (24) in all rooms together.
 - **Speed:** 8 hospitals means 8 times the patients in every player's game
   (and the referee's). The slowest computer paces the game.
 - **Network:** 8 players from one home share an address. That is still within

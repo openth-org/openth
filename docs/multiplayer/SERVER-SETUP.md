@@ -18,11 +18,12 @@ takes about 15 minutes.
     AMD) machine. ARM servers do not work: the referee is the game's Linux
     x86_64 build.
   - **2 CPU cores and 4 GB of memory**, plus 4 GB of swap (step 6).
-    Every running game has a referee, and every bot in it is a game of its
-    own: each takes 300 to 450 MB (the most on a big map such as Mount
-    Everest, late in the game). The server itself takes about 100 MB. So a
-    full room of eight with seven bots needs about 3.5 GB; a room of people
-    without bots needs only its referee. OpenTH's servers have exactly this.
+    Every running game has a referee, and the bots of a room share one
+    more game: each takes 300 to 450 MB (the most on a big map such as
+    Mount Everest, late in the game). The server itself takes about 100 MB.
+    So a room with bots needs about 1 GB; a room of people without bots
+    needs only its referee. The server adds a bot only while the machine
+    has the CPU and memory for it. OpenTH's servers have this size.
   - **20 GB of disk** is plenty.
 - **SSH access** with sudo rights (the provider tells you how; use an SSH key,
   not a password).

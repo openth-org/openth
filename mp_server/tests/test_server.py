@@ -1,4 +1,5 @@
 import asyncio
+import time
 import zlib
 
 import pytest
@@ -2099,3 +2100,67 @@ def test_no_stand_in_while_the_persons_assistant_plays_on(monkeypatch):
         await asyncio.sleep(0.3)
         assert len(bots) == 1 and 3 in server.rooms["duo"].players
     run_with_bots(body, with_referees=True)
+
+
+def test_bots_fit_the_machine_and_waiting_rooms_count(tmp_path):
+    async def body(server, port, hosts, alone):
+        # One core, a tenth of it busy: bots may take it to 85 %. A room with
+        # bots counts 0.15 core and each bot 0.06 more (Server._bots_fit).
+        server.capacity = lambda: {"cores": 1, "busy": 0.1, "free_mb": 8000}
+        people = []
+        for name, room in (("Ann", "a"), ("Bob", "b"), ("Cid", "c")):
+            person = await Client.connect(port, name)
+            person.send(encode("CREATE", room=room, password="", max=4, mode="coop", level=1))
+            await person.expect("JOINED")
+            people.append(person)
+        ann, bob, cid = people
+        # Rooms whose bots do not play yet count as they will: two rooms of
+        # three fit (0.1 + 2 x 0.33), the third room's first bot does not.
+        for person in (ann, bob):
+            for _ in range(3):
+                person.send(encode("BOT", add=1))
+            await person.expect("LOBBY", starting=3)
+        cid.send(encode("BOT", add=1))
+        error = await cid.expect("ERROR")
+        assert error["code"] == "too_many_bots" and "too busy" in error["text"]
+        # Once those games have played a while, the load shows them as they
+        # are (here lighter than at the highest speed): the third room's bot fits.
+        for name in ("a", "b"):
+            server.rooms[name].state, server.rooms[name].started_at = "running", time.time() - 120
+        server.capacity = lambda: {"cores": 1, "busy": 0.4, "free_mb": 8000}
+        cid.send(encode("BOT", add=1))
+        await cid.expect("LOBBY", starting=1)
+        # (A game started less than a minute ago still counts as to come.)
+        server.rooms["a"].started_at = time.time() - 10
+        cid.send(encode("BOT", add=1))
+        assert "too busy" in (await cid.expect("ERROR"))["text"]
+        for person in people:
+            await person.close()
+    run_with_shared_bots(body, tmp_path)
+
+
+def test_bots_leave_memory_free(tmp_path):
+    async def body(server, port, hosts, alone):
+        # 800 MB free and 400 kept free: a room with bots counts 250 MB and
+        # each bot 15 MB more.
+        server.capacity = lambda: {"cores": 8, "busy": 0.0, "free_mb": 800}
+        ann = await Client.connect(port, "Ann")
+        ann.send(encode("CREATE", room="a", password="", max=4, mode="coop", level=1))
+        await ann.expect("JOINED")
+        for _ in range(3):
+            ann.send(encode("BOT", add=1))
+        await ann.expect("LOBBY", starting=3)
+        bob = await Client.connect(port, "Bob")
+        bob.send(encode("CREATE", room="b", password="", max=4, mode="coop", level=1))
+        await bob.expect("JOINED")
+        bob.send(encode("BOT", add=1))
+        error = await bob.expect("ERROR")
+        assert error["code"] == "too_many_bots" and "memory" in error["text"]
+        # Bots on the server at most, before anything else.
+        server.capacity = lambda: {"cores": 8, "busy": 0.0, "free_mb": 64000}
+        server.max_bots = 3
+        bob.send(encode("BOT", add=1))
+        assert (await bob.expect("ERROR"))["text"] == "This server runs as many bots as it can"
+        await ann.close()
+        await bob.close()
+    run_with_shared_bots(body, tmp_path)
