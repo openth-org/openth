@@ -426,6 +426,8 @@ function Epidemic:resolveDeclaration()
   self.hospital:spendMoney(self.declare_fine, _S.transactions.epidemy_fine)
   self.hospital:reputationEvent(ReputationAccount.epidemic_gave_up)
   self.hospital.epidemic = nil
+  -- (Multiplayer: a rival sent it with a dirty trick; they hear how it went.)
+  if self.mp_sent_by then MultiplayerSession.sabotage.tellEpidemicOutcome(self, "declared", self.declare_fine) end
 end
 
 --- Remove all infected patients by vaccinating from the hospital and clear
@@ -580,6 +582,10 @@ function Epidemic:applyOutcome()
     end
   else
     self.hospital:receiveMoney(self.compensation, _S.transactions.compensation)
+  end
+  if self.mp_sent_by then
+    MultiplayerSession.sabotage.tellEpidemicOutcome(self, self.compensation == 0 and "caught" or "hidden",
+        self.coverup_fine)
   end
   -- Finally send the fax confirming the outcome
   self:sendResultFax()

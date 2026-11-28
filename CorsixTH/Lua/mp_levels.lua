@@ -613,6 +613,9 @@ end
 
 --! A swarm of rats in the next hospital in turn (with holes for them).
 local function ratSwarm(world)
+  -- (Only when the host allowed rat attacks, the room's game option; Jan,
+  -- 2026-11-28: a swarm came although he had switched rat attacks off.)
+  if not (world.mp_coop and world.mp_coop.rats_on) then return 0 end
   local hospital = world:_coopTurn("level_rats")
   if not hospital.opened then return 0 end
   hospital:mpAddRatholes(3)

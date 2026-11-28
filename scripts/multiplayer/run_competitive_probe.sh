@@ -24,9 +24,9 @@
 #      the player's own and the evil handyman in it; nobody sees a rival's
 #      room outline, nor the blue floor of a room lou furnishes by hand
 #   6. the newer tricks, in room "tricks" (nia against oz): a headhunter
-#      (level 1) after oz's nurse, who leaves for nia's hiring list (every
-#      hospital has its own) when oz does not pay; nia hires them, and oz
-#      hires a nurse from oz's own list;
+#      (level 1) after the nurse nia picks in the headhunter window, who walks
+#      over to nia's hospital (stolen over, at the pay they asked for) when oz
+#      does not pay; both hire a nurse from their own lists later;
 #      a broken boiler (level 1), repaired; a smear campaign (level 1) that
 #      runs out at the month's end; espionage (level 3) copies two of oz's
 #      results. In room "tricks2" (pia against quin) quin pays the
@@ -224,9 +224,11 @@ ok3 = ok3 and ok_v and outlines == 0
 fail |= not ok3
 
 o, q = log('oz'), log('quin')
-poached = 'headhunter after Nurse' in o and re.search(r'Nurse #\d+ left hospital 2 for the hiring list of hospital 1', o)
-kept_for_nia = (re.search(r'step 10\d\d: peer 2 #\d+ hire -> ok', o) and re.search(r'step 110\d: peer 1 #\d+ hire -> ok', o)
-                and 'promised to another hospital' not in o)
+poached = 'headhunter after Nurse' in o and re.search(r'Nurse #\d+ left hospital 2 for hospital 1 \(wage \$\d+\)', o)
+# (The nurse nia picked in the headhunter window, walked over to nia: not on a hiring list.)
+picked_nurse = re.search(r'dirty trick headhunter level 1 against hospital 2 at step \d+: .*\(picked ([^)]+)\)', log('nia'))
+kept_for_nia = (bool(picked_nurse) and re.search(r'step 10\d\d: peer 2 #\d+ hire -> ok', o) and
+                re.search(r'step 110\d: peer 1 #\d+ hire -> ok', o) and 'promised to another hospital' not in o)
 boiler = 'boiler of hospital 2 broken' in o and 'working properly again' in o
 smear = re.search(r'smear campaign against hospital 2 over: (\d+) patients', o)
 spied = re.search(r'hospital 1 spied on hospital 2: ([^\n]+)', o)
@@ -238,7 +240,7 @@ paid = 'accepted the pay rise' in q and 'left hospital 2' not in q and re.search
 spied1 = 'dirty trick espionage level 1 against hospital 2 at step 260: they know nothing that you do not' in log('pia')
 ok6 = bool(poached and kept_for_nia and boiler and smear and spied and spied.group(1).count(',') == 1 and paid and spied1
            and all(result(n).startswith('IN SYNC') for n in ('nia', 'oz', 'pia', 'quin')))
-print(f"6. Newer tricks:            poached: {bool(poached)}; kept for the buyer: {bool(kept_for_nia)}; boiler broken and repaired: {boiler}; "
+print(f"6. Newer tricks:            poached: {bool(poached)}; picked and gone to the buyer: {bool(kept_for_nia)}; boiler broken and repaired: {boiler}; "
       f"smear over: {smear.group(1) + ' sent elsewhere' if smear else '-'}; espionage L3: {spied.group(1) if spied else '-'}; "
       f"rise paid, nurse kept: {bool(paid)}; espionage L1 with nothing to copy refused: {spied1}; "
       f"{result('nia')} / {result('oz')} / {result('pia')} / {result('quin')}")

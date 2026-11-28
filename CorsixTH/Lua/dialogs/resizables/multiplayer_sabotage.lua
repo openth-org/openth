@@ -200,6 +200,11 @@ function UIMultiplayerSabotage:buy(kind, level)
     self.ui:addWindow(UIMultiplayerSpy(self.ui, self, level))
     return
   end
+  if kind == "headhunter" then
+    -- The player picks whom to tempt away first (Jan, 2026-11-28).
+    self.ui:addWindow(_G["UIMultiplayerHeadhunt"](self.ui, self, level))
+    return
+  end
   if kind == "litter_bomb" then
     -- The bomb goes onto the cursor, to be put down on a corridor of a
     -- rival (it is paid when it is down).
@@ -328,6 +333,139 @@ function UIMultiplayerSpy:steal()
   end
   session:issue({kind = "sabotage", trick = "espionage", level = self.level,
       to = self.world:getHospitalIndex(self.target), items = table.concat(keys, ";")})
+  if self.tricks.setStatus then self.tricks:setStatus(S.sabotage_sent) end
+  self:close()
+end
+
+--! Headhunter: the rival's staff a headhunter of this level may tempt away,
+--! with their kind, specialisms, skill and pay, the most skilled first; the
+--! player picks one before the headhunter goes (Jan, 2026-11-28: as with
+--! espionage). The one picked leaves for the player's hospital unless the
+--! rival pays their rise (sabotage.headhunt, sabotage.poached).
+class "UIMultiplayerHeadhunt" (UIResizable)
+
+---@class UIMultiplayerHeadhunt: UIResizable
+---@operator call: UIMultiplayerHeadhunt
+local UIMultiplayerHeadhunt = _G["UIMultiplayerHeadhunt"] ---@type UIMultiplayerHeadhunt
+
+local HUNT_WIDTH = 480
+
+--! Is this staff profile flag set (1, true; not 0 or nil)?
+local function has(v) return v ~= nil and v ~= 0 and v ~= false end
+
+--!param tricks (UIMultiplayerSabotage) the dirty tricks window it came from
+--!param level (integer) the headhunter level bought
+function UIMultiplayerHeadhunt:UIMultiplayerHeadhunt(ui, tricks, level)
+  local S = _S.multiplayer_window
+  local sabotage = MultiplayerSession.sabotage
+  local height = 40 + SPY_ROWS * (SPY_ROW_H + 2) + 35 + 75
+  self:UIResizable(ui, HUNT_WIDTH, height, col.bg)
+  self.esc_closes = true
+  self.resizable = false
+  self.on_top = true
+  self:setDefaultPosition(0.5, 0.25)
+  self.default_button_sound = "selectx.wav"
+  self.tricks, self.level = tricks, level
+  self.world, self.hospital, self.target = tricks.world, tricks.hospital, tricks.target
+  self.staff = sabotage.headhuntCandidates(self.target, level)
+  self.picked, self.page = nil, 1
+
+  self:addBevelPanel(20, 10, HUNT_WIDTH - 40, 20, col.title)
+      :setLabel(S.sabotage_headhunt_caption:format(self.target.name)).lowered = true
+  self.rows = {}
+  for row = 1, SPY_ROWS do
+    local y = 40 + (row - 1) * (SPY_ROW_H + 2)
+    local panel = self:addBevelPanel(20, y, HUNT_WIDTH - 40, SPY_ROW_H, Colours.Setting, nil, nil, nil,
+        Colours.SettingActive)
+    self.rows[row] = panel:makeToggleButton(0, 0, HUNT_WIDTH - 40, SPY_ROW_H, nil,
+        function(window, state) window:pickRow(row, state) end)
+  end
+  local y = 40 + SPY_ROWS * (SPY_ROW_H + 2) + 5
+  self.page_panel = self:addBevelPanel(20, y, 290, 28, col.caption)
+  self.page_panel.lowered = true
+  self:addBevelPanel(320, y, 65, 28, col.button):setLabel(S.research_previous)
+      :makeButton(0, 0, 65, 28, nil, function(window) window:turnPage(-1) end)
+  self:addBevelPanel(395, y, 65, 28, col.button):setLabel(S.research_next)
+      :makeButton(0, 0, 65, 28, nil, function(window) window:turnPage(1) end)
+  self.status_panel = self:addBevelPanel(20, height - 72, HUNT_WIDTH - 40, 22, col.bg)
+  self.status_panel.lowered = true
+  self.status_panel:setLabel(S.sabotage_headhunt_pick)
+  self:addBevelPanel(20, height - 45, 240, 30, col.button)
+      :setLabel(S.sabotage_headhunt_send:format(sabotage.price(self.world, self.hospital, "headhunter", level)))
+      :makeButton(0, 0, 240, 30, nil, self.send)
+  self:addBevelPanel(HUNT_WIDTH - 140, height - 45, 120, 30, col.button):setLabel(S.sabotage_close)
+      :makeButton(0, 0, 120, 30, nil, self.close)
+  self:_showPage()
+end
+
+function UIMultiplayerHeadhunt:draw(canvas, x_, y_)
+  UIResizable.draw(self, canvas, x_, y_)
+  MultiplayerSession.drawTitleTabs(canvas, self, x_, y_, self.target)
+end
+
+--! A member of staff's line: name, kind and specialisms, skill, pay.
+function UIMultiplayerHeadhunt.rowText(staff)
+  local T = _S.staff_title
+  local p = staff.profile
+  local kinds = {}
+  if p.humanoid_class == "Nurse" then
+    kinds[1] = T.nurse
+  else
+    kinds[1] = has(p.is_consultant) and T.consultant or has(p.is_junior) and T.junior or T.doctor
+    if has(p.is_surgeon) then kinds[#kinds + 1] = T.surgeon end
+    if has(p.is_psychiatrist) then kinds[#kinds + 1] = T.psychiatrist end
+    if has(p.is_researcher) then kinds[#kinds + 1] = T.researcher end
+  end
+  for i, k in ipairs(kinds) do kinds[i] = tostring(k) end
+  return _S.multiplayer_window.sabotage_headhunt_row:format(p:getFullName(), table.concat(kinds, ", "),
+      math.floor((p.skill or 0) * 100 + 0.5), math.floor(p.wage or 0))
+end
+
+function UIMultiplayerHeadhunt:_pages()
+  return math.max(1, math.ceil(#self.staff / SPY_ROWS))
+end
+
+function UIMultiplayerHeadhunt:_showPage()
+  local first = (self.page - 1) * SPY_ROWS
+  for row, button in ipairs(self.rows) do
+    local staff = self.staff[first + row]
+    button:setLabel(staff and UIMultiplayerHeadhunt.rowText(staff) or "")
+    button:enable(staff ~= nil)
+    if (staff ~= nil and self.picked == staff) ~= (button.toggled or false) then button:toggle() end
+  end
+  self.page_panel:setLabel(_S.multiplayer_window.research_page:format(self.page, self:_pages()))
+end
+
+function UIMultiplayerHeadhunt:turnPage(delta)
+  self.page = math.min(self:_pages(), math.max(1, self.page + delta))
+  self:_showPage()
+end
+
+--! Pick a member of staff (one only: another click picks another), or drop them.
+function UIMultiplayerHeadhunt:pickRow(row, state)
+  local staff = self.staff[(self.page - 1) * SPY_ROWS + row]
+  if not staff then return end
+  if state then
+    self.picked = staff
+  elseif self.picked == staff then
+    self.picked = nil
+  end
+  self:_showPage()
+end
+
+--! Send the headhunter after the one picked: a command, checked again when
+--! it runs (they may have left or got busy since).
+function UIMultiplayerHeadhunt:send()
+  local S = _S.multiplayer_window
+  local session = TheApp.mp_session
+  if not session then return end
+  if not self.picked then
+    self.ui:playSound("wrong2.wav")
+    self.status_panel:setLabel(S.sabotage_headhunt_pick)
+    return
+  end
+  session:issue({kind = "sabotage", trick = "headhunter", level = self.level,
+      to = self.world:getHospitalIndex(self.target), staff = self.picked.mp_id})
   if self.tricks.setStatus then self.tricks:setStatus(S.sabotage_sent) end
   self:close()
 end

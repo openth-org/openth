@@ -2050,8 +2050,9 @@ def test_assistants_help_in_a_hospital_and_take_no_place(monkeypatch):
 
 
 def test_assistants_keep_to_the_games_players(monkeypatch):
-    """No more players than a game can have (MAX_PLACES), assistants too."""
+    """No more players than a game can have (MAX_PEERS), assistants too."""
     monkeypatch.setattr(srv, "MAX_PLACES", 3)
+    monkeypatch.setattr(srv, "MAX_PEERS", 3)
 
     async def body(server, port, bots):
         ann = await Client.connect(port, "Ann")
@@ -2197,3 +2198,27 @@ def test_a_bot_gives_its_place_to_a_person_who_joins():
         for c in (ann, ben, cid, dan):
             await c.close()
     run_with_bots(body)
+
+
+def test_an_assistant_comes_on_top_of_eight_places(tmp_path):
+    async def body(server, port, hosts, alone):
+        # Alone against seven bots (Jan, 2026-11-28), with an assistant too:
+        # it plays her hospital and takes no place, so the room of eight
+        # still has room for it.
+        ann = await Client.connect(port, "Ann")
+        ann.send(encode("CREATE", room="eight", password="", max=8, hospitals=8, mode="teams", level=8))
+        joined = await ann.expect("JOINED")
+        assert joined["max"] == "8"
+        for _ in range(7):
+            ann.send(encode("BOT", add=1))
+        await ann.expect("LOBBY", starting=7)
+        ann.send(encode("BOT", assist=joined["peer"]))
+        lobby = await ann.expect("LOBBY", assistants=1)
+        assert lobby["open"] == "0" and lobby["starting"] == "8"
+        added = await shared_bot_lines(hosts[0]["control"], 8)
+        assert added[7]["name"] == "Bot Hector"
+        # The places stay eight: no ninth bot of its own.
+        ann.send(encode("BOT", add=1))
+        assert (await ann.expect("ERROR"))["code"] == "room_full"
+        await ann.close()
+    run_with_shared_bots(body, tmp_path)

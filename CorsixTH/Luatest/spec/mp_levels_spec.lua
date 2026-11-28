@@ -418,7 +418,12 @@ describe("Multiplayer levels", function()
   end)
 
   it("lets rats swarm into the hospitals by turns", function()
+    -- (Only when the host allowed rat attacks: none by default.)
     local world = fake_world(2)
+    play(world, 365)
+    assert.equal(0, #world.rats)
+    world = fake_world(2)
+    world.mp_coop.rats_on = true
     play(world, 365)
     local swarms, last = {}, nil
     for _, r in ipairs(world.rats) do

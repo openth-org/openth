@@ -47,6 +47,10 @@ MultiplayerLobby.MODES = {"shared", "coop", "competitive", "teams", "teamshared"
 --! (Up to 8 players in a room, so as many colours and teams; a level's map
 --! has room for 4 hospitals, a few for 8: mp_levels.maxHospitals.)
 MultiplayerLobby.PLACES = 8
+--! Players a game may have: every place, and an assistant beside each person
+--! (it plays its person's hospital and takes no place; Jan, 2026-11-28:
+--! alone against seven bots, with an assistant). The server's MAX_PEERS.
+MultiplayerLobby.PEERS = 16
 MultiplayerLobby.COLOURS = 8
 MultiplayerLobby.TEAMS = 8
 
@@ -843,10 +847,11 @@ function MultiplayerLobby:mayAddAssistant(peer)
   for helped in (self.summary and self.summary.assisted or ""):gmatch("%d+") do
     if tonumber(helped) == tonumber(peer) then return false end
   end
-  -- (Not once the game has its most players, assistants too: PLACES.)
+  -- (Not once the game has its most players, assistants too: PEERS. An
+  -- assistant takes no place, so a full room still has room for them.)
   local everybody = tonumber(self.summary and self.summary.starting) or 0
   for _ in pairs(self.players) do everybody = everybody + 1 end
-  return self:assistantOf(peer) == nil and everybody < MultiplayerLobby.PLACES
+  return self:assistantOf(peer) == nil and everybody < MultiplayerLobby.PEERS
 end
 
 --! The assistant of the person of place `peer` (their entry), or nil.
@@ -2113,13 +2118,25 @@ function MultiplayerLobby:_beginGame(f)
     self.peer_names = {}
     for i, p in ipairs(peers) do self.peer_names[p] = start_names[i] and MultiplayerLobby.capitals(start_names[i]) end
     local names = {}
+    -- (An assistant helps its person: the hospital is named after the
+    -- person only, START's assists. Jan, 2026-11-28: "JANBA + BOT DORA" did
+    -- not fit the Players window.)
+    local assists = {}
+    for p in (f.assists or ""):gmatch("%d+") do assists[tonumber(p)] = true end
+    local helpers = {}
     for i, p in ipairs(peers) do
       local player = self.players[p]
       local index = self.peer_hospital[p]
       local name = MultiplayerLobby.capitals(start_names[i] or (player and player.name) or ("Player " .. p))
-      names[index] = names[index] and (names[index] .. " + " .. name) or name
+      if assists[p] then
+        helpers[index] = helpers[index] or name
+      else
+        names[index] = names[index] and (names[index] .. " + " .. name) or name
+      end
       if p == tonumber(f.peer) then my_index = index end
     end
+    -- (A hospital only assistants play, should one: their names.)
+    for index, name in pairs(helpers) do names[index] = names[index] or name end
     local count = layout and layout.count or #peers
     -- Hospitals that only bots play (none of their players a person): a
     -- hidden monthly bonus, World:onEndMonth. (From START: the referee never

@@ -639,6 +639,13 @@ end
 function Bot:tellRival(kind, from)
   local world = self.world
   local mine = world.ui.hospital
+  -- (A boiler broken in summer runs hot: lines about the heat, not the cold.
+  -- Jan, 2026-11-28.)
+  local heat = mine.heating
+  if kind == "boiler" and heat and heat.heating_broke and (heat.radiator_heat or 0) >= 1 and
+      LINES.tricked.boiler_hot then
+    kind = "boiler_hot"
+  end
   local hospitals = {}
   if from then
     hospitals[1] = from
@@ -1171,9 +1178,40 @@ function Bot:canTreat(patient)
   return mine:countRoomOfType("gp", 1) > 0
 end
 
+--! Can it build these rooms now, for an emergency it would accept: each one
+--! discovered, all of them paid for (a loan too), and floor for them, or a
+--! plot it can buy as well? (Its staff: Bot:answerEmergencies.)
+--!param missing (table) the room types it has none of
+--!return (boolean) yes, (string) why not
+function Bot:canBuildForEmergency(missing)
+  local mine = self.world.ui.hospital
+  if not self.manager or self:leavesBuilding() then return false, "does not build" end
+  local cost, floor = 0, 0
+  for _, rt in ipairs(missing) do
+    local found = mine.room_discoveries and mine.room_discoveries[rt.id]
+    if not (found and found.is_discovered) then return false, rt.id .. " not discovered" end
+    cost = cost + self:roomCost(rt)
+    -- (A room of its smallest size, with a tile around it to walk.)
+    local size = (rt.minimum_size or 4) + 1
+    floor = floor + size * size
+  end
+  local max_loan = math.floor((mine.value or 0) * 0.33 / 5000) * 5000 + 10000
+  local money = mine.balance + math.max(0, max_loan - (mine.loan or 0)) - RESERVE
+  if self:freeFloor() < floor then
+    local plot, price = self:cheapestPlot()
+    if not plot then return false, "no floor or land" end
+    cost = cost + price
+  end
+  if money < cost then return false, string.format("$%d needed", math.floor(cost)) end
+  return true
+end
+
 --! Answer this hospital's emergency faxes: accept if it has the treatment
---! room and somebody to work in it, else refuse (a fax left alone refuses
---! itself after 16 days, which some levels punish).
+--! rooms and somebody to work in them, or can build the rooms it lacks now
+--! (Bot:canBuildForEmergency; the manager builds an accepted emergency's
+--! rooms first), else refuse (a fax left alone refuses itself after 16
+--! days, which some levels punish). Jan, 2026-11-28: a bot refused twice
+--! for a room it then built at once.
 function Bot:answerEmergencies()
   local panel = self.world.ui and self.world.ui.bottom_panel
   if not panel then return end
@@ -1186,7 +1224,8 @@ function Bot:answerEmergencies()
       -- hiring list (two surgeons for an operating theatre: the second is
       -- hired at once, see BotManager:projects).
       local rooms = mine.emergency.disease.treatment_rooms or {}
-      local can = #rooms > 0
+      local can, why = #rooms > 0, nil
+      local missing = {}
       for _, id in ipairs(rooms) do
         local rt
         for _, r in ipairs(TheApp.rooms) do if r.id == id then rt = r end end
@@ -1196,15 +1235,21 @@ function Bot:answerEmergencies()
           self.manager.research_need[id] = self:gameDay()
           self.manager.demand[id] = (self.manager.demand[id] or 0) + 2
         end
-        if not rt or mine:countRoomOfType(id, 1) == 0 then can = false break end
+        if not rt then can, why = false, "no room " .. id break end
+        if mine:countRoomOfType(id, 1) == 0 then missing[#missing + 1] = rt end
         for cat, k in pairs(rt.required_staff or {}) do
-          if mine:countStaffOfCategory(cat, k) < k and not self:canHire(cat) then can = false end
+          if mine:countStaffOfCategory(cat, k) < k and not self:canHire(cat) then can, why = false, "no " .. cat end
         end
       end
+      if can and #missing > 0 then can, why = self:canBuildForEmergency(missing) end
       local msg = icon.mp_id
       local delay = 2 + rand() * 4
-      log(string.format("emergency fax #%s (%s): %s in %.1f s", tostring(msg), tostring(mine.emergency.disease.id),
-          can and "accept" or "refuse", delay))
+      local builds = {}
+      for _, rt in ipairs(missing) do builds[#builds + 1] = rt.id end
+      log(string.format("emergency fax #%s (%s): %s in %.1f s%s", tostring(msg), tostring(mine.emergency.disease.id),
+          can and "accept" or "refuse", delay,
+          can and #builds > 0 and (", builds " .. table.concat(builds, ", ") .. " first") or
+          not can and why and (" (" .. why .. ")") or ""))
       self:say(nil, delay, nil, function()
         local session = TheApp.mp_session
         if session and not session.held then

@@ -97,7 +97,7 @@ plays, not how strong it is: the level stays the room's choice. A stand-in
 |---|---|---|
 | Agnes | kind, a bit slow | builds about a third slower, types slowly, gives allies more money (keeps $10,000, up to $25,000 at once), lends specialists sooner, her first dirty trick comes much later and the next ones half as often, sells to rivals cheaply, answers rivals kindly |
 | Bertie | sassy | dirty tricks sooner and more often, pays rivals a quarter less and asks half as much again, keeps more of his money |
-| Clive | loves research | a big research room early with four desks, hires researchers sooner, shares research with allies twice as often |
+| Clive | loves research | a big research room early (8 x 8, also where the experts' recipes would make it 6 x 6) with four desks, hires researchers sooner, shares research with allies twice as often |
 | Dora | thrifty | keeps $9,000 when she builds, borrows only for the most urgent projects, gives little money, fewer plants and benches, buys land later, likes drinks machines (they pay for themselves), haggles |
 | Edna | homely | benches, plants, radiators, drinks machines, a staff room and toilets sooner, fewer dirty tricks |
 | Fergus | bold | borrows readily, buys land early, an operating theatre and a scanner sooner, pays rivals well |
@@ -115,8 +115,11 @@ character, `"Bot 9=clive"` gives a bot another one.
 - Assistants (Argus, 2026-11-15): `BOT assist=<peer>` adds a bot to that
   person's hospital (a person for their own, the host for anybody's, one
   each, new games only). It takes none of the room's places (`Room.is_full`
-  counts `assistant_of == 0` players; the game's 8 players still cap
-  everybody), always has its person's colour and team (`_on_seat` refuses
+  counts `assistant_of == 0` players). Assistants come on top of the 8
+  places (Jan, 2026-11-28: alone against 7 bots, with an assistant): a game
+  has up to `MAX_PEERS` = 16 players (`MultiplayerLobby.PEERS` in the game;
+  until then 8, assistants included), so a room of 8 still offers one, and
+  the in-game Players window has a row for each, up to 16. It always has its person's colour and team (`_on_seat` refuses
   its own changes and moves it with its person), goes when its person leaves
   the lobby, and in a game plays on when they leave (`_stand_in_due` starts
   no stand-in for that place). LOBBY says `assistants=` and `open=` (places a
@@ -178,7 +181,9 @@ the level's goals. Every possible project gets a score from those needs
 (`Manager:projects`): the opening basics first (receptionist, GP's office,
 doctor), then rooms the patients need, a pharmacy and general diagnosis, a
 staff room when staff tire, toilets, a research room for diseases waiting
-for undiscovered rooms, a second room of a busy type, staff for rooms short of
+for undiscovered rooms (a normal or hard bot right after its first three
+rooms, as experts do; Jan, 2026-11-28: his assistant had none by April; a
+bot whose research room found no floor twice buys land for it), a second room of a busy type, staff for rooms short of
 them or with long queues (capped by the patients), handymen for litter and
 machines, a second desk for a long reception queue, benches for people
 standing, drinks machines, radiators for cold patients, bins, plants. The
@@ -502,8 +507,19 @@ What needs the model today:
   list has one), a handyman from 3 rooms and another from 8. A room that
   cannot work at all for want of staff (an operating theatre with one
   surgeon) gets its missing specialist before any new room.
+- **Patients it cannot treat** (a fax: the room is missing): an ally whose
+  hospital has the rooms gets the patient first (`M:referTarget`: one
+  referral in 14 game days, the allies in turn, none to an ally who said
+  no; `M:checkReferrals` sees the answer: the offer closed and the patient
+  still here). Else the patient waits while the room is built (with more
+  than $15,000), or goes home. (Jan, 2026-11-28: referring is what
+  multiplayer adds; before, only half went to an ally, the rest waited or
+  went home.)
 - **Emergencies**: it accepts one when every room that cures the disease
-  stands and its staff is complete or on the hiring list. While one is on
+  stands, or it can build the missing ones now (discovered, the money for
+  them with a loan, floor or a plot it can buy: `Bot:canBuildForEmergency`;
+  Jan, 2026-11-28: a bot refused twice and built the room right after), and
+  their staff is complete or on the hiring list. While one is on
   (accepted, or sent by a rival), the missing staff of those rooms comes
   before all but the basics, and a missing room is built at once. The model's
   report starts with the emergency (patients, cured, days left, the rooms)

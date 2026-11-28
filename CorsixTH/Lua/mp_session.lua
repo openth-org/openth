@@ -2833,7 +2833,7 @@ end
 --! Move a member of staff from one player's hospital to another's: they walk
 --! over and start work there on arrival.
 --!return true, or false and a reason
-function MultiplayerSession.transferStaff(world, from, to, staff)
+function MultiplayerSession.transferStaff(world, from, to, staff, quiet)
   local x, y = arrival_tile(world, to)
   if not x then return false, "no room at the other hospital" end
 
@@ -2865,8 +2865,12 @@ function MultiplayerSession.transferStaff(world, from, to, staff)
 
   local window = world.ui and world.ui:getWindow(UIStaffManagement)
   if window then window:updateStaffList() end
-  MultiplayerSession.tellPlayer(world, to,
-      _S.multiplayer_window.staff_received_note:format(from.name, "") .. staff.profile:getFullName())
+  -- (quiet: no "sent you" note; the caller says what happened. An evil
+  -- handyman thrown out read as if the rival had sent him: Jan, 2026-11-28.)
+  if not quiet then
+    MultiplayerSession.tellPlayer(world, to,
+        _S.multiplayer_window.staff_received_note:format(from.name, "") .. staff.profile:getFullName())
+  end
   return true
 end
 
@@ -5245,8 +5249,15 @@ function handlers.pay_rise(world, cmd)
     if w.staff == staff then w:close() end
   end
   if accept then
+    -- (A headhunter's target kept: its buyer hears so. Jan, 2026-11-28.)
+    local hunted = staff.mp_headhunted
     staff.mp_headhunted = nil
     staff:increaseWage(amount)
+    local buyer = hunted and world.hospitals[hunted.by]
+    if buyer then
+      MultiplayerSession.tellPlayer(world, buyer,
+          _S.multiplayer_window.sabotage_headhunter_kept:format(staff.hospital.name, staff.profile:getFullName()))
+    end
   elseif staff.mp_headhunted then
     -- Competitive: poached by a rival's headhunter (no severance).
     MultiplayerSession.sabotage.poached(staff)

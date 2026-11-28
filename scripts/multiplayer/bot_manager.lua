@@ -43,8 +43,11 @@ local RESERVE = 3000
 -- referred to a team mate with the rooms, the rest sent home; and at most one
 -- referral to the same hospital in this many game days (the person there
 -- gets a fax for each one, Jan on eu2).
-local REFER_SHARE = 0.5
-local REFER_GAP_DAYS = 3
+-- (Jan, 2026-11-28: referring is what multiplayer adds, and the bots let
+-- most such patients wait or sent them home: now a patient it cannot treat
+-- goes to an ally who can, one referral in this many game days, the allies
+-- in turn; an ally who said no is not asked again, M:checkReferrals.)
+local REFER_GAP_DAYS = 14
 -- A room nobody has used for this many game days (about 5 months) is taken
 -- down for its floor (Jan, eu2), and none of the kind is built again for
 -- REMOVED_REBUILD_DAYS unless patients keep asking for it. While the level's
@@ -141,6 +144,9 @@ local RIVAL_WARN_DAYS = 120
 -- advisor and no ask to the allies before month 13 of the game), and at most
 -- every RESCUE_DAYS (3 months).
 local RESCUE_FROM_MONTH, RESCUE_DAYS = 13, 90
+-- A bot sharing a person's hospital that may answer its faxes opens it from
+-- this game day on (mid-January), if the person has not (M:think).
+local OPEN_BY_DAY = 15
 -- Waiting areas (Jan, 2026-11-03): by each room's door and the reception
 -- benches for the queue, a plant and a radiator, and a drinks machine by
 -- every third, within WAITING_R tiles. Not by rooms nobody queues for.
@@ -304,7 +310,15 @@ function M.roomPlan(id)
   local recipe = M.learned and M.Learned and M.Learned.recipe(M.learned, id, SIZES_OF(id))
   if recipe then
     local rt = TheApp and TheApp.rooms and TheApp.rooms[id]
-    return math.max(recipe.w, recipe.d), M.Learned.extras(recipe.objects, rt and rt.objects_needed)
+    local size, extras = math.max(recipe.w, recipe.d), M.Learned.extras(recipe.objects, rt and rt.objects_needed)
+    -- (A bot set to research hard, Bot Clive's character: its own bigger
+    -- room with four desks, not the experts' 6 x 6, where only two fitted.
+    -- Jan, 2026-11-28.)
+    if id == "research" and M.research_heavy then
+      size = math.max(size, SIZES_OF(id))
+      extras.desk = 3
+    end
+    return size, extras
   end
   local extras = EXTRAS[id] or DEFAULT_EXTRAS
   local copy = {}
@@ -339,6 +353,9 @@ function M.new(bot, ctx)
   self.called = {}         -- machine entity id -> day a handyman was sent
   self.answered = {}       -- message number -> true
   self.referred_day = {}   -- hospital index -> game day this hospital last referred a patient there
+  self.last_referral = nil -- game day of its last referral (any ally)
+  self.referrals = {}      -- patient mp_id -> {to = ally index, day, patient, seen = offer seen open}
+  self.refer_refused = {}  -- ally index -> true: said no to a referral (not asked again)
   self.room_used = {}      -- room id -> last game day somebody used it (a patient; staff in staff-only rooms)
   self.removed_type = {}   -- room type id -> game day a room of it was removed for being empty
   self.noticed = {}        -- saboteur entity id -> day it was noticed
@@ -805,12 +822,15 @@ function M:projects(s)
     if self:mateRemoved(id, s.day) and not self.wishes["room:" .. id] then return end
     -- A room for a specialist (a psychiatrist, surgeons, a researcher) waits
     -- until one is on the staff or on the hiring list: an empty room helps
-    -- nobody.
+    -- nobody. Unless a team mate asked for it: then it is built, and the
+    -- specialist hired once there is one (Jan, 2026-11-28: he asked his
+    -- assistant for a research room three times; it said yes and built
+    -- nothing, as no researcher was for hire).
     for cat in pairs(rt.required_staff or {}) do
       if SPECIALISTS[cat] and hosp:countStaffOfCategory(cat, 1) == 0 and not bot:canHire(cat) then
         -- (Patients ask for the room, or an ally wished for it: the allies are asked, M:askAllies.)
         if (self.demand[id] or 0) >= 2 or self.wishes["room:" .. id] then self.blocked_spec[cat] = {day = s.day, room = id} end
-        return
+        if not self.wishes["room:" .. id] then return end
       end
     end
     local want, extras = M.roomPlan(id)
@@ -904,8 +924,14 @@ function M:projects(s)
   for id, v in pairs(self.demand) do
     if not self:available(id) then undiscovered = undiscovered + v end
   end
+  -- (A normal or hard bot: right after the first three rooms, as experts do,
+  -- to catch up on what the level has not discovered. Jan, 2026-11-28: his
+  -- assistant had none by April; it scored 6, below every ward and toilet.)
   if not s.rooms.research and s.room_count >= 4 then room("research", 6 + undiscovered * 0.4) end
-  if M.research_heavy and not s.rooms.research and s.room_count >= 3 then room("research", 30 + undiscovered * 0.4) end
+  if bot.skill ~= "easy" and not s.rooms.research and s.room_count >= 3 then
+    room("research", 40 + undiscovered * 0.4)
+  end
+  if M.research_heavy and not s.rooms.research and s.room_count >= 3 then room("research", 55 + undiscovered * 0.4) end
   -- Training: a lecture room once doctors want teaching (juniors, or doctors
   -- not yet consultants) and a consultant can teach them (on the staff or
   -- the hiring list), when money allows.
@@ -1906,7 +1932,11 @@ function M:landWanted(s, free_floor, fill)
       -- too small for it. Jan, 2026-11-13: Bertie's second operating theatre
       -- did not fit for weeks, seven patients queued for the first, and it
       -- bought no land: 120 tiles of floor were free, here and there.)
-      if ((self.no_space_tries or {})[key] or 0) >= 3 then again = true end
+      -- (A big room it plans for, research above all, already twice: Jan's
+      -- assistant found no floor for its research room in months 1 and 2
+      -- and bought no land, 2026-11-28.)
+      local big = key == "room:research" or key == "room:operating_theatre" or key == "room:ward"
+      if ((self.no_space_tries or {})[key] or 0) >= (big and 2 or 3) then again = true end
     end
   end
   if wanted < 3 and wanted > 0 and not again and (free_floor or self.bot:freeFloor()) >= 120 then wanted = 0 end
@@ -2091,6 +2121,7 @@ function M:daily(s)
   if mates and bot:mayDo("loan") then self:assistantLoan(s) end
   if helper then
     if bot:mayDo("faxes") then self:answerFaxes(s) end
+    self:checkReferrals(s)
     return
   end
   self:surplusDoctors(s)
@@ -2122,6 +2153,7 @@ function M:daily(s)
     if self:issue({kind = "loan", amount = 5000}) then self:note(string.format("day %d: loan of $5,000", s.day)) end
   end
   if bot:mayDo("faxes") then self:answerFaxes(s) end
+  self:checkReferrals(s)
 end
 
 -- The loan in a hospital a person plays too (Argus and Jan, 2026-11-21): in
@@ -2314,21 +2346,26 @@ function M:answerFaxes(s)
         end
         -- (Never "research": that is an autopsy, and it costs the hospital
         -- a lot of reputation when it comes out.)
+        -- A team mate whose hospital has the rooms gets the patient first
+        -- (M:referTarget: one referral in REFER_GAP_DAYS, the allies in turn,
+        -- none to one who said no); else it waits while the room is built,
+        -- or goes home.
+        local mate, mate_index
+        if missing then mate, mate_index = self:referTarget(patient, rooms, s.day) end
         if not missing then
           pick, why = index.wait, "the room is there"
+        elseif mate and index.wait then
+          pick, why = index.wait, "referred to " .. tostring(mate.name)
+          refer_to = mate_index
+          self.referred_day[mate_index] = s.day
+          self.last_referral = s.day
+          if patient and patient.mp_id then
+            self.referrals[patient.mp_id] = {to = mate_index, day = s.day, patient = patient}
+          end
         elseif buildable and s.balance > 15000 then
           pick, why = index.wait, "building the room"
         else
-          -- About half go to a team mate whose hospital has the rooms (not
-          -- every one: the person there gets a fax for each), the rest home.
-          local mate, mate_index = self:referTarget(patient, rooms, s.day)
-          if mate and index.wait and self.rand() < REFER_SHARE then
-            pick, why = index.wait, "referred to " .. tostring(mate.name)
-            refer_to = mate_index
-            self.referred_day[mate_index] = s.day
-          else
-            pick, why = index.send_home, "no room for it"
-          end
+          pick, why = index.send_home, "no room for it"
         end
       elseif index.accept_vip or index.refuse_vip then
         local good = s.reputation >= 450 and s.room_count >= 5 and s.litter < 10
@@ -2467,22 +2504,48 @@ function M:referTarget(patient, rooms, day)
   local world = self.bot.world
   local mine = world.ui.hospital
   if not (patient and patient.mp_id and MultiplayerSession.referable(patient)) then return nil end
+  if self.last_referral and day - self.last_referral < REFER_GAP_DAYS then return nil end
   local n = world.mp_coop and world.mp_coop.players or 0
+  local best, best_i
   for i = 1, n do
     local h = world.hospitals[i]
-    local last = self.referred_day[i]
     -- (Allies only: in a race everyone for themselves the rivals may trade,
-    -- but a bot does not hand its patients to them.)
+    -- but a bot does not hand its patients to them. Not one who said no.)
     if h and h ~= mine and not h.mp_place and world:mpMayTrade(mine, h) and not world:mpRivals(mine, h) and
-        not (last and day - last < REFER_GAP_DAYS) then
+        not self.refer_refused[i] then
       local has = true
       for _, r in ipairs(rooms) do
         if h:countRoomOfType(r, 1) == 0 then has = false break end
       end
-      if has then return h, i end
+      -- (The ally it referred to longest ago, or never: the allies in turn.)
+      if has and (not best or (self.referred_day[i] or -1) < (self.referred_day[best_i] or -1)) then
+        best, best_i = h, i
+      end
     end
   end
-  return nil
+  return best, best_i
+end
+
+--! Its referrals answered: once the offer is closed, a patient still in its
+--! hospital was refused (or the fax was left unanswered), and that ally is
+--! not asked again; one who walked over was taken. (Every game day.)
+function M:checkReferrals(s)
+  for id, r in pairs(self.referrals) do
+    local p = r.patient
+    if p.mp_offer then
+      r.seen = true
+    elseif not r.seen and s.day - r.day > 10 then
+      self.referrals[id] = nil -- (the offer never opened: refused by the game)
+    elseif r.seen then
+      self.referrals[id] = nil
+      if p.hospital == s.hosp and not p.going_home and p.tile_x then
+        self.refer_refused[r.to] = true
+        local h = self.bot.world.hospitals[r.to]
+        self:note(string.format("day %d: %s said no to a referred patient: no more referrals there", s.day,
+            tostring(h and h.name)))
+      end
+    end
+  end
 end
 
 --! A race: throw out evil handymen once noticed, shoot attack rats, pick up
@@ -4619,8 +4682,10 @@ function M:think()
   -- Failing its objectives: a review by the model, and a word to the allies.
   self:rescue(s)
   if s.hosp.mp_place then return end -- out of the race (or won): no more building
-  if not s.hosp.opened and s.staffed_desks > 0 and s.rooms.gp and (s.staff.Doctor or 0) > 0 and
-      not bot:sharesWithPerson() then
+  -- (Sharing a person's hospital: once it may answer the faxes, it opens
+  -- it too, from mid-January, if the person has not. Jan, 2026-11-28.)
+  local opens = not bot:sharesWithPerson() or (bot:mayDo("faxes") and s.day >= OPEN_BY_DAY)
+  if not s.hosp.opened and s.staffed_desks > 0 and s.rooms.gp and (s.staff.Doctor or 0) > 0 and opens then
     bot:openHospital()
   end
   if s.month ~= self.last_month then

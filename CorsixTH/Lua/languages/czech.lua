@@ -4238,8 +4238,8 @@ multiplayer_window.race_won_together = "Dokázali jste to společně! Dobrá pr�
 multiplayer_window.race_won_together_first = "Dokázali jste to společně! Skvělá práce!"
 multiplayer_window.race_won_well_done = "Dobrá práce!"
 multiplayer_window.rat_attacks = "útoky krys"
-multiplayer_window.rats_off = "Útok krys (závody): nepovolen"
-multiplayer_window.rats_on = "Útok krys (závody): povolen"
+multiplayer_window.rats_off = "Útok krys: nepovolen"
+multiplayer_window.rats_on = "Útok krys: povolen"
 multiplayer_window.ready = "Připraven"
 multiplayer_window.rebuild_destroyed_room = "Tato místnost byla zničena. Odklidit ji za $%d a postavit znovu?"
 multiplayer_window.recommendation = "Až %s; akce trvají %s ms"
@@ -4301,7 +4301,7 @@ multiplayer_window.sabotage_boiler = "Rozbitý bojler"
 multiplayer_window.sabotage_boiler_notice = "Bojler se rozbil, a nebyla to náhoda. Vaši údržbáři ho opravují: čím víc jich je, tím dřív to bude."
 multiplayer_window.sabotage_caption = "Špinavé triky proti hráči %s"
 multiplayer_window.sabotage_caught = "Vyhodili jste údržbáře, který nebyl váš: poslal ho hráč %s. Vrací se k němu."
-multiplayer_window.sabotage_caught_owner = "Hráč %s přistihl vašeho zlého údržbáře. Vrací se pracovat pro vás."
+multiplayer_window.sabotage_caught_owner = "Váš zlý údržbář se vrátil od hráče %s: dělal tam nepořádek, dokud ho nepřistihli. Znovu pracuje pro vás."
 multiplayer_window.sabotage_close = "Zavřít"
 multiplayer_window.sabotage_done.boiler = "Bojler u hráče %s se porouchal."
 multiplayer_window.sabotage_done.emergency = "K hráči %s míří pohotovost."
@@ -4366,11 +4366,22 @@ multiplayer_window.sabotage_sent = "Objednáno. Platí se po provedení."
 multiplayer_window.sabotage_smear = "Pomlouvačná kampaň"
 multiplayer_window.sabotage_smear_notice = "Špatný tisk: pomlouvačná kampaň proti nemocnici odhání část pacientů (měsíců: %d)."
 multiplayer_window.sabotage_smear_over = "Pomlouvačná kampaň skončila: pacienti chodí do nemocnice jako dřív."
+multiplayer_window.sabotage_smear_done = "Vaše pomlouvačná kampaň proti hráči %s skončila: %d pacientů místo toho odešlo do jiných nemocnic."
 multiplayer_window.sabotage_spy_caption = "Špehovat hráče %s: vyberte %d"
 multiplayer_window.sabotage_spy_pick = "Vyberte, co má váš špión zkopírovat, a stiskněte Ukrást."
 multiplayer_window.sabotage_spy_steal = "Ukrást ($%d)"
+multiplayer_window.sabotage_headhunt_caption = "Lovec hlav u hráče %s: koho?"
+multiplayer_window.sabotage_headhunt_pick = "Vyberte, koho přetáhnout, a stiskněte Poslat."
+multiplayer_window.sabotage_headhunt_send = "Poslat ($%d)"
+multiplayer_window.sabotage_headhunt_row = "%s (%s): dovednost %d%%, $%d měsíčně"
+multiplayer_window.sabotage_headhunter_left_to = "%s teď pracuje pro hráče %s, který nabídl víc."
+multiplayer_window.sabotage_headhunter_won_to = "Váš lovec hlav uspěl: %s je na cestě k vám, za $%d měsíčně."
+multiplayer_window.sabotage_headhunter_kept = "Hráč %s zvýšil plat (%s): váš lovec hlav se vrátil s prázdnou."
+multiplayer_window.sabotage_epidemic_declared = "Hráč %s ohlásil epidemii, kterou jste mu poslali, a zaplatil pokutu $%d."
+multiplayer_window.sabotage_epidemic_hidden = "Hráč %s ututlal epidemii, kterou jste mu poslali, a prošlo mu to."
+multiplayer_window.sabotage_epidemic_caught = "Hráč %s se pokusil ututlat epidemii, kterou jste mu poslali: inspektor mu dal pokutu $%d."
 multiplayer_window.sabotage_transaction = "Špinavé triky"
-multiplayer_window.sabotage_went_home = "Čas vašeho zlého údržbáře u hráče %s vypršel. Odešel domů."
+multiplayer_window.sabotage_went_home = "Čas vašeho zlého údržbáře u hráče %s vypršel a nikdo ho nepřistihl: mise splněna. Odešel domů."
 multiplayer_window.sabotage_litter_bomb = "Odpadková bomba"
 multiplayer_window.sabotage_levels.litter_bomb[1] = "Nastražíte ji na jednu z jejich chodeb. Její rozbuška hoří 16 dní, pak rozhází 15 kusů odpadků. Pokud ji najdou dřív, mohou ji hodit dál na jiného soupeře, třeba i zpátky na vás."
 multiplayer_window.sabotage_levels.litter_bomb[2] = "Jako L1, ale rozhází 25 kusů odpadků, a dál."
@@ -4524,7 +4535,7 @@ tooltip.multiplayer_window.password = "Heslo místnosti, do které se připojuje
 tooltip.multiplayer_window.player_row = "Klik: ukázat nemocnici tohoto hráče (N: další nemocnice)"
 tooltip.multiplayer_window.chat_target = "Komu zpráva půjde: všem, vašemu týmu (v závodě týmů) nebo jednomu hráči. Klikněte nebo stiskněte Tab pro dalšího"
 tooltip.multiplayer_window.players = "Pro kolik hráčů je místnost určena"
-tooltip.multiplayer_window.rats = "Rozhoduje hostitel: v závodě se špinavými triky mohou hráči pustit krysy do nemocnice soupeře (stojí ho to reputaci), nebo ne"
+tooltip.multiplayer_window.rats = "Rozhoduje hostitel: v závodě se špinavými triky mohou hráči pustit krysy do nemocnice soupeře (stojí ho to reputaci), nebo ne; totéž platí pro hejna krys v úrovni 6"
 tooltip.multiplayer_window.ready = "Dejte hostiteli vědět, že jste připraveni začít"
 tooltip.multiplayer_window.refer_button = "Nabídnout tohoto pacienta nemocnici jiného hráče. Musí ho přijmout."
 tooltip.multiplayer_window.room_chat = "Napište sem zprávu a stiskem Enteru ji pošlete všem v místnosti"
@@ -4558,6 +4569,10 @@ bot_chat = {
           "Rozbitý bojler, {name}? Máme deky.",
           "Studená nemocnice? Zato vřelá srdce, {name}. Bojler se už opravuje.",
           "Ha, {name}, pořádná zima. Moji údržbáři milují výzvy."},
+      boiler_hot = {"Někdo mi zasekl bojler na plný výkon. Moc vtipné, {name}. Moji údržbáři už na tom makají.",
+          "Sauna v mé nemocnici, {name}? Údržbáři se u toho už potí.",
+          "Je tu horko, {name}. Ale ne dlouho: moji údržbáři bojler opravují.",
+          "Pěkný pokus, {name}. Moji pacienti vedro přežijí."},
       smear = {"Špatný tisk, {name}? Moji pacienti se vrátí.", "Pěkná pomlouvačná kampaň, {name}. Ta moje bude lepší.",
           "Bulvár, {name}? Laciné. Moji pacienti vědí svoje.",
           "Drby nikoho nevyléčí, {name}. Moji doktoři ano."},
@@ -4579,6 +4594,9 @@ bot_chat = {
       boiler = {"Někdo mi rozbil bojler. Ať to byl kdokoli: máme deky.",
           "Bojler je rozbitý. Kdo to udělal: moc vtipné.",
           "Den dva studená nemocnice. Ať to byl kdokoli, moji údržbáři už na tom makají."},
+      boiler_hot = {"Někdo mi zasekl bojler na plný výkon. Ať to byl kdokoli: moji údržbáři už na tom makají.",
+          "Moje nemocnice je dnes sauna. Kdo to udělal: moc vtipné.",
+          "Den dva horká nemocnice. Ať to byl kdokoli, moji údržbáři už na tom makají."},
       smear = {"Někdo o mé nemocnici šíří lži. Pacienti poznají pravdu.",
           "Špatný tisk z ničeho nic. Moji pacienti se vrátí.",
           "Kdo pomlouvá mou nemocnici: odpovědí mu moji doktoři."},

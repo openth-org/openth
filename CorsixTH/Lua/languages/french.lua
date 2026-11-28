@@ -2243,8 +2243,8 @@ multiplayer_window.race_won_together = "Vous y êtes arrivés ensemble ! Bien jo
 multiplayer_window.race_won_together_first = "Vous avez réussi ensemble ! Excellent travail !"
 multiplayer_window.race_won_well_done = "Bien joué !"
 multiplayer_window.rat_attacks = "attaques de rats"
-multiplayer_window.rats_off = "Attaque de rats (courses) : non autorisée"
-multiplayer_window.rats_on = "Attaque de rats (courses) : autorisée"
+multiplayer_window.rats_off = "Attaque de rats : non autorisée"
+multiplayer_window.rats_on = "Attaque de rats : autorisée"
 multiplayer_window.ready = "Prêt"
 multiplayer_window.rebuild_destroyed_room = "Cette salle a été détruite. La déblayer pour $%d et la reconstruire ?"
 multiplayer_window.recommendation = "Jusqu'à %s ; les actions prennent %s ms"
@@ -2306,7 +2306,7 @@ multiplayer_window.sabotage_boiler = "Chaudière en panne"
 multiplayer_window.sabotage_boiler_notice = "La chaudière est tombée en panne, et ce n'était pas un accident. Vos agents d'entretien la réparent : plus ils sont nombreux, plus vite c'est fait."
 multiplayer_window.sabotage_caption = "Coups bas contre %s"
 multiplayer_window.sabotage_caught = "Vous avez renvoyé un agent d'entretien qui n'était pas à vous : %s l'avait envoyé. Il retourne chez eux."
-multiplayer_window.sabotage_caught_owner = "%s a démasqué votre agent d'entretien malveillant. Il revient travailler pour vous."
+multiplayer_window.sabotage_caught_owner = "Votre agent d'entretien malveillant revient de chez %s : il y a semé le désordre jusqu'à ce qu'on le démasque. Il travaille de nouveau pour vous."
 multiplayer_window.sabotage_close = "Fermer"
 multiplayer_window.sabotage_done.boiler = "La chaudière de %s est tombée en panne."
 multiplayer_window.sabotage_done.emergency = "Une urgence arrive chez %s."
@@ -2371,11 +2371,22 @@ multiplayer_window.sabotage_sent = "Commandé. Vous payez une fois fait."
 multiplayer_window.sabotage_smear = "Campagne de calomnie"
 multiplayer_window.sabotage_smear_notice = "Mauvaise presse : une campagne de calomnie contre l'hôpital éloigne certains patients pendant %d mois."
 multiplayer_window.sabotage_smear_over = "La campagne de calomnie est finie : les patients reviennent à l'hôpital comme avant."
+multiplayer_window.sabotage_smear_done = "Votre campagne de diffamation contre %s est terminée : %d patients sont allés dans d'autres hôpitaux."
 multiplayer_window.sabotage_spy_caption = "Espionner %s : choisir %d"
 multiplayer_window.sabotage_spy_pick = "Choisissez ce que votre espion doit copier, puis appuyez sur Voler."
 multiplayer_window.sabotage_spy_steal = "Voler ($%d)"
+multiplayer_window.sabotage_headhunt_caption = "Chasseur de têtes chez %s : qui ?"
+multiplayer_window.sabotage_headhunt_pick = "Choisissez qui débaucher, puis appuyez sur Envoyer."
+multiplayer_window.sabotage_headhunt_send = "Envoyer ($%d)"
+multiplayer_window.sabotage_headhunt_row = "%s (%s) : compétence %d%%, $%d par mois"
+multiplayer_window.sabotage_headhunter_left_to = "%s est parti travailler pour %s, qui offrait plus."
+multiplayer_window.sabotage_headhunter_won_to = "Votre chasseur de têtes a réussi : %s arrive pour travailler chez vous, à $%d par mois."
+multiplayer_window.sabotage_headhunter_kept = "%s a accordé l'augmentation (%s) : votre chasseur de têtes revient bredouille."
+multiplayer_window.sabotage_epidemic_declared = "%s a déclaré l'épidémie que vous lui avez envoyée et payé une amende de $%d."
+multiplayer_window.sabotage_epidemic_hidden = "%s a étouffé l'épidémie que vous lui avez envoyée et s'en est tiré."
+multiplayer_window.sabotage_epidemic_caught = "%s a tenté d'étouffer l'épidémie que vous lui avez envoyée : l'inspecteur lui a infligé $%d d'amende."
 multiplayer_window.sabotage_transaction = "Coups bas"
-multiplayer_window.sabotage_went_home = "Le séjour de votre agent d'entretien malveillant chez %s est terminé. Il est rentré."
+multiplayer_window.sabotage_went_home = "Le séjour de votre agent d'entretien malveillant chez %s est terminé et personne ne l'a démasqué : mission accomplie. Il est rentré."
 multiplayer_window.sabotage_litter_bomb = "Bombe à détritus"
 multiplayer_window.sabotage_levels.litter_bomb[1] = "Vous la posez dans l'un de leurs couloirs. Sa mèche brûle 16 jours, puis elle projette 15 détritus autour d'elle. S'ils la trouvent avant, ils peuvent la relancer vers un rival, voire vers vous."
 multiplayer_window.sabotage_levels.litter_bomb[2] = "Comme L1, mais elle projette 25 détritus, plus loin."
@@ -2529,7 +2540,7 @@ tooltip.multiplayer_window.password = "Mot de passe du salon à rejoindre ou à 
 tooltip.multiplayer_window.player_row = "Clic : voir l'hôpital de ce joueur (N : l'hôpital suivant)"
 tooltip.multiplayer_window.chat_target = "À qui va le message : tout le monde, votre équipe (dans une course d'équipes) ou un joueur. Cliquez ou appuyez sur Tab pour le suivant"
 tooltip.multiplayer_window.players = "Pour combien de joueurs est le salon"
-tooltip.multiplayer_window.rats = "L'hôte décide : dans une course avec coups bas, les joueurs peuvent lâcher des rats dans l'hôpital d'un rival (cela lui coûte de la réputation), ou non"
+tooltip.multiplayer_window.rats = "L'hôte décide : dans une course avec coups bas, les joueurs peuvent lâcher des rats dans l'hôpital d'un rival (cela lui coûte de la réputation), ou non ; il en va de même pour les essaims de rats du niveau 6"
 tooltip.multiplayer_window.ready = "Dites à l'hôte que vous êtes prêt à commencer"
 tooltip.multiplayer_window.refer_button = "Proposez ce patient à l'hôpital d'un autre joueur. Il doit accepter."
 tooltip.multiplayer_window.room_chat = "Écrivez ici et appuyez sur Entrée pour parler à tout le salon"
@@ -2563,6 +2574,10 @@ bot_chat = {
           "Une chaudière en panne, {name} ? On a des couvertures.",
           "Hôpital froid, coeurs chauds, {name}. La chaudière est en réparation.",
           "Ha, {name}, une vague de froid. Mes agents d'entretien adorent les défis."},
+      boiler_hot = {"Quelqu'un a bloqué ma chaudière à fond. Très drôle, {name}. Mes agents d'entretien s'en occupent.",
+          "Un sauna dans mon hôpital, {name} ? Les agents d'entretien transpirent déjà dessus.",
+          "Il fait chaud ici, {name}. Plus pour longtemps : mes agents réparent la chaudière.",
+          "Bien essayé, {name}. Mes patients survivront à une canicule."},
       smear = {"Mauvaise presse, {name} ? Mes patients reviendront.", "Jolie campagne de calomnie, {name}. La mienne sera meilleure.",
           "La presse à scandale, {name} ? Facile. Mes patients ne sont pas dupes.",
           "Les ragots ne guérissent personne, {name}. Mes médecins, si."},
@@ -2584,6 +2599,9 @@ bot_chat = {
       boiler = {"Quelqu'un a cassé ma chaudière. Qui que ce soit : on a des couvertures.",
           "Ma chaudière est en panne. Celui qui a fait ça : très drôle.",
           "Un hôpital froid pendant un jour ou deux. Qui que ce soit, mes agents d'entretien s'en occupent."},
+      boiler_hot = {"Quelqu'un a bloqué ma chaudière à fond. Qui que ce soit : mes agents d'entretien s'en occupent.",
+          "Mon hôpital est un sauna aujourd'hui. Qui a fait ça : très drôle.",
+          "Un hôpital surchauffé pour un jour ou deux. Qui que ce soit, mes agents d'entretien s'en occupent."},
       smear = {"Quelqu'un répand des mensonges sur mon hôpital. Les patients verront la vérité.",
           "Une mauvaise presse sortie de nulle part. Mes patients reviendront.",
           "Celui qui raconte des ragots sur mon hôpital : mes médecins répondront."},

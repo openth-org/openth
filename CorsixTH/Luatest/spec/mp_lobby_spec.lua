@@ -378,10 +378,13 @@ describe("MultiplayerLobby", function()
       lobby.summary.assisted = "1"
       assert.is_true(lobby:mayAddAssistant(2))
       lobby.summary.starting = nil
-      -- Not once the game has its most players (8, assistants too).
+      -- A full room of eight still has room for her assistant: it takes no
+      -- place. Not once the game has its most players (16, assistants too).
       for peer = 4, 8 do lobby.players[peer] = {peer = tostring(peer), name = "P" .. peer, bot = "1"} end
+      assert.is_true(lobby:mayAddAssistant(2))
+      for peer = 9, 16 do lobby.players[peer] = {peer = tostring(peer), name = "P" .. peer, bot = "1"} end
       assert.is_false(lobby:mayAddAssistant(2))
-      lobby.players[8] = nil
+      lobby.players[16] = nil
       assert.is_true(lobby:mayAddAssistant(2))
       -- Not in a saved game.
       lobby.room.free = nil

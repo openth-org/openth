@@ -40,7 +40,7 @@ local col = {
 -- (The team has a column of its own, Jan 2026-11-12: "BOT BERTIE (team 2)"
 -- was cut off in the hospital's.)
 local COLUMNS = {
-  {"name", 80}, {"hospital", 100}, {"team", 52}, {"ping", 56}, {"status", 100},
+  {"name", 80}, {"hospital", 130}, {"team", 52}, {"ping", 56}, {"status", 100},
   {"value", 60}, {"balance", 60}, {"reputation", 44}, {"goals", 60},
 }
 local WIDTH = 20 * 2 + (#COLUMNS - 1) * 4
@@ -52,12 +52,13 @@ local BEHIND_STEPS = 24
 local QUIET_SECONDS = 5
 
 --! How many rows the window has: a row per place in the room (2 to 8), or
---! per player in the game's list if that has more.
+--! per player in the game's list if that has more (assistants too: up to
+--! MultiplayerLobby.PEERS).
 local function rowCount()
   local lobby = TheApp.mp_lobby
   local places = lobby and lobby.room and tonumber(lobby.room.max) or 4
   local listed = lobby and lobby.game_players and #lobby.game_players or 0
-  return math.max(2, math.min(MultiplayerLobby.PLACES, math.max(places, listed)))
+  return math.max(2, math.min(MultiplayerLobby.PEERS or MultiplayerLobby.PLACES, math.max(places, listed)))
 end
 
 function UIMultiplayerPlayers:UIMultiplayerPlayers(ui)

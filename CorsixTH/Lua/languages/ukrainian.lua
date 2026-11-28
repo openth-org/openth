@@ -3962,8 +3962,8 @@ multiplayer_window.race_won_together = "Ви впоралися разом! Мо
 multiplayer_window.race_won_together_first = "Ви впоралися разом! Чудова робота!"
 multiplayer_window.race_won_well_done = "Чудово!"
 multiplayer_window.rat_attacks = "навали щурів"
-multiplayer_window.rats_off = "Навала щурів (перегони): заборонена"
-multiplayer_window.rats_on = "Навала щурів (перегони): дозволена"
+multiplayer_window.rats_off = "Навала щурів: заборонена"
+multiplayer_window.rats_on = "Навала щурів: дозволена"
 multiplayer_window.ready = "Готовий"
 multiplayer_window.rebuild_destroyed_room = "Ця кімната зруйнована. Прибрати її за $%d і збудувати наново?"
 multiplayer_window.recommendation = "До %s; дії займають %s мс"
@@ -4025,7 +4025,7 @@ multiplayer_window.sabotage_boiler = "Зламаний котел"
 multiplayer_window.sabotage_boiler_notice = "Котел зламався, і не випадково. Ваші різноробочі лагодять його: чим їх більше, тим швидше."
 multiplayer_window.sabotage_caption = "Брудні прийоми проти: %s"
 multiplayer_window.sabotage_caught = "Ви вигнали різноробочого, який не ваш: його надіслав %s. Він повернеться до нього."
-multiplayer_window.sabotage_caught_owner = "%s упіймав вашого злого різноробочого. Він повертається працювати на вас."
+multiplayer_window.sabotage_caught_owner = "Ваш злий різноробочий повернувся від %s: він влаштовував там безлад, доки його не впіймали. Він знову працює на вас."
 multiplayer_window.sabotage_close = "Закрити"
 multiplayer_window.sabotage_done.boiler = "У лікарні %s зламався котел."
 multiplayer_window.sabotage_done.emergency = "До лікарні %s летить надзвичайний випадок."
@@ -4090,11 +4090,22 @@ multiplayer_window.sabotage_sent = "Замовлено. Платити, коли
 multiplayer_window.sabotage_smear = "Наклеп"
 multiplayer_window.sabotage_smear_notice = "Погана преса: наклепницька кампанія проти лікарні відлякує частину пацієнтів, місяців: %d."
 multiplayer_window.sabotage_smear_over = "Наклепницька кампанія закінчилася: пацієнти знову йдуть до лікарні."
+multiplayer_window.sabotage_smear_done = "Ваша наклепницька кампанія проти %s закінчилася: %d пацієнтів пішли до інших лікарень."
 multiplayer_window.sabotage_spy_caption = "Шпигунство за %s: оберіть (%d)"
 multiplayer_window.sabotage_spy_pick = "Оберіть, що скопіює шпигун, і натисніть «Вкрасти»."
 multiplayer_window.sabotage_spy_steal = "Вкрасти ($%d)"
+multiplayer_window.sabotage_headhunt_caption = "Мисливець за головами до %s: кого?"
+multiplayer_window.sabotage_headhunt_pick = "Оберіть, кого переманити, і натисніть «Надіслати»."
+multiplayer_window.sabotage_headhunt_send = "Надіслати ($%d)"
+multiplayer_window.sabotage_headhunt_row = "%s (%s): майстерність %d%%, $%d на місяць"
+multiplayer_window.sabotage_headhunter_left_to = "%s пішов працювати до %s: там запропонували більше."
+multiplayer_window.sabotage_headhunter_won_to = "Ваш мисливець за головами впорався: %s іде працювати до вас за $%d на місяць."
+multiplayer_window.sabotage_headhunter_kept = "%s дав підвищення (%s): ваш мисливець за головами повернувся ні з чим."
+multiplayer_window.sabotage_epidemic_declared = "%s оголосив про надіслану вами епідемію і сплатив штраф $%d."
+multiplayer_window.sabotage_epidemic_hidden = "%s приховав надіслану вами епідемію, і йому це минуло."
+multiplayer_window.sabotage_epidemic_caught = "%s намагався приховати надіслану вами епідемію: інспектор оштрафував його на $%d."
 multiplayer_window.sabotage_transaction = "Брудні прийоми"
-multiplayer_window.sabotage_went_home = "Час вашого злого різноробочого в лікарні %s вийшов. Він пішов додому."
+multiplayer_window.sabotage_went_home = "Час вашого злого різноробочого в лікарні %s вийшов, і ніхто його не впіймав: завдання виконано. Він пішов додому."
 multiplayer_window.sabotage_litter_bomb = "Сміттєва бомба"
 multiplayer_window.sabotage_levels.litter_bomb[1] = "Ви підкладаєте її в один з їхніх коридорів. Її гніт горить 16 днів, потім вона розкидає довкола 15 шматків сміття. Якщо її знайдуть раніше, її можна перекинути іншому суперникові, навіть назад вам."
 multiplayer_window.sabotage_levels.litter_bomb[2] = "Як L1, але розкидає 25 шматків сміття, далі."
@@ -4248,7 +4259,7 @@ tooltip.multiplayer_window.password = "Пароль кімнати, до яко�
 tooltip.multiplayer_window.player_row = "Клацання: показати лікарню цього гравця (N: наступна лікарня)"
 tooltip.multiplayer_window.chat_target = "Кому повідомлення: усім, вашій команді (у перегонах команд) або одному гравцеві. Клацніть або натисніть Tab для наступного"
 tooltip.multiplayer_window.players = "На скількох гравців кімната"
-tooltip.multiplayer_window.rats = "Вирішує господар кімнати: чи можна в перегонах із брудними прийомами пускати щурів у лікарню суперника (це коштує їй репутації)"
+tooltip.multiplayer_window.rats = "Вирішує господар кімнати: чи можна в перегонах із брудними прийомами пускати щурів у лікарню суперника (це коштує їй репутації); те саме стосується зграй щурів на рівні 6"
 tooltip.multiplayer_window.ready = "Повідомити господареві кімнати, що ви готові почати"
 tooltip.multiplayer_window.refer_button = "Запропонувати цього пацієнта лікарні іншого гравця. Він має погодитися."
 tooltip.multiplayer_window.room_chat = "Пишіть тут і натисніть Enter, щоб говорити з усіма в кімнаті"
@@ -4282,6 +4293,10 @@ bot_chat = {
           "Зламаний котел, {name}? У нас є ковдри.",
           "Холодна лікарня? Зате теплі серця, {name}. Котел уже лагодять.",
           "Ха, {name}, похолодання. Мої різноробочі люблять виклики."},
+      boiler_hot = {"Хтось заклинив мій котел на повну потужність. Дуже смішно, {name}. Мої різноробочі вже лагодять.",
+          "Сауна в моїй лікарні, {name}? Різноробочі вже пітніють над цим.",
+          "Тут спекотно, {name}. Але ненадовго: мої різноробочі лагодять котел.",
+          "Гарна спроба, {name}. Мої пацієнти переживуть спеку."},
       smear = {"Погана преса, {name}? Мої пацієнти повернуться.", "Гарна наклепницька кампанія, {name}. Моя буде кращою.",
           "Жовта преса, {name}? Дешево. Мої пацієнти знають правду.",
           "Плітки нікого не вилікують, {name}. А мої лікарі вилікують."},
@@ -4303,6 +4318,9 @@ bot_chat = {
       boiler = {"Хтось зламав мій котел. Хто б це не був: у нас є ковдри.",
           "Мій котел зламано. Хто б це не зробив: дуже смішно.",
           "Холодна лікарня на день-два. Хто б це не влаштував, мої різноробочі вже працюють."},
+      boiler_hot = {"Хтось заклинив мій котел на повну потужність. Хто б це не був: мої різноробочі вже лагодять.",
+          "У моїй лікарні сьогодні сауна. Хто це зробив: дуже смішно.",
+          "День-два спекотної лікарні. Хто б це не був, мої різноробочі вже лагодять."},
       smear = {"Хтось поширює брехню про мою лікарню. Пацієнти побачать правду.",
           "Погана преса на рівному місці. Мої пацієнти повернуться.",
           "Хто б не пліткував про мою лікарню: мої лікарі дадуть відповідь."},

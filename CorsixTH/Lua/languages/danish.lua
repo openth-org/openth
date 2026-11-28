@@ -3094,8 +3094,8 @@ multiplayer_window.race_won_together = "I klarede det sammen! Godt gået!"
 multiplayer_window.race_won_together_first = "I klarede det sammen! Flot arbejde!"
 multiplayer_window.race_won_well_done = "Godt gået!"
 multiplayer_window.rat_attacks = "rotteangreb"
-multiplayer_window.rats_off = "Rotteangreb (löb): ikke tilladt"
-multiplayer_window.rats_on = "Rotteangreb (löb): tilladt"
+multiplayer_window.rats_off = "Rotteangreb: ikke tilladt"
+multiplayer_window.rats_on = "Rotteangreb: tilladt"
 multiplayer_window.ready = "Klar"
 multiplayer_window.rebuild_destroyed_room = "Dette rum blev ödelagt. Ryd det væk for $%d og byg det igen?"
 multiplayer_window.recommendation = "Op til %s; handlinger tager %s ms"
@@ -3157,7 +3157,7 @@ multiplayer_window.sabotage_boiler = "Defekt kedel"
 multiplayer_window.sabotage_boiler_notice = "Kedlen er gået i stykker, og det var ikke et uheld. Dine pedeller reparerer den: jo flere, jo hurtigere."
 multiplayer_window.sabotage_caption = "Beskidte tricks mod %s"
 multiplayer_window.sabotage_caught = "Du smed en pedel ud, som ikke var din: %s sendte ham. Han går tilbage til dem."
-multiplayer_window.sabotage_caught_owner = "%s fangede din onde pedel. Han kommer tilbage og arbejder for dig."
+multiplayer_window.sabotage_caught_owner = "Din onde pedel er tilbage fra %s: han lavede rod der, til de fangede ham. Han arbejder for dig igen."
 multiplayer_window.sabotage_close = "Luk"
 multiplayer_window.sabotage_done.boiler = "Kedlen hos %s er gået i stykker."
 multiplayer_window.sabotage_done.emergency = "En nödsituation er på vej til %s."
@@ -3222,11 +3222,22 @@ multiplayer_window.sabotage_sent = "Bestilt. Du betaler, når det er gjort."
 multiplayer_window.sabotage_smear = "Smædekampagne"
 multiplayer_window.sabotage_smear_notice = "Dårlig presse: en smædekampagne mod hospitalet holder nogle patienter væk i %d måned(er)."
 multiplayer_window.sabotage_smear_over = "Smædekampagnen er forbi: patienterne kommer til hospitalet som för."
+multiplayer_window.sabotage_smear_done = "Din smædekampagne mod %s er slut: %d patienter tog til andre hospitaler i stedet."
 multiplayer_window.sabotage_spy_caption = "Spionér på %s: vælg %d"
 multiplayer_window.sabotage_spy_pick = "Vælg, hvad din spion skal kopiere, og tryk så på Stjæl."
 multiplayer_window.sabotage_spy_steal = "Stjæl ($%d)"
+multiplayer_window.sabotage_headhunt_caption = "Headhunter hos %s: hvem?"
+multiplayer_window.sabotage_headhunt_pick = "Vælg, hvem der skal lokkes væk, og tryk på Send."
+multiplayer_window.sabotage_headhunt_send = "Send ($%d)"
+multiplayer_window.sabotage_headhunt_row = "%s (%s): dygtighed %d%%, $%d om måneden"
+multiplayer_window.sabotage_headhunter_left_to = "%s er gået over til %s, som bød mere."
+multiplayer_window.sabotage_headhunter_won_to = "Din headhunter lykkedes: %s er på vej til at arbejde for dig, for $%d om måneden."
+multiplayer_window.sabotage_headhunter_kept = "%s gav %s lönforhöjelsen: din headhunter kom tomhændet tilbage."
+multiplayer_window.sabotage_epidemic_declared = "%s erklærede den epidemi, du sendte, og betalte en böde på $%d."
+multiplayer_window.sabotage_epidemic_hidden = "%s dækkede over den epidemi, du sendte, og slap godt fra det."
+multiplayer_window.sabotage_epidemic_caught = "%s prövede at dække over den epidemi, du sendte: inspektören gav en böde på $%d."
 multiplayer_window.sabotage_transaction = "Beskidte tricks"
-multiplayer_window.sabotage_went_home = "Din onde pedels tid hos %s er gået. Han er taget hjem."
+multiplayer_window.sabotage_went_home = "Din onde pedels tid hos %s er gået, og ingen fangede ham: mission fuldført. Han er taget hjem."
 multiplayer_window.sabotage_litter_bomb = "Affaldsbombe"
 multiplayer_window.sabotage_levels.litter_bomb[1] = "Du lægger den på en af deres gange. Lunten brænder i 16 dage, så kaster den 15 stykker affald omkring sig. Finder de den först, kan de kaste den videre til en rival, endda tilbage til dig."
 multiplayer_window.sabotage_levels.litter_bomb[2] = "Som L1, men den kaster 25 stykker affald, længere ud."
@@ -3380,7 +3391,7 @@ tooltip.multiplayer_window.password = "Adgangskode til det rum, du deltager i el
 tooltip.multiplayer_window.player_row = "Klik: se denne spillers hospital (N: næste hospital)"
 tooltip.multiplayer_window.chat_target = "Hvem beskeden er til: alle, dit hold (i et kapløb mellem hold) eller én spiller. Klik eller tryk Tab for den næste"
 tooltip.multiplayer_window.players = "Hvor mange spillere rummet er til"
-tooltip.multiplayer_window.rats = "Værten bestemmer: i et löb med beskidte tricks må spillere slippe rotter lös i en rivals hospital (det koster omdömme), eller ej"
+tooltip.multiplayer_window.rats = "Værten bestemmer: i et löb med beskidte tricks må spillere slippe rotter lös i en rivals hospital (det koster omdömme), eller ej; det samme gælder rottesværmene på bane 6"
 tooltip.multiplayer_window.ready = "Fortæl værten, at du er klar til at starte"
 tooltip.multiplayer_window.refer_button = "Tilbyd denne patient til en anden spillers hospital. Vedkommende skal acceptere."
 tooltip.multiplayer_window.room_chat = "Skriv her, og tryk Enter for at tale med alle i rummet"
@@ -3414,6 +3425,10 @@ bot_chat = {
           "En ödelagt kedel, {name}? Vi har tæpper.",
           "Koldt hospital? Varme hjerter, {name}. Kedlen bliver repareret.",
           "Ha, {name}, en kuldebölge. Mine pedeller elsker en udfordring."},
+      boiler_hot = {"Nogen har låst mit fyr på fuld kraft. Meget morsomt, {name}. Mine pedeller er i gang.",
+          "En sauna på mit hospital, {name}? Pedellerne sveder allerede over det.",
+          "Varmt herinde, {name}. Ikke længe: mine pedeller reparerer fyret.",
+          "Godt forsøgt, {name}. Mine patienter overlever en hedebølge."},
       smear = {"Dårlig presse, {name}? Mine patienter kommer tilbage.", "Flot smædekampagne, {name}. Min bliver bedre.",
           "Sladderblade, {name}? Billigt. Mine patienter ved bedre.",
           "Sladder helbreder ingen, {name}. Det gör mine læger."},
@@ -3435,6 +3450,9 @@ bot_chat = {
       boiler = {"Nogen ödelagde min kedel. Hvem det end var: vi har tæpper.",
           "Min kedel er i stykker. Hvem der end gjorde det: meget morsomt.",
           "Et koldt hospital en dag eller to. Hvem det end var, mine pedeller er i gang."},
+      boiler_hot = {"Nogen har låst mit fyr på fuld kraft. Hvem det end var: mine pedeller er i gang.",
+          "Mit hospital er en sauna i dag. Hvem der end gjorde det: meget morsomt.",
+          "Et varmt hospital en dag eller to. Hvem det end var, mine pedeller er i gang."},
       smear = {"Nogen spreder lögne om mit hospital. Patienterne skal nok se sandheden.",
           "Dårlig presse ud af det blå. Mine patienter kommer tilbage.",
           "Til den, der sladrer om mit hospital: mine læger skal nok svare igen."},

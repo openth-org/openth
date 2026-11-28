@@ -1206,7 +1206,8 @@ if with_referee:
     ok37 = (all(lines37) and lines37[1].group(1) == '4' and lines37[1].group(2) == '0'
             and zoe37.startswith('yuri (host)') and ' | zoe ' in zoe37 and 'Bot' not in zoe37
             and len(side37) >= 2 and side37[0].startswith('yes (Bot ') and side37[1].startswith('yes (Bot ')
-            and len(names37) == 2 and names37[0].startswith('YURI + BOT') and names37[1].startswith('ZOE + BOT')
+            # (A hospital is named after its people, not its assistant: Jan, 2026-11-28.)
+            and names37 == ['YURI', 'ZOE']
             and sorted((a, c) for a, _, c in added37) == [('yuri', 'yuri'), ('zoe', 'zoe')]
             and all(result(n).startswith('IN SYNC through step 600') for n in ('yuri', 'zoe'))
             and int(confirmed_after('assist')) >= 500

@@ -255,15 +255,15 @@ function handlers.sabotage(world, cmd)
   if kind == "handyman" then
     ok, why = sabotage.sendHandyman(world, buyer, target, level)
   elseif kind == "epidemic" then
-    ok, why = sabotage.startEpidemic(world, target, level)
+    ok, why = sabotage.startEpidemic(world, target, level, buyer)
   elseif kind == "rats" then
     ok, why = sabotage.ratAttack(world, target, level)
   elseif kind == "headhunter" then
-    ok, why = sabotage.headhunt(world, buyer, target, level)
+    ok, why = sabotage.headhunt(world, buyer, target, level, tonumber(cmd.staff))
   elseif kind == "boiler" then
     ok, why = sabotage.breakBoiler(world, target, level)
   elseif kind == "smear" then
-    ok, why = sabotage.smear(world, target, level)
+    ok, why = sabotage.smear(world, target, level, buyer)
   elseif kind == "espionage" then
     ok, why = sabotage.spy(world, buyer, target, level, cmd.items)
   elseif kind == "litter_bomb" then
@@ -568,7 +568,7 @@ function sabotage.throwOut(world, handyman, by)
   sabotage.unlockRoom(world, s)
   handyman:setDynamicInfoText("")
   handyman.mp_saboteur = nil
-  local ok, why = MultiplayerSession.transferStaff(world, by, owner, handyman)
+  local ok, why = MultiplayerSession.transferStaff(world, by, owner, handyman, true)
   if not ok then
     -- Nowhere to go back to: he just leaves the hospital (no severance).
     handyman.mp_saboteur = s
@@ -582,7 +582,7 @@ end
 
 --! An epidemic: contagious patients of one disease arrive at the rival's
 --! hospital (by its helipad, or else a map edge).
-function sabotage.startEpidemic(world, target, level)
+function sabotage.startEpidemic(world, target, level, buyer)
   local contagious = {}
   for _, disease in ipairs(world.available_diseases) do
     if disease.contagious then contagious[#contagious + 1] = disease end
@@ -601,7 +601,26 @@ function sabotage.startEpidemic(world, target, level)
     patient:setHospital(target)
     target:addToEpidemic(patient)
   end
+  -- (Its buyer hears how it ends: Epidemic:resolveDeclaration, applyOutcome.
+  -- Jan, 2026-11-28: no word came back.)
+  local by = buyer and world:getHospitalIndex(buyer)
+  if by then
+    if target.epidemic and target.epidemic.disease == disease then target.epidemic.mp_sent_by = by end
+    for _, future in ipairs(target.future_epidemics_pool or {}) do
+      if future.disease == disease then future.mp_sent_by = by end
+    end
+  end
   return true
+end
+
+--! An epidemic a rival sent ended: tell them how (`kind`: declared, hidden or
+--! caught; `fine`: what the hospital paid).
+function sabotage.tellEpidemicOutcome(epidemic, kind, fine)
+  local world = epidemic.world
+  local buyer = epidemic.mp_sent_by and world.hospitals[epidemic.mp_sent_by]
+  if not (world.mp_coop and buyer) then return end
+  local text = S()["sabotage_epidemic_" .. kind]
+  if text then MultiplayerSession.tellPlayer(world, buyer, text:format(epidemic.hospital.name, fine or 0)) end
 end
 
 --! An emergency the rival cannot refuse: the helicopter just comes, and the
@@ -735,28 +754,53 @@ local function headhuntKind(staff, level)
       profile.is_psychiatrist == 1 or profile.is_researcher == 1
 end
 
---! The member of staff of `hospital` a headhunter of `level` goes for: the
---! most skilled one of that kind who is not busy with another request.
-function sabotage.headhuntTarget(hospital, level)
-  local best
+--! May a headhunter of `level` go for this member of staff now: of the
+--! level's kind, and not busy with another request?
+function sabotage.headhuntable(staff, level)
+  return not staff.fired and not staff.quitting_in and not staff.mp_in_transit and
+      not staff.mp_saboteur and not staff.mp_headhunted and staff.profile ~= nil and
+      headhuntKind(staff, level)
+end
+
+--! The staff of `hospital` a headhunter of `level` may go for, the most
+--! skilled first (the buyer picks one: UIMultiplayerHeadhunt).
+function sabotage.headhuntCandidates(hospital, level)
+  local list = {}
   for _, staff in ipairs(hospital.staff) do
-    if not staff.fired and not staff.quitting_in and not staff.mp_in_transit and
-        not staff.mp_saboteur and not staff.mp_headhunted and staff.profile and
-        headhuntKind(staff, level) and
-        (not best or staff.profile.skill > best.profile.skill) then
-      best = staff
-    end
+    if sabotage.headhuntable(staff, level) then list[#list + 1] = staff end
   end
-  return best
+  table.sort(list, function(a, b)
+    if a.profile.skill ~= b.profile.skill then return a.profile.skill > b.profile.skill end
+    return (a.mp_id or 0) < (b.mp_id or 0)
+  end)
+  return list
+end
+
+--! The member of staff of `hospital` a headhunter of `level` goes for when
+--! the buyer picked nobody (a bot, an older game): the most skilled one.
+function sabotage.headhuntTarget(hospital, level)
+  return sabotage.headhuntCandidates(hospital, level)[1]
 end
 
 --! A headhunter: the rival's doctor asks for a big pay rise (as a pay rise
---! request, answered in the usual window), or else leaves.
-function sabotage.headhunt(world, buyer, target, level)
-  local staff = sabotage.headhuntTarget(target, level)
+--! request, answered in the usual window), or else leaves for the buyer's
+--! hospital. `staff_id`: the one the buyer picked (Jan, 2026-11-28: as with
+--! espionage, to see their skill and specialisms); nil: the most skilled.
+function sabotage.headhunt(world, buyer, target, level, staff_id)
+  local staff
+  if staff_id then
+    for _, s in ipairs(target.staff) do
+      if s.mp_id == staff_id then staff = s end
+    end
+    if not (staff and sabotage.headhuntable(staff, level)) then
+      return false, "that member of staff cannot be poached now"
+    end
+  else
+    staff = sabotage.headhuntTarget(target, level)
+  end
   if not staff then return false, "they have nobody of that kind to poach" end
   local amount = math.max(1, math.floor(staff.profile.wage * HEADHUNT_RISE[level]))
-  staff.mp_headhunted = {by = world:getHospitalIndex(buyer)}
+  staff.mp_headhunted = {by = world:getHospitalIndex(buyer), rise = amount}
   target:makeRaiseRequest(amount, staff)
   staff.quitting_in = HEADHUNT_TICKS
   staff:setMood("pay_rise", "activate")
@@ -768,11 +812,14 @@ function sabotage.headhunt(world, buyer, target, level)
 end
 
 --! A headhunted member of staff who was not given the rise leaves (no
---! severance, no reputation lost) and goes on the hiring list, kept for the
---! hospital that sent the headhunter for a while.
+--! severance, no reputation lost) for the hospital that sent the headhunter:
+--! they walk over and work there, at the pay they asked for (Jan,
+--! 2026-11-28: the trick is dear, so they are stolen over). Only if they
+--! cannot get there, the hiring list, kept for that hospital for a while.
 function sabotage.poached(staff)
   local world, hospital = staff.world, staff.hospital
   local by = staff.mp_headhunted and staff.mp_headhunted.by
+  local rise = staff.mp_headhunted and staff.mp_headhunted.rise or 0
   staff.mp_headhunted = nil
   staff.quitting_in = nil
   hospital:removeMessage(staff)
@@ -781,6 +828,18 @@ function sabotage.poached(staff)
   if staff_window and staff_window.staff == staff then staff_window:close() end
   staff:removeQueuedStaffMessage()
   staff:setMood("pay_rise", "deactivate")
+  local buyer = by and world.hospitals[by]
+  if buyer and buyer ~= hospital and MultiplayerSession.transferStaff(world, hospital, buyer, staff, true) then
+    local most = world.map.level_config and world.map.level_config.payroll and
+        world.map.level_config.payroll.MaxSalary
+    staff.profile.wage = most and math.min(most, staff.profile.wage + rise) or staff.profile.wage + rise
+    local name = staff.profile:getFullName()
+    log(string.format("%s #%s left hospital %d for hospital %d (wage $%d)", staff.profile.humanoid_class,
+        tostring(staff.mp_id), world:getHospitalIndex(hospital), by, staff.profile.wage))
+    MultiplayerSession.tellPlayer(world, hospital, S().sabotage_headhunter_left_to:format(name, buyer.name))
+    MultiplayerSession.tellPlayer(world, buyer, S().sabotage_headhunter_won_to:format(name, staff.profile.wage))
+    return
+  end
   staff:setMood("exit", "activate")
   staff:setDynamicInfoText(_S.dynamic_info.staff.actions.fired)
   staff.fired = true
@@ -802,7 +861,6 @@ function sabotage.poached(staff)
   log(string.format("%s #%s left hospital %d for the hiring list of hospital %d", profile.humanoid_class,
       tostring(staff.mp_id), world:getHospitalIndex(hospital), world:getHospitalIndex(to)))
   MultiplayerSession.tellPlayer(world, hospital, S().sabotage_headhunter_left:format(profile:getFullName()))
-  local buyer = by and world.hospitals[by]
   if buyer then
     MultiplayerSession.tellPlayer(world, buyer,
         S().sabotage_headhunter_won:format(profile:getFullName(), HEADHUNT_RESERVED_DAYS))
@@ -829,6 +887,11 @@ function sabotage.daily(world)
       log(string.format("smear campaign against hospital %d over: %d patients went elsewhere",
           world:getHospitalIndex(hospital), smear.sent or 0))
       MultiplayerSession.tellPlayer(world, hospital, S().sabotage_smear_over)
+      -- (And the one who paid for it: how it went. Jan, 2026-11-28.)
+      local owner = smear.owner and world.hospitals[smear.owner]
+      if owner then
+        MultiplayerSession.tellPlayer(world, owner, S().sabotage_smear_done:format(hospital.name, smear.sent or 0))
+      end
     end
   end
   -- (A poached doctor is on the list of a hospital that has made its list,
@@ -879,11 +942,13 @@ end
 
 --! A smear campaign: for a few months a share of the patients who would come
 --! to the rival go to the other hospitals (World:_coopPatientHospital).
-function sabotage.smear(world, target, level)
+--! `buyer` hears at the end how many (sabotage.daily).
+function sabotage.smear(world, target, level, buyer)
   if target.mp_smear then return false, "a smear campaign against them is running already" end
   -- (sabotage.daily ends it.)
   target.mp_smear = {share = SMEAR_SHARE[level],
-      until_month = world.game_date:monthOfGame() + SMEAR_MONTHS[level]}
+      until_month = world.game_date:monthOfGame() + SMEAR_MONTHS[level],
+      owner = buyer and world:getHospitalIndex(buyer) or nil}
   log(string.format("smear campaign against hospital %d until month %d", world:getHospitalIndex(target),
       target.mp_smear.until_month))
   MultiplayerSession.tellPlayer(world, target, S().sabotage_smear_notice:format(SMEAR_MONTHS[level]))

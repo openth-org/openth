@@ -2291,8 +2291,8 @@ multiplayer_window.race_won_together = "Együtt sikerrel jártatok! Szép munka!
 multiplayer_window.race_won_together_first = "Együtt megcsináltátok! Remek munka!"
 multiplayer_window.race_won_well_done = "Szép munka!"
 multiplayer_window.rat_attacks = "patkánytámadások"
-multiplayer_window.rats_off = "Patkánytámadás (versenyek): tiltva"
-multiplayer_window.rats_on = "Patkánytámadás (versenyek): engedélyezve"
+multiplayer_window.rats_off = "Patkánytámadás: tiltva"
+multiplayer_window.rats_on = "Patkánytámadás: engedélyezve"
 multiplayer_window.ready = "Kész"
 multiplayer_window.rebuild_destroyed_room = "Ez a szoba megsemmisült. Elbontod és újraépíted? Ára: $%d."
 multiplayer_window.recommendation = "Legfeljebb %s; a műveletek ideje: %s ms"
@@ -2354,7 +2354,7 @@ multiplayer_window.sabotage_boiler = "Elromlott kazán"
 multiplayer_window.sabotage_boiler_notice = "A kazán elromlott, és ez nem baleset volt. A gondnokaid javítják: minél többen vannak, annál hamarabb végeznek."
 multiplayer_window.sabotage_caption = "Piszkos trükkök ellene: %s"
 multiplayer_window.sabotage_caught = "Kidobtál egy gondnokot, aki nem a tiéd volt: %s küldte. Visszamegy hozzá."
-multiplayer_window.sabotage_caught_owner = "%s elkapta a gonosz gondnokodat. Visszatér, és újra neked dolgozik."
+multiplayer_window.sabotage_caught_owner = "A gonosz gondnokod visszatért tőle: %s. Rendetlenséget csinált ott, amíg el nem kapták. Újra neked dolgozik."
 multiplayer_window.sabotage_close = "Bezár"
 multiplayer_window.sabotage_done.boiler = "%s kazánja elromlott."
 multiplayer_window.sabotage_done.emergency = "Vészhelyzet indult %s kórháza felé."
@@ -2419,11 +2419,22 @@ multiplayer_window.sabotage_sent = "Megrendelve. Akkor fizetsz, ha megtörtént.
 multiplayer_window.sabotage_smear = "Lejárató kampány"
 multiplayer_window.sabotage_smear_notice = "Rossz sajtó: a kórház elleni lejárató kampány távol tart néhány beteget (hónapok: %d)."
 multiplayer_window.sabotage_smear_over = "A lejárató kampánynak vége: a betegek újra úgy jönnek a kórházba, mint azelőtt."
+multiplayer_window.sabotage_smear_done = "A lejárató kampányod %s ellen véget ért: %d beteg ment inkább más kórházba."
 multiplayer_window.sabotage_spy_caption = "Kémkedés: %s, választható: %d"
 multiplayer_window.sabotage_spy_pick = "Válaszd ki, mit másoljon le a kémed, aztán nyomd meg a Lopás gombot."
 multiplayer_window.sabotage_spy_steal = "Lopás ($%d)"
+multiplayer_window.sabotage_headhunt_caption = "Fejvadász ide: %s. Kit?"
+multiplayer_window.sabotage_headhunt_pick = "Válaszd ki, kit csábítson el, aztán nyomd meg a Küldés gombot."
+multiplayer_window.sabotage_headhunt_send = "Küldés ($%d)"
+multiplayer_window.sabotage_headhunt_row = "%s (%s): ügyesség %d%%, havi $%d"
+multiplayer_window.sabotage_headhunter_left_to = "%s átment dolgozni ide: %s, mert ott többet ajánlottak."
+multiplayer_window.sabotage_headhunter_won_to = "A fejvadászod sikerrel járt: %s úton van hozzád, havi $%d fizetésért."
+multiplayer_window.sabotage_headhunter_kept = "%s megadta a fizetésemelést (%s): a fejvadászod üres kézzel tért vissza."
+multiplayer_window.sabotage_epidemic_declared = "%s bejelentette a küldött járványt, és $%d bírságot fizetett."
+multiplayer_window.sabotage_epidemic_hidden = "%s eltussolta a küldött járványt, és megúszta."
+multiplayer_window.sabotage_epidemic_caught = "%s megpróbálta eltussolni a küldött járványt: az ellenőr $%d bírságot szabott ki."
 multiplayer_window.sabotage_transaction = "Piszkos trükkök"
-multiplayer_window.sabotage_went_home = "A gonosz gondnokod ideje %s kórházában lejárt. Hazament."
+multiplayer_window.sabotage_went_home = "A gonosz gondnokod ideje %s kórházában lejárt, és senki sem kapta el: küldetés teljesítve. Hazament."
 multiplayer_window.sabotage_litter_bomb = "Szemétbomba"
 multiplayer_window.sabotage_levels.litter_bomb[1] = "Elhelyezed az egyik folyosójukon. A kanóca 16 napig ég, aztán 15 darab szemetet szór szét maga körül. Ha előbb megtalálják, továbbdobhatják egy riválisnak, akár vissza is neked."
 multiplayer_window.sabotage_levels.litter_bomb[2] = "Mint az L1, de 25 darab szemetet szór szét, messzebbre."
@@ -2577,7 +2588,7 @@ tooltip.multiplayer_window.password = "A csatlakozandó vagy létrehozandó szob
 tooltip.multiplayer_window.player_row = "Kattintás: a játékos kórházának megtekintése (N: a következő kórház)"
 tooltip.multiplayer_window.chat_target = "Kinek szól az üzenet: mindenkinek, a csapatodnak (csapatversenyben) vagy egy játékosnak. Kattints vagy nyomd meg a Tabot a következőhöz"
 tooltip.multiplayer_window.players = "Hány játékosnak készül a szoba"
-tooltip.multiplayer_window.rats = "A házigazda dönt: piszkos trükkös versenyben a játékosok patkányokat ereszthetnek a riválisok kórházába (hírnévbe kerül nekik), vagy nem"
+tooltip.multiplayer_window.rats = "A házigazda dönt: piszkos trükkös versenyben a játékosok patkányokat ereszthetnek a riválisok kórházába (hírnévbe kerül nekik), vagy nem; ugyanez vonatkozik a 6. pálya patkányrajaira"
 tooltip.multiplayer_window.ready = "Jelezd a házigazdának, hogy készen állsz az indulásra"
 tooltip.multiplayer_window.refer_button = "Felajánlod ezt a beteget egy másik játékos kórházának. El kell fogadnia."
 tooltip.multiplayer_window.room_chat = "Írj ide, és nyomj Entert, hogy a szobában mindenkihez szólj"
@@ -2611,6 +2622,10 @@ bot_chat = {
           "Elromlott kazán, {name}? Van takarónk.",
           "Hideg kórház? Meleg szívek, {name}. A kazánt már javítják.",
           "Ha, {name}, hidegfront. A gondnokaim imádják a kihívásokat."},
+      boiler_hot = {"Valaki elrontotta a kazánomat: teljes gőzzel fűt. Nagyon vicces, {name}. A gondnokaim már dolgoznak rajta.",
+          "Szauna a kórházamban, {name}? A gondnokok már izzadnak rajta.",
+          "Meleg van itt, {name}. Nem sokáig: a gondnokaim javítják a kazánt.",
+          "Szép próbálkozás, {name}. A betegeim túlélnek egy hőhullámot."},
       smear = {"Rossz sajtó, {name}? A betegeim visszajönnek.", "Szép lejárató kampány, {name}. Az enyém jobb lesz.",
           "Bulvárlapok, {name}? Olcsó. A betegeim okosabbak ennél.",
           "A pletyka senkit sem gyógyít meg, {name}. Az orvosaim igen."},
@@ -2632,6 +2647,9 @@ bot_chat = {
       boiler = {"Valaki elrontotta a kazánomat. Akárki volt: van takarónk.",
           "Elromlott a kazánom. Aki ezt tette: nagyon vicces.",
           "Egy-két napig hideg lesz a kórházban. Akárki tette, a gondnokaim már dolgoznak rajta."},
+      boiler_hot = {"Valaki elrontotta a kazánomat: teljes gőzzel fűt. Akárki volt: a gondnokaim már dolgoznak rajta.",
+          "A kórházam ma egy szauna. Aki ezt tette: nagyon vicces.",
+          "Egy-két napig forró kórház. Akárki volt, a gondnokaim már dolgoznak rajta."},
       smear = {"Valaki hazugságokat terjeszt a kórházamról. A betegek látni fogják az igazat.",
           "Rossz sajtó a semmiből. A betegeim visszajönnek.",
           "Aki a kórházamról pletykál: az orvosaim majd felelnek."},

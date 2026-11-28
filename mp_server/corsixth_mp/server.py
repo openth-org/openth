@@ -66,6 +66,12 @@ HOSPITAL_EACH = ("coop", "competitive", "teams", "teamshared", "mixed")
 # for, the room's `hospitals` (4 on most levels, 8 on a few); more players
 # than that share hospitals.
 MAX_PLACES = 8
+# Players a game may have: every place, and beside it an assistant for each
+# person (Jan, 2026-11-28: alone against seven bots, with an assistant). An
+# assistant plays its person's hospital, so it takes no place (no colour, no
+# hospital of its own), but it is a player of the game (its own moves). Eight
+# until then, assistants included.
+MAX_PEERS = 2 * MAX_PLACES
 COLOURS = tuple(range(1, MAX_PLACES + 1))
 TEAMS = tuple(range(1, MAX_PLACES + 1))
 # How a hospital name lists the players who share it ("ANN + BEN").
@@ -466,10 +472,10 @@ class Room:
 
     def is_full(self) -> bool:
         """No place left: the room's places are taken (assistants take none),
-        or the game has as many players as it can."""
+        or the game has as many players as it can (MAX_PEERS)."""
         places = sum(1 for p in self.players.values() if not p.assistant_of) + \
             sum(1 for e in self.bots_pending.values() if not _assists(e))
-        return places >= self.max_players or self.total() >= MAX_PLACES
+        return places >= self.max_players or self.total() >= MAX_PEERS
 
     def total(self) -> int:
         """Everybody in the room and the bots starting for it."""
@@ -489,7 +495,7 @@ class Room:
         """How many more people (or bots of their own) may join."""
         places = sum(1 for p in self.players.values() if not p.assistant_of) + \
             sum(1 for e in self.bots_pending.values() if not _assists(e))
-        return max(0, min(self.max_players - places, MAX_PLACES - self.total()))
+        return max(0, min(self.max_players - places, MAX_PEERS - self.total()))
 
     def check_password(self, password: str) -> bool:
         if self.password_hash is None:
@@ -505,8 +511,8 @@ class Room:
             self.referee.send(line)
 
     def free_peer(self) -> int | None:
-        # (Assistants take numbers too: up to the game's most.)
-        for n in range(1, MAX_PLACES + 1):
+        # (Assistants take numbers too: up to the game's most players.)
+        for n in range(1, MAX_PEERS + 1):
             if n not in self.players and n not in self.left:
                 return n
         return None
@@ -1712,7 +1718,7 @@ class Server:
                 any(_assists(e) == target.peer for e in room.bots_pending.values()):
             self._error(player, "has_assistant", f"{target.name} has an assistant already")
             return True
-        if room.total() >= MAX_PLACES:
+        if room.total() >= MAX_PEERS:
             self._error(player, "room_full", "The game has as many players as it can")
             return True
         why = self._bots_fit(room, new_game=not self._in_shared_game(room))
@@ -2001,6 +2007,12 @@ class Server:
         room.bot_levels = {n: p.bot_level for n, p in room.players.items()
                            if p.is_bot and p.bot_level != "normal"}
         self._set_bots_field(room)
+        # Assistants: their person's hospital is named after the person only
+        # (MultiplayerLobby:_onSTART; "JANBA", not "JANBA + BOT DORA", which
+        # did not fit the Players window. Jan, 2026-11-28).
+        assists = sorted(n for n, p in room.players.items() if p.assistant_of)
+        if assists:
+            room.start_fields["assists"] = ",".join(str(n) for n in assists)
         for name, value in sorted(room.options.items()):
             room.start_fields[name] = value
         if free:

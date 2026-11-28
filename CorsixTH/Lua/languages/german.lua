@@ -1463,8 +1463,8 @@ multiplayer_window.race_won_together = "Sie haben es gemeinsam geschafft! Gut ge
 multiplayer_window.race_won_together_first = "Sie haben es gemeinsam geschafft! Tolle Arbeit!"
 multiplayer_window.race_won_well_done = "Gut gemacht!"
 multiplayer_window.rat_attacks = "Rattenangriffe"
-multiplayer_window.rats_off = "Rattenangriff (Rennen): nicht erlaubt"
-multiplayer_window.rats_on = "Rattenangriff (Rennen): erlaubt"
+multiplayer_window.rats_off = "Rattenangriff: nicht erlaubt"
+multiplayer_window.rats_on = "Rattenangriff: erlaubt"
 multiplayer_window.ready = "Bereit"
 multiplayer_window.rebuild_destroyed_room = "Dieser Raum wurde zerstört. Für $%d wegräumen und neu bauen?"
 multiplayer_window.recommendation = "Bis zu %s; Aktionen dauern %s ms"
@@ -1526,7 +1526,7 @@ multiplayer_window.sabotage_boiler = "Heizkessel kaputt"
 multiplayer_window.sabotage_boiler_notice = "Der Heizkessel ist ausgefallen, und das war kein Zufall. Ihre Hausmeister reparieren ihn: je mehr, desto schneller."
 multiplayer_window.sabotage_caption = "Fiese Tricks gegen %s"
 multiplayer_window.sabotage_caught = "Sie haben einen Hausmeister rausgeworfen, der nicht Ihrer war: %s hat ihn geschickt. Er geht zu ihm zurück."
-multiplayer_window.sabotage_caught_owner = "%s hat Ihren bösen Hausmeister erwischt. Er kommt zurück und arbeitet wieder für Sie."
+multiplayer_window.sabotage_caught_owner = "Ihr böser Hausmeister ist von %s zurück: Er hat dort Unordnung gemacht, bis man ihn erwischt hat. Er arbeitet wieder für Sie."
 multiplayer_window.sabotage_close = "Schließen"
 multiplayer_window.sabotage_done.boiler = "Der Heizkessel bei %s ist ausgefallen."
 multiplayer_window.sabotage_done.emergency = "Ein Notfall ist auf dem Weg zu %s."
@@ -1591,11 +1591,22 @@ multiplayer_window.sabotage_sent = "Bestellt. Sie zahlen, wenn er ausgeführt is
 multiplayer_window.sabotage_smear = "Hetzkampagne"
 multiplayer_window.sabotage_smear_notice = "Schlechte Presse: Eine Hetzkampagne gegen das Krankenhaus hält einige Patienten für %d Monat(e) fern."
 multiplayer_window.sabotage_smear_over = "Die Hetzkampagne ist vorbei: Die Patienten kommen wieder wie zuvor ins Krankenhaus."
+multiplayer_window.sabotage_smear_done = "Ihre Schmutzkampagne gegen %s ist vorbei: %d Patienten gingen stattdessen in andere Krankenhäuser."
 multiplayer_window.sabotage_spy_caption = "%s ausspionieren: wählen Sie %d"
 multiplayer_window.sabotage_spy_pick = "Wählen Sie, was Ihr Spion kopieren soll, und drücken Sie dann Stehlen."
 multiplayer_window.sabotage_spy_steal = "Stehlen ($%d)"
+multiplayer_window.sabotage_headhunt_caption = "Abwerber bei %s: wen?"
+multiplayer_window.sabotage_headhunt_pick = "Wählen Sie, wen Sie abwerben wollen, und drücken Sie dann Senden."
+multiplayer_window.sabotage_headhunt_send = "Senden ($%d)"
+multiplayer_window.sabotage_headhunt_row = "%s (%s): Können %d%%, $%d im Monat"
+multiplayer_window.sabotage_headhunter_left_to = "%s arbeitet jetzt für %s, die mehr geboten haben."
+multiplayer_window.sabotage_headhunter_won_to = "Ihr Abwerber war erfolgreich: %s ist auf dem Weg zu Ihnen, für $%d im Monat."
+multiplayer_window.sabotage_headhunter_kept = "%s hat die Gehaltserhöhung gewährt (%s): Ihr Abwerber kam mit leeren Händen zurück."
+multiplayer_window.sabotage_epidemic_declared = "%s hat die Epidemie, die Sie geschickt haben, gemeldet und $%d Strafe gezahlt."
+multiplayer_window.sabotage_epidemic_hidden = "%s hat die Epidemie, die Sie geschickt haben, vertuscht und ist davongekommen."
+multiplayer_window.sabotage_epidemic_caught = "%s wollte die Epidemie, die Sie geschickt haben, vertuschen: Der Inspektor verhängte $%d Strafe."
 multiplayer_window.sabotage_transaction = "Fiese Tricks"
-multiplayer_window.sabotage_went_home = "Die Zeit Ihres bösen Hausmeisters bei %s ist um. Er ist nach Hause gegangen."
+multiplayer_window.sabotage_went_home = "Die Zeit Ihres bösen Hausmeisters bei %s ist um, und niemand hat ihn erwischt: Auftrag erfüllt. Er ist nach Hause gegangen."
 multiplayer_window.sabotage_litter_bomb = "Müllbombe"
 multiplayer_window.sabotage_levels.litter_bomb[1] = "Sie legen sie in einem ihrer Flure ab. Ihre Lunte brennt 16 Tage, dann verteilt sie 15 Stück Müll um sich herum. Finden sie sie vorher, können sie sie zu einem Rivalen weiterwerfen, sogar zurück zu Ihnen."
 multiplayer_window.sabotage_levels.litter_bomb[2] = "Wie L1, aber sie verteilt 25 Stück Müll, weiter weg."
@@ -1749,7 +1760,7 @@ tooltip.multiplayer_window.password = "Passwort des Raums, dem Sie beitreten ode
 tooltip.multiplayer_window.player_row = "Klick: das Krankenhaus dieses Spielers ansehen (N: das nächste Krankenhaus)"
 tooltip.multiplayer_window.chat_target = "An wen die Nachricht geht: alle, dein Team (in einem Rennen der Teams) oder ein Spieler. Klick oder Tab für den nächsten"
 tooltip.multiplayer_window.players = "Für wie viele Spieler der Raum gedacht ist"
-tooltip.multiplayer_window.rats = "Der Host entscheidet: In einem Rennen mit fiesen Tricks dürfen Spieler Ratten im Krankenhaus eines Rivalen loslassen (das kostet ihn Ruf), oder nicht"
+tooltip.multiplayer_window.rats = "Der Host entscheidet: In einem Rennen mit fiesen Tricks dürfen Spieler Ratten im Krankenhaus eines Rivalen loslassen (das kostet ihn Ruf), oder nicht; dasselbe gilt für die Rattenschwärme in Level 6"
 tooltip.multiplayer_window.ready = "Dem Host mitteilen, dass Sie startbereit sind"
 tooltip.multiplayer_window.refer_button = "Diesen Patienten dem Krankenhaus eines anderen Spielers anbieten. Er muss annehmen."
 tooltip.multiplayer_window.room_chat = "Hier schreiben und Enter drücken, um mit allen im Raum zu sprechen"
@@ -1783,6 +1794,10 @@ bot_chat = {
           "Ein kaputter Heizkessel, {name}? Wir haben Decken.",
           "Kaltes Krankenhaus? Warme Herzen, {name}. Der Heizkessel wird repariert.",
           "Ha, {name}, eine Kältewelle. Meine Hausmeister lieben Herausforderungen."},
+      boiler_hot = {"Jemand hat meinen Heizkessel auf volle Leistung blockiert. Sehr witzig, {name}. Meine Hausmeister sind dran.",
+          "Eine Sauna in meinem Krankenhaus, {name}? Die Hausmeister schwitzen schon daran.",
+          "Heiß hier, {name}. Nicht mehr lange: Meine Hausmeister reparieren den Kessel.",
+          "Netter Versuch, {name}. Meine Patienten überstehen eine Hitzewelle."},
       smear = {"Schlechte Presse, {name}? Meine Patienten kommen wieder.", "Nette Hetzkampagne, {name}. Meine wird besser.",
           "Klatschblätter, {name}? Billig. Meine Patienten wissen es besser.",
           "Tratsch heilt niemanden, {name}. Meine Ärzte schon."},
@@ -1804,6 +1819,9 @@ bot_chat = {
       boiler = {"Jemand hat meinen Heizkessel kaputt gemacht. Wer auch immer: Wir haben Decken.",
           "Mein Heizkessel ist kaputt. Wer das war: sehr witzig.",
           "Ein, zwei Tage kaltes Krankenhaus. Wer auch immer das war, meine Hausmeister sind dran."},
+      boiler_hot = {"Jemand hat meinen Heizkessel auf volle Leistung blockiert. Wer auch immer: Meine Hausmeister sind dran.",
+          "Mein Krankenhaus ist heute eine Sauna. Wer das war: sehr witzig.",
+          "Ein, zwei Tage ein heißes Krankenhaus. Wer auch immer es war, meine Hausmeister sind dran."},
       smear = {"Jemand verbreitet Lügen über mein Krankenhaus. Die Patienten sehen die Wahrheit.",
           "Schlechte Presse aus dem Nichts. Meine Patienten kommen wieder.",
           "Wer auch immer über mein Krankenhaus tratscht: Meine Ärzte antworten."},

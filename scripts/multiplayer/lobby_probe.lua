@@ -2107,9 +2107,21 @@ local function run()
             shot("spy")
             spy:steal()
           end
+          -- Headhunter: pick the first of the list (the most skilled), then Send.
+          local hunt_class = rawget(_G, "UIMultiplayerHeadhunt")
+          local hunt = hunt_class and world.ui:getWindow(hunt_class)
+          if hunt then
+            if hunt.rows[1] and hunt.staff[1] then
+              hunt.rows[1]:toggle()
+              hunt:pickRow(1, true)
+              picked[#picked + 1] = tostring(hunt.picked.profile:getFullName())
+            end
+            shot("headhunt")
+            hunt:send()
+          end
           log(string.format("UI: dirty trick %s level %s against hospital %s at step %d: %s%s", trick, level, to,
               session.step, tostring(win.status_panel and win.status_panel.label),
-              spy and (" (picked " .. table.concat(picked, ", ") .. ")") or ""))
+              (spy or hunt) and (" (picked " .. table.concat(picked, ", ") .. ")") or ""))
           win:close()
         elseif a == "trickprices" then
           -- Level 7 and others: what each trick (level 1 and 3) costs this
