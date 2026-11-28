@@ -374,6 +374,23 @@ function M.new(bot, ctx)
   return self
 end
 
+--! A setting of the bot's character (bot_personality.lua), or `default`.
+function M:knob(name, default)
+  local p = self.bot.persona
+  local v = p and p[name]
+  if v == nil then return default end
+  return v
+end
+
+--! Game days times its character's pace, rounded up or down by chance (so
+--! that 1.35 times one or two days still comes out longer on average).
+function M:paced(days)
+  local d = days * self:knob("pace", 1)
+  local whole = math.floor(d)
+  if d > whole and self.rand() < d - whole then whole = whole + 1 end
+  return whole
+end
+
 function M:note(text)
   self.log(text)
   self.history[#self.history + 1] = text
@@ -771,6 +788,8 @@ function M:projects(s)
     -- for them; not what a plan or a wish lifted that high.)
     local basic = score >= 90
     score = score + (self.boost[key] or 0) + (self.wishes[key] and WISH or 0) + self:goalBonus(key, s)
+    -- (What its character likes more or less: bot_personality.lua.)
+    score = score + (self:knob("scores", {})[key:match("^[^@]+")] or 0)
     listed[key] = true
     if self.failed[key] and s.day < self.failed[key] then return end
     if score > 0.5 then list[#list + 1] = {key = key, score = score, run = run, cost = cost or 0, basic = basic} end
@@ -1930,26 +1949,31 @@ function M:doProject(s)
   local bot = self.bot
   if s.day < self.next_project then return end
   local list = self:projects(s)
+  -- (Its character may keep more in the bank, borrow sooner or later, and
+  -- build at its own pace: bot_personality.lua.)
+  local reserve = math.max(RESERVE, self:knob("reserve", RESERVE))
+  local borrow = self:knob("borrow", URGENT)
+  local function later(days) return bot:later(self:paced(days)) end
   for i = 1, math.min(#list, 6) do
     local p = list[i]
     -- (Something urgent it cannot pay: a loan, then it is done.)
-    local short = p.cost + RESERVE - s.balance
+    local short = p.cost + reserve - s.balance
     -- (Once in a few days: the bank may say no.)
     -- (Not for a project that found no floor in the last month: Bot Dora
     -- borrowed for an X-ray room and a scanner again and again, and neither
     -- fitted; 2026-11-14.)
     local floorless = self.no_space[p.key] and s.day - self.no_space[p.key] <= 30
-    if short > 0 and p.score >= URGENT and not p.basic and not floorless and
+    if short > 0 and p.score >= borrow and not p.basic and not floorless and
         s.day - (self.loan_day or -99) > 5 then
       local amount = math.ceil(short / 5000) * 5000
       if s.loan + amount <= s.max_loan and s.hosp.opened and self:issue({kind = "loan", amount = amount}) then
         self.loan_day = s.day
         self:note(string.format("day %d: loan of $%d for %s", s.day, amount, p.key))
-        self.next_project = bot:later(1)
+        self.next_project = later(1)
         return
       end
     end
-    if s.balance - p.cost >= RESERVE or p.basic then
+    if s.balance - p.cost >= reserve or p.basic then
       local ok, why = p.run()
       if ok then
         self:note(string.format("day %d: %s (score %.1f, $%d)", s.day, p.key, p.score, math.floor(s.balance)))
@@ -1962,7 +1986,7 @@ function M:doProject(s)
         if self.wishes[p.key] then self:tellWisher(self.wishes[p.key], "wish_done", p.key) end
         self.wishes[p.key] = nil
         -- Rooms take a few days to build; staff and objects less.
-        self.next_project = bot:later(p.key:find("^room:") and self.rand(2, 4) or self.rand(1, 2))
+        self.next_project = later(p.key:find("^room:") and self.rand(2, 4) or self.rand(1, 2))
         return
       end
       if why == "busy" then
@@ -3029,7 +3053,7 @@ function M:shareResearch(s)
   local mine = s.hosp
   if not world.mp_coop or not world.mpMayTrade or not MultiplayerSession.shareableResearch then return end
   if world.mp_coop.sharing_off then return end -- (the room's owner switched it off)
-  local every = bot:sharesWithPerson() and SHARE_MATE_DAYS or SHARE_DAYS
+  local every = bot:sharesWithPerson() and SHARE_MATE_DAYS or self:knob("share_days", SHARE_DAYS)
   for index, h in ipairs(world.hospitals) do
     local peer = bot:playerOfHospital(index)
     -- (Never to a rival: in a race only to team mates.)
@@ -3105,7 +3129,7 @@ function M:helpAllies(s)
     for _, sh in ipairs(short) do
       local key = index .. ":" .. sh.cat
       local lacking = self.ally_lack[key] and s.day - self.ally_lack[key] >= (sh.emergency and LACK_EMERGENCY_DAYS or LACK_DAYS)
-      if lends(sh) and (sh.built or sh.building) and s.day - (self.gave[key] or -999) >= GIVE_DAYS and
+      if lends(sh) and (sh.built or sh.building) and s.day - (self.gave[key] or -999) >= self:knob("lend_days", GIVE_DAYS) and
           (lacking or not bot:canHire(sh.cat, h)) and
           M.spareStaff(world, mine, sh.cat, s.emergency and s.emergency.rooms) > 0 then
         -- (The least skilled of them: it keeps its best.)
@@ -3653,6 +3677,8 @@ function M:rivalOffer(offer, name)
     return true, say(L.rival_patient_yes)
   elseif offer.kind == "research" then
     local value, any = self:offerValue(s, offer.items)
+    -- (What its character pays a rival: bot_personality.lua.)
+    if value > 0 then value = math.max(500, round500(value * self:knob("pays", 1))) end
     if price == 0 then
       if any then
         self:note(string.format("day %d: takes free research from %s (rival)", s.day, name))
@@ -3674,8 +3700,9 @@ function M:rivalOffer(offer, name)
   elseif offer.kind == "staff" then
     local kind = self:lackedKind(s, world:getEntityById(offer.entity))
     if not kind then return false end
-    if price > RIVAL_STAFF_PAY then
-      return false, say(L.rival_staff_dear, {value = price_text(RIVAL_STAFF_PAY), kind = self.ref("staff", kind, kind:lower())})
+    local most = round500(RIVAL_STAFF_PAY * self:knob("pays", 1))
+    if price > most then
+      return false, say(L.rival_staff_dear, {value = price_text(most), kind = self.ref("staff", kind, kind:lower())})
     end
     if s.balance - price < RESERVE then return false, say(L.rival_broke) end
     self:note(string.format("day %d: buys a %s from %s for $%d", s.day, kind, name, price))
@@ -3753,7 +3780,7 @@ function M:askForNeeds(s)
           if item then
             local vars = {item = self.ref("obj", item.object.id, plain(item.name)), room = self.ref("room", rid, room_name(rid))}
             if rivals then
-              vars.price = price_text(M.researchValue(world, s.hosp, item.key, need))
+              vars.price = price_text(math.max(500, round500(M.researchValue(world, s.hosp, item.key, need) * self:knob("pays", 1))))
               ask(target, self.lines.research_buy, vars, item.key .. " for " .. vars.price)
             else
               ask(target, self.lines.research_please, vars, item.key .. " (free)")
@@ -3883,7 +3910,7 @@ function M:botRequest(peer, name, text)
         pick = st
       end
     end
-    local price = rival and RIVAL_STAFF_PRICE or 0
+    local price = rival and round500(RIVAL_STAFF_PRICE * self:knob("asks", 1)) or 0
     if pick and self:issue({kind = "offer_staff", to = index, staff = pick.mp_id, price = price > 0 and price or nil}) then
       local who = plain(pick.profile:getFullName())
       self:note(string.format("day %d: offers %s (%s) to %s for $%d (asked)", s.day, who, cat, name, price))

@@ -76,6 +76,9 @@
 #      boiler. The bot shoots the rats and throws the handyman out, each at
 #      least 10 game days after the trick (as a busy player), notices the
 #      smear campaign and the boiler, and tells eve privately
+#  22. characters: each bot plays in the character of its name
+#      (bot_personality.lua; it says which in its log) and greets with one of
+#      its own lines (bot_chat.persona in english.lua)
 # Exits 0 only if all checks behave as expected.
 #
 # Needs LuaSocket (LUASOCKET_TREE, a LuaRocks tree containing it) and python3.
@@ -173,7 +176,7 @@ for pid in "${pids[@]}"; do wait "$pid" || true; done
 sleep 2
 
 python3 - "$out" <<'PY'
-import pathlib, re, sys
+import os, pathlib, re, sys
 out = pathlib.Path(sys.argv[1])
 server = (out / 'server.log').read_text()
 def log(n): return (out / n / 'log.txt').read_text()
@@ -537,6 +540,25 @@ print(f"21. A plot asked of a bot:  plot {plot21} won by the bot: {bool(won21)};
       f"his now: {his21}")
 fail |= not ok21
 if not ok21: bad.append("ok21")
+# 22. Each bot in the character of its name, greeting with its own line.
+src22 = (pathlib.Path(os.environ['CORSIXTH_SOURCE']) / 'CorsixTH/Lua/languages/english.lua').read_text(encoding='utf-8')
+block22 = src22[src22.index('\n  persona = {'):src22.index('\n  words = {')]
+own22 = {k: re.findall(r'"([^"]*)"', g) for k, g in re.findall(r'\n    (\w+) = \{\s*greet = \{(.*?)\},', block22, re.S)}
+chars22, wrong22 = {}, []
+for key, text in sorted(bots.items()):
+    who = re.match(r'[^/]*/Bot (\w+)$', key)
+    if not who:
+        continue
+    c = who.group(1).lower()
+    logged = f'character: {c} (' in text
+    greeted = [t for t in re.findall(r'CHAT: (.*)', text) if t in own22.get(c, [])]
+    chars22[key] = (logged, greeted[:1])
+    if not logged or not greeted:
+        wrong22.append(key)
+ok22 = len(own22) == 8 and len(chars22) == len(bots) and not wrong22
+print(f"22. Characters:             {chars22}; not in character: {wrong22}")
+fail |= not ok22
+if not ok22: bad.append("ok22")
 for name, text in sorted(bots.items()):
     errors = [l for l in text.splitlines() if 'ERROR' in l or 'could not' in l]
     if errors: print(f"   {name} problems: {errors[:5]}")

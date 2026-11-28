@@ -2691,6 +2691,135 @@ bot_chat = {
     busy = {"Sorry {name}, people keep walking over plot {plot}. Ask me again later.",
         "{name}, plot {plot} is never empty of people for long. Try asking me again later."},
   },
+  -- Each bot's own lines, by its character (scripts/multiplayer/bot_personality.lua):
+  -- greet, said once to everybody instead of the common greetings; remark,
+  -- small talk now and then; replies, its answers by kind (as replies above:
+  -- hello, how are you, thanks, an insult, anything else), {name} the player.
+  -- Agnes is kind and a bit slow, Bertie sassy, Clive loves research, Dora is
+  -- thrifty, Edna homely, Fergus bold, Gwen a team player and Hector a grumpy
+  -- old hand.
+  persona = {
+    agnes = {
+      greet = {"Hello everyone, I'm Agnes. I build slowly, but with lots of love.",
+          "Hi all! Take your time, there are patients enough for everybody.",
+          "Good day, everyone! Do say if I can help. I'm a bit slow, but I mean well."},
+      remark = {"Slowly but surely. My patients get a cup of tea while they wait.",
+          "No hurry here. A happy patient is worth the wait.",
+          "I hope everybody is doing well. My nurses send their regards."},
+      replies = {
+        greet = {"Hello, {name}, dear! Lovely to see you.", "Hi {name}! Sit down, the tea is still warm."},
+        how = {"Slow and steady, {name}, but we get there. And you?", "All well, {name}. My patients are patient with me."},
+        thanks = {"Oh, it was nothing, {name}.", "Any time, {name}. That's what friends are for."},
+        insult = {"Oh dear, {name}. I hope your day gets better.", "That wasn't very nice, {name}, but I forgive you."},
+        other = {"That's lovely, {name}.", "I'll think about that, {name}. Slowly."},
+      },
+    },
+    bertie = {
+      greet = {"Bertie's here, darlings. Try to keep up.",
+          "Oh look, a hospital contest. How cute. I'll win it.",
+          "Hello, hello! Lovely hospitals, everyone. Mine will be lovelier."},
+      remark = {"Just checked the league table. I look fabulous on it.",
+          "My receptionist says my hospital is the talk of the town. Naturally.",
+          "Is it just me, or is everybody else's queue getting longer?"},
+      replies = {
+        greet = {"Well, hello, {name}. Come to admire my hospital?", "{name}, darling! Still here?"},
+        how = {"Fabulous, {name}. As always.", "Better than your waiting room, {name}."},
+        thanks = {"I know, {name}. I'm wonderful.", "Don't mention it, {name}. Really, don't."},
+        insult = {"Cute, {name}. Did you practise that?", "Ouch, {name}. Almost."},
+        other = {"Fascinating, {name}. Truly. Anyway...", "Mm-hm, {name}. Tell it to my receptionist."},
+      },
+    },
+    clive = {
+      greet = {"Greetings! Clive here. My research department is already warming up.",
+          "Hello all! Science first, then coffee. Well, maybe coffee first.",
+          "Good day! If anyone needs a cure discovered, you know where my lab is."},
+      remark = {"My researchers think they're onto something. Fascinating!",
+          "Another day in the lab. The microscopes are humming nicely.",
+          "Research tip: four desks beat two. I counted."},
+      replies = {
+        greet = {"Ah, {name}! Have you seen my lab yet?", "Hello {name}! I was just reading a fascinating paper."},
+        how = {"Busy in the lab, {name}. We're close to something!", "Very well, {name}. A new discovery is nearly ready."},
+        thanks = {"My pleasure, {name}. Science is for sharing.", "You're welcome, {name}. Knowledge grows when it's shared."},
+        insult = {"Interesting hypothesis, {name}. No evidence, though.", "Noted, {name}. Under 'unproven'."},
+        other = {"Fascinating, {name}. Do you have data on that?", "Hmm, {name}, that calls for an experiment."},
+      },
+    },
+    dora = {
+      greet = {"Hello all, Dora here. Remember: a penny saved is a patient cured.",
+          "Good day! I've already found the cheapest benches in town.",
+          "Hi everyone. Spend wisely. I certainly will."},
+      remark = {"Checked my books again. Every penny is where it should be.",
+          "Why buy a fancy plant when a drinks machine pays for itself?",
+          "My bank manager smiles at me these days. I like that."},
+      replies = {
+        greet = {"Hello {name}. Did you know benches are on sale?", "Hi {name}. Checked your bank balance today?"},
+        how = {"Thrifty and thriving, {name}.", "Fine, {name}. Under budget, as always."},
+        thanks = {"You're welcome, {name}. It didn't cost a thing.", "No trouble, {name}. Free help is the best kind."},
+        insult = {"Words are free, {name}. I'll take them.", "Careful, {name}. Rudeness doesn't pay."},
+        other = {"Is that expensive, {name}?", "Hmm, {name}. And what would that cost?"},
+      },
+    },
+    edna = {
+      greet = {"Hello, dears! I've put the kettle on and turned the radiators up.",
+          "Hello everyone! A warm corridor and a comfy bench, that's my secret.",
+          "Good morning, dears. Don't forget to give your staff a break."},
+      remark = {"My staff room has the comfiest chairs in town. Everyone needs a rest.",
+          "Another plant for the corridor. It brightens the patients' day.",
+          "Nobody waits standing up in my hospital. There's always a bench."},
+      replies = {
+        greet = {"Hello, {name}, love! Have a biscuit.", "There you are, {name}! Come in out of the cold."},
+        how = {"Warm and cosy, {name}. My staff just had a nice break.", "Lovely, {name}. Every patient has a bench."},
+        thanks = {"You're welcome, {name}, love.", "Oh, it was no trouble at all, {name}."},
+        insult = {"Now, now, {name}. Have a cup of tea and calm down.", "Goodness, {name}. Somebody needs a rest."},
+        other = {"That's nice, {name}, love.", "Wrap up warm, {name}."},
+      },
+    },
+    fergus = {
+      greet = {"Fergus here! The biggest hospital in town, coming right up.",
+          "Hello all! I hope you like the view of my new land.",
+          "Good luck, everybody. I'm thinking big this time. Very big."},
+      remark = {"More land, more rooms, more patients. That's the plan.",
+          "A loan? An investment in greatness.",
+          "My hospital is growing faster than my waiting list."},
+      replies = {
+        greet = {"{name}! Have you seen the size of my hospital?", "Hello {name}. My plans are bigger today than yesterday."},
+        how = {"Growing, {name}. Always growing.", "Brilliant, {name}. I just bought more land."},
+        thanks = {"No problem, {name}. I think big, I give big.", "Any time, {name}. There's plenty more where that came from."},
+        insult = {"Big words, {name}. My hospital is bigger.", "Ha! I've built on worse ground than that, {name}."},
+        other = {"Let's think bigger, {name}.", "Good, {name}. Now imagine it twice as big."},
+      },
+    },
+    gwen = {
+      greet = {"Hi everyone, Gwen here! Shout if you need anything, I'm glad to help.",
+          "Hello all! If anyone runs short of staff or research, just ask.",
+          "Hi! Let's make this a game to remember."},
+      remark = {"How is everybody doing? Ask if you need a hand.",
+          "Remember, nobody has to manage on their own here.",
+          "Good teamwork beats a big budget every time."},
+      replies = {
+        greet = {"Hi {name}! Need anything?", "Hello {name}! Good to have you here."},
+        how = {"Good, {name}! Ready to help whoever needs it.", "Fine, thanks, {name}. How can I help you?"},
+        thanks = {"Happy to help, {name}! Just ask again.", "Any time, {name}. We stick together."},
+        insult = {"Rough day, {name}? Tell me if I can help.", "No hard feelings, {name}. We all have days like that."},
+        other = {"Good point, {name}!", "Sounds good, {name}. Count me in."},
+      },
+    },
+    hector = {
+      greet = {"Hector. Thirty years in hospitals. Let's get on with it.",
+          "Hmph. Another game. Fine. GPs first, nonsense later.",
+          "Good day. Don't expect small talk."},
+      remark = {"Plants. Drinks machines. In my day we had a doctor and a chair.",
+          "Too much chatter, not enough curing.",
+          "My GPs work. That's all a hospital needs."},
+      replies = {
+        greet = {"{name}.", "Hmph. Hello, {name}."},
+        how = {"Busy. Next question, {name}.", "Fine, {name}. Could be worse. Usually is."},
+        thanks = {"Hmph. Fine, {name}.", "Don't make a habit of it, {name}."},
+        insult = {"Heard worse, {name}. From better.", "In my day, {name}, we had manners."},
+        other = {"If you say so, {name}.", "Hmph. Back to work, {name}."},
+      },
+    },
+  },
   -- Words the bot puts into its lines, so they read right in each language.
   words = {
     -- Names in a list: "Jan, Argus and Pavel".

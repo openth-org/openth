@@ -154,6 +154,13 @@ The room, the places of a running game and the Players window say which:
 "Bot Agnes (hard bot)". Whatever helps a bot stops once a person plays its
 hospital.
 
+Each bot has a character of its own, whatever its level: Agnes is kind but a
+bit slow, Bertie sassy (and quick with dirty tricks), Clive loves research,
+Dora counts every penny, Edna makes her hospital cosy, Fergus thinks big and
+borrows for it, Gwen helps her team mates first, and Hector is a grumpy old
+hand who builds GP's offices before plants. They greet you and talk in
+character.
+
 **An assistant for your hospital.** In a new game's room, the **Assistants**
 column beside the places has "+ Add assistant" beside your own line (the menu
 on your line, a right or double click, offers it too): a bot joins your

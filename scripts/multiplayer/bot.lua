@@ -120,8 +120,24 @@ local function pick(list) return list[rand(1, #list)] end
 --------------------------------------------------------------------------------
 
 local BotChat = dofile(source_dir .. "/scripts/multiplayer/bot_chat.lua")
-local CHAT = assert(BotChat.load(source_dir .. "/CorsixTH/Lua/languages/english.lua"), "no bot_chat in english.lua")
+-- (A server whose bot scripts are newer than its game, setup-referee-host.sh
+-- --code, puts that code's english.lua beside them: the bots say the newest
+-- lines, such as their characters' own. A game without a line shows the
+-- English text that comes with it.)
+local chat_file = source_dir .. "/scripts/multiplayer/bot_chat_english.lua"
+do
+  local f = io.open(chat_file)
+  if f then f:close() else chat_file = source_dir .. "/CorsixTH/Lua/languages/english.lua" end
+end
+local CHAT = assert(BotChat.load(chat_file), "no bot_chat in " .. chat_file)
 local LINES, REPLIES = CHAT.lines, CHAT.replies
+
+-- Its character (bot_personality.lua): by its name, none for a stand-in.
+local Persona = dofile(source_dir .. "/scripts/multiplayer/bot_personality.lua")
+local persona = Persona.of(my_name, standin, os.getenv("MP_BOT_PERSONA"))
+-- (Its own lines, bot_chat.persona.<key>: greet, remark, and replies by kind.)
+local OWN_LINES = persona and CHAT.persona and CHAT.persona[persona.key] or nil
+local TYPING = persona and persona.typing or 1
 
 -- Each line's place in bot_chat ("lines.tricked.rats.2").
 local LINE_PATH = {}
@@ -435,6 +451,8 @@ local DRINKS_APART = 5
 -- extinguisher: they go into the rooms with costly machines, where they
 -- stop explosions; Jan, 2026-11-13. M:projects.)
 local EXTRAS = {{"bench", 3}, {"plant", 2}, {"drinks_machine", 1}, {"bench", 5}, {"plant", 4}}
+-- Game days between a character's remarks (small talk, bot_personality.lua).
+local REMARK_DAYS = {150, 300}
 
 function Bot.new(lobby)
   local self = setmetatable({}, Bot)
@@ -454,8 +472,11 @@ function Bot.new(lobby)
   self.brain = brain_of(my_name)
   -- (Tests: MP_BOT_RESEARCH names a bot that researches hard: a bigger
   -- research room with four desks and a researcher at each.)
-  self.research_heavy = (os.getenv("MP_BOT_RESEARCH") or "") == my_name
+  self.research_heavy = (os.getenv("MP_BOT_RESEARCH") or "") == my_name or (persona and persona.research) or false
   if self.research_heavy then log("researches hard (four desks)") end
+  -- Its character (bot_personality.lua; Manager reads it too).
+  self.persona = persona
+  if persona then log("character: " .. persona.key .. " (" .. persona.voice .. ")") end
   -- (In a person's place while they are away: it plays, and says nothing.)
   self.standin = standin
   if standin then log("plays for " .. my_name .. " while they are away (quiet)") end
@@ -486,7 +507,7 @@ function Bot.new(lobby)
     self.manager = Manager.new(self, {log = log, rand = rand, pick = pick, sabotage = sabotage, lines = LINES, fill = fill_in,
         chat = CHAT, ref = ref, names_ref = names_ref,
         line_ref = function(text) return ref("line", LINE_PATH[text] or "", text) end,
-        typing = function(text) return 1.5 + #text * 0.06 + rand() * 2 end, learned_module = Learned})
+        typing = function(text) return (1.5 + #text * 0.06 + rand() * 2) * TYPING end, learned_module = Learned})
   end
   -- "manager": the same brain, without the language model's advice; an easy
   -- bot never asks it either (Bot:applyLevel).
@@ -539,7 +560,7 @@ end
 
 --! A person's typing time for a line: a pause to read, then some per letter.
 local function typing(text)
-  return 1.5 + #text * 0.06 + rand() * 2
+  return (1.5 + #text * 0.06 + rand() * 2) * TYPING
 end
 
 function Bot:flushOutbox()
@@ -970,7 +991,14 @@ function Bot:onChat(f)
   end
   self.last_reply = self:now()
   local kind = reply_kind(text)
-  local line = fill_in(pick(REPLIES[kind][rival and "fiery" or "friendly"]), {name = name})
+  -- (A kind character, bot_personality.lua, answers rivals kindly too; not
+  -- about the race or money, where the friendly lines are a team mate's.)
+  local tone = rival and not (persona and persona.kind and kind ~= "race" and kind ~= "money") and "fiery" or
+      "friendly"
+  -- (Its character's own answer where it has one: hello, how are you,
+  -- thanks, an insult, anything else. Without the language model too.)
+  local own = OWN_LINES and OWN_LINES.replies and OWN_LINES.replies[kind]
+  local line = fill_in(pick(own or REPLIES[kind][tone]), {name = name})
   -- Spoken to: the model answers if the server has one (the stock line if
   -- it does not answer within a few seconds). The answer goes where the line
   -- came from: the team, that person, or everybody.
@@ -978,7 +1006,7 @@ function Bot:onChat(f)
   -- Somebody who is not an ally gets no orders done (and no money): at most
   -- a short refusal, without asking the model.
   if (private or named) and not ally and is_request(text) then
-    local refusal = rival and kind == "money" and REPLIES.money.fiery or REPLIES.no_orders[rival and "fiery" or "friendly"]
+    local refusal = tone == "fiery" and kind == "money" and REPLIES.money.fiery or REPLIES.no_orders[tone]
     local reply = fill_in(pick(refusal), {name = name})
     log(string.format("refused a request from %s (not an ally)", name))
     self:say(reply, typing(reply), to)
@@ -1194,9 +1222,11 @@ end
 -- refused a small sum back.) Tests: the limits "keep:max" in
 -- MP_BOT_GIVE_LIMITS.
 local GIVE_KEEP, GIVE_MAX = 15000, 20000
+-- (Its character's own limits, bot_personality.lua; the tests' win.)
+local GIFT = persona and persona.gift or {}
 do
   local keep, most = (os.getenv("MP_BOT_GIVE_LIMITS") or ""):match("^(%d+):(%d+)$")
-  if keep then GIVE_KEEP, GIVE_MAX = tonumber(keep), tonumber(most) end
+  if keep then GIVE_KEEP, GIVE_MAX, GIFT = tonumber(keep), tonumber(most), {} end
 end
 
 --! Dollars with thousands separators: 20,000.
@@ -1211,12 +1241,13 @@ end
 --! nothing once the bank holds GIVE_KEEP or less. No sum named: half of what
 --! is above GIVE_KEEP, in whole thousands, $1,000 to $10,000 (and at most
 --! GIVE_MAX): enough to help, and the bank stays well above its floor.
-function Bot.giftFor(balance, amount)
+function Bot.giftFor(balance, amount, keep, max)
+  keep, max = keep or GIVE_KEEP, max or GIVE_MAX
   balance = math.floor(balance)
-  local most = math.max(0, math.min(GIVE_MAX, balance - GIVE_KEEP))
+  local most = math.max(0, math.min(max, balance - keep))
   if most == 0 then return 0, 0 end
   if amount then return math.min(amount, most), most end
-  local spare = math.floor((balance - GIVE_KEEP) / 1000) * 1000
+  local spare = math.floor((balance - keep) / 1000) * 1000
   local give = math.min(10000, most, math.max(1000, math.floor(spare / 2000) * 1000))
   if give > spare then return 0, most end
   return give, most
@@ -1264,7 +1295,9 @@ function Bot:answerMoneyRequest(peer, name, amount, to)
   local mine = world.ui.hospital
   local index = self.lobby.peer_hospital and self.lobby.peer_hospital[peer]
   local line
-  local vars = {name = name, keep = thousands(GIVE_KEEP), max = thousands(GIVE_MAX)}
+  -- (Its character may keep more, or send more at once: bot_personality.lua.)
+  local keep, max = GIFT.keep or GIVE_KEEP, GIFT.max or GIVE_MAX
+  local vars = {name = name, keep = thousands(keep), max = thousands(max)}
   -- (Where the money went, after a line that gives less than asked.)
   local function spent(text)
     local words = self.manager and self.manager:spentRef(self:gameDay())
@@ -1274,7 +1307,7 @@ function Bot:answerMoneyRequest(peer, name, amount, to)
   if not index or world.hospitals[index] == mine then
     line = fill_in(pick(LINES.gift_same_bank), vars)
   else
-    local give, most = Bot.giftFor(mine.balance, amount)
+    local give, most = Bot.giftFor(mine.balance, amount, keep, max)
     vars.amount, vars.asked = thousands(give), amount and thousands(amount)
     if give > 0 and (not session or session.held) then
       line = fill_in(pick(LINES.gift_later), vars)
@@ -1283,7 +1316,7 @@ function Bot:answerMoneyRequest(peer, name, amount, to)
       if self.manager then self.manager:noteSpent("gift:" .. name, give) end
       if amount and give < amount then
         -- (The most it sends at once, or all it can spare above its floor.)
-        local capped = give >= GIVE_MAX
+        local capped = give >= max
         log(string.format("money for %s: sent $%d, less than the $%d asked (%s; bank $%d)", name, give, amount,
             capped and "the most at once" or "all it can spare", math.floor(mine.balance)))
         line = fill_in(pick(capped and LINES.gift_cap or LINES.gift_part), vars)
@@ -3933,7 +3966,7 @@ end
 --! Game days to the next dirty trick, by the bot's level.
 function Bot:trickGap()
   local r = TRICK_EVERY_DAYS[self.skill] or TRICK_EVERY_DAYS.normal
-  return rand(r[1], r[2])
+  return math.floor(rand(r[1], r[2]) * (persona and persona.tricks and persona.tricks.every or 1))
 end
 
 function Bot:playTrick()
@@ -4073,10 +4106,15 @@ function Bot:attach(world)
       -- the one before it (Bot:botRank).
       greet = (month - 1) * 30 + 31 + (self:botRank() - 1) * 12 + rand(0, 6),
       -- The first dirty trick: in months 7 to 12 (easy 10 to 12, hard 4 to 6).
-      trick = (month - 1) * 30 + rand(unpack_args(TRICK_FIRST_DAYS[self.skill] or TRICK_FIRST_DAYS.normal)),
+      -- (Its character may start sooner or later: bot_personality.lua.)
+      trick = (month - 1) * 30 + math.floor(rand(unpack_args(TRICK_FIRST_DAYS[self.skill] or TRICK_FIRST_DAYS.normal)) *
+          (persona and persona.tricks and persona.tricks.first or 1)),
     }
+    -- Its character's remarks (small talk), now and then after the greeting.
+    if OWN_LINES and OWN_LINES.remark then self.plan.remark = self.plan.greet + rand(REMARK_DAYS[1], REMARK_DAYS[2]) end
     if pace > 1 then self.plan.greet = day + math.floor((self.plan.greet - day) / pace) end
     if pace > 1 then self.plan.trick = day + math.floor((self.plan.trick - day) / pace) end
+    if pace > 1 and self.plan.remark then self.plan.remark = day + math.floor((self.plan.remark - day) / pace) end
     self.room_tries = {}
     self.tricks_played = 0
     log(string.format("playing hospital %d (%s), %s; greeting on day %d%s", self:hospitalIndex(),
@@ -4218,9 +4256,27 @@ function Bot:think()
       if p.bot ~= "1" and peer ~= TheApp.mp_session.peer_id then others[#others + 1] = p.name end
     end
     table.sort(others)
-    local line = fill_in(self:ownLine(LINES.greet[self.fiery and "fiery" or "friendly"]),
+    -- (Its character's own greeting, bot_personality.lua; else one of the
+    -- common ones no other bot of the game says.)
+    local own = OWN_LINES and OWN_LINES.greet
+    local line = fill_in(own and pick(own) or self:ownLine(LINES.greet[self.fiery and "fiery" or "friendly"]),
         {name = others[1] and pick(others) or ref("everybody", "", "everybody")})
     self:say(line, typing(line), nil, nil, true)
+  end
+  -- A remark in character now and then, while people are in the game (each
+  -- of its lines in turn, from a place the dice choose).
+  if plan.remark and plan.greeted and day >= plan.remark then
+    plan.remark = self:later(rand(REMARK_DAYS[1], REMARK_DAYS[2]))
+    local people = false
+    for peer, p in pairs(self.lobby.players or {}) do
+      people = people or (p.bot ~= "1" and peer ~= TheApp.mp_session.peer_id)
+    end
+    local list = OWN_LINES.remark
+    self.remarks = (self.remarks or rand(0, #list - 1)) + 1
+    if people and not hospital.mp_place then
+      local line = fill_in(list[(self.remarks - 1) % #list + 1], {})
+      self:say(line, typing(line), nil, nil, true)
+    end
   end
 
   if self.manager then

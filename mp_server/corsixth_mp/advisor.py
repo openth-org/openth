@@ -14,7 +14,9 @@ question (ASK lines, see server.py):
     report with the reasons; the model answers like a plan (priorities from
     the menu, with weights), aimed at reviving the hospital.
   * chat: a player wrote to the bot; the model writes its answer in the
-    bot's voice (friendly in co-op, a good-natured rival in a race).
+    bot's voice (friendly in co-op, a good-natured rival in a race), in
+    the character of its name (PERSONAS: Bot Agnes is kind, Bot Bertie
+    sassy, and so on).
 
 Off unless ANTHROPIC_API_KEY is set (and the anthropic package installed).
 A daily budget (CORSIXTH_MP_AI_DAILY_USD, default 3) stops the advice for
@@ -109,7 +111,7 @@ PLAN_SCHEMA = {
 }
 
 CHAT_SYSTEM = """You are {name}, a computer player in a multiplayer game of Theme Hospital (CorsixTH), chatting
-with the people you play with. {stance} Answer the last message in one short sentence (under 15 words), like a
+with the people you play with. {stance}{persona} Answer the last message in one short sentence (under 15 words), like a
 quick chat line between players, in the language it was written in, playful and in character as a hospital
 manager. Only talk about your money, bank balance or other numbers when someone asks; the hospital report is
 there so you know how things are going. Never give away plans to a rival. Never claim to be human. Write only
@@ -156,6 +158,29 @@ STANCES = {
     "friendly": "You play on the same team as them: be friendly and helpful.",
     "rival": "You race against them: be a cheeky, good-natured rival (trash talk, never insults).",
 }
+
+# Each bot name's character (Jan, 2026-11-28: the bots should keep their own
+# personalities). The bot plays and greets in the same character:
+# scripts/multiplayer/bot_personality.lua and bot_chat.persona in the
+# language files; keep the three in step.
+PERSONAS = {
+    "agnes": "You are kind, gentle and a little slow: warm and polite, never mean, even to a rival.",
+    "bertie": "You are sassy: cheeky, teasing and witty, but never cruel.",
+    "clive": "You love research: a bit nerdy, excited about labs, discoveries and clever machines.",
+    "dora": "You are thrifty: you count every penny, love a bargain and hate waste.",
+    "edna": "You are homely and motherly: you care about comfort, tea, plants, warm corridors and rested staff.",
+    "fergus": "You are bold and boastful: big plans, more land, a bigger hospital, always confident.",
+    "gwen": "You are a team player: encouraging and generous, always offering help.",
+    "hector": "You are a grumpy old hand: short, dry and hard to impress, no frills, but you know your job.",
+}
+
+
+def persona_of(name: str) -> str:
+    """The character of a bot of this name ("Bot Agnes") for its system
+    prompt, with a space before it, or "" for any other name (a stand-in
+    plays under a person's name)."""
+    match = re.fullmatch(r"Bot (\w+)", name.strip())
+    return " " + PERSONAS[match.group(1).lower()] if match and match.group(1).lower() in PERSONAS else ""
 
 
 class Advisor:
@@ -295,7 +320,8 @@ class Advisor:
 
     async def chat(self, name: str, rival: bool, context: str, lines: list[str]) -> str | None:
         """The bot's answer to the last chat line."""
-        system = CHAT_SYSTEM.format(name=name, stance=STANCES["rival" if rival else "friendly"])
+        system = CHAT_SYSTEM.format(name=name, stance=STANCES["rival" if rival else "friendly"],
+                                    persona=persona_of(name))
         text = f"Your hospital: {context[:1500]}\n\nChat so far:\n" + "\n".join(line[:300] for line in lines[-8:])
         answer = await self._ask(system, text, 2000, None)
         if not answer:
@@ -308,7 +334,7 @@ class Advisor:
         {"text": str, "wishes": [str], "leave": [str], "give": int or None, "plot": int or None}: give
         is the sum in dollars an ally asks for (0: no sum named), None when they do not ask for money;
         plot the number of the plot they ask for (0: none named), None when they ask for no plot."""
-        system = CHAT_SYSTEM.format(name=name, stance=STANCES["friendly"]) + TEAM_CHAT_EXTRA
+        system = CHAT_SYSTEM.format(name=name, stance=STANCES["friendly"], persona=persona_of(name)) + TEAM_CHAT_EXTRA
         text = (f"Your hospital: {context[:1500]}\n\nMenu of projects: {', '.join(menu)}\n\nChat so far:\n" +
                 "\n".join(line[:300] for line in lines[-8:]))
         answer = await self._ask(system, text, 2000, TEAM_CHAT_SCHEMA)

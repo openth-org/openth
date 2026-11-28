@@ -56,6 +56,35 @@ closes.
 - Limits: if the shared game itself crashes, all its bots stop at once (an
   error in one bot's thinking is caught and logged); the shared game's bots
   agree in every desync vote, so the referee decides.
+- Several rooms: each room has its own shared game (its own map and
+  hospitals), so the server runs one game per room with bots, plus that
+  room's referee. Names are given per room, so two rooms may each have a Bot
+  Agnes: the same character, each with its own hospital and memory.
+
+**Characters (since 2026-11-28).** Each bot name plays and talks in a way of
+its own (`scripts/multiplayer/bot_personality.lua`; Jan wanted the bots to
+keep their personalities in a shared game). A character changes how a bot
+plays, not how strong it is: the level stays the room's choice. A stand-in
+(a person's name) and a bot under a saved hospital's name have none.
+
+| Bot | Character | How it plays |
+|---|---|---|
+| Agnes | kind, a bit slow | builds about a third slower, types slowly, gives allies more money (keeps $10,000, up to $25,000 at once), lends specialists sooner, her first dirty trick comes much later and the next ones half as often, sells to rivals cheaply, answers rivals kindly |
+| Bertie | sassy | dirty tricks sooner and more often, pays rivals a quarter less and asks half as much again, keeps more of his money |
+| Clive | loves research | a big research room early with four desks, hires researchers sooner, shares research with allies twice as often |
+| Dora | thrifty | keeps $9,000 when she builds, borrows only for the most urgent projects, gives little money, fewer plants and benches, buys land later, likes drinks machines (they pay for themselves), haggles |
+| Edna | homely | benches, plants, radiators, drinks machines, a staff room and toilets sooner, fewer dirty tricks |
+| Fergus | bold | borrows readily, buys land early, an operating theatre and a scanner sooner, pays rivals well |
+| Gwen | team player | lends specialists every week, shares research often, generous with money, answers quickly, fewer dirty tricks |
+| Hector | grumpy old hand | builds a little faster, more GP's offices, fewer plants, benches and drinks machines |
+
+Each says its own greeting (instead of the common ones), now and then a
+remark in character (small talk the players can hide; every 150 to 300 game
+days, only while people play), and its own stock answers to hello, how are
+you, thanks, an insult and anything else (`bot_chat.persona.<name>` in the
+language files). So a character needs no language model; with one, the model
+answers in the same character (`PERSONAS` in `advisor.py`). Tests: `MP_BOT_PERSONA=off` gives no bot a
+character, `"Bot 9=clive"` gives a bot another one.
 
 - Assistants (Argus, 2026-11-15): `BOT assist=<peer>` adds a bot to that
   person's hospital (a person for their own, the host for anybody's, one
@@ -401,6 +430,31 @@ environment):
   `/var/lib/openth/ai-spend.json` across restarts) stops the advice for the
   rest of the day (UTC). Without a key, or over the budget, the bots play on
   the manager's own rules. Haiku 5.5 costs about $0.001 a plan.
+
+**Without the language model.** Jan (2026-11-28) wants the bots not to depend
+on it: with many players it costs too much. What works without it:
+
+- Play: the manager decides everything itself (an easy bot never asks, and
+  `MP_BOT_BRAIN=manager` is the same brain without advice). The weekly plan
+  only adds weights to projects the manager already scores.
+- Characters: their play, greetings, remarks and stock answers
+  (`bot_chat.persona.<name>.replies`: hello, how are you, thanks, an insult,
+  anything else) come from the bot itself; the model, when there is one,
+  answers in the same character.
+- An ally asking for money or a plot: the bot reads the request itself
+  (`is_money_request`, `parse_amount`, `is_plot_request`, `parse_plot`) and
+  its bank or land decides.
+
+What needs the model today:
+
+- A team mate asking for a room, staff or an object ("build a toilet next to
+  the GP"): only the model turns the words into a project from the menu
+  (`wish`, `leave`). Without it the bot answers with a stock line and does
+  nothing.
+- What team mates said lately goes into the weekly plan through the model.
+- The team note now and then (the plan's `note`).
+- Answers that fit what was said: without the model the bot picks a stock
+  line by keywords (`reply_kind`).
 
 ## The fixed plan (`MP_BOT_BRAIN=script`)
 

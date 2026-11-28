@@ -211,9 +211,13 @@ ln -s game "$R/CorsixTH" # referee.lua loads <source>/CorsixTH/CorsixTH.lua
 # nightly learning reads saves with layout_dump.lua and layout_learn.py; what
 # they say comes through bot_chat.lua; bot_host.lua: one game for all the
 # bots of a room).
-for f in referee.lua probe_builder.lua bot.lua bot_host.lua bot_manager.lua bot_learned.lua bot_chat.lua layout_dump.lua layout_learn.py; do
+for f in referee.lua probe_builder.lua bot.lua bot_host.lua bot_manager.lua bot_learned.lua bot_chat.lua bot_personality.lua layout_dump.lua layout_learn.py; do
   if [[ -f "$BASE/src/scripts/multiplayer/$f" ]]; then cp "$BASE/src/scripts/multiplayer/$f" "$R/scripts/multiplayer/"; fi
 done
+# (The bots' lines from this code's english.lua, which may be newer than the
+# game's (--code): bot.lua reads them from there. bot_personality.lua: each
+# bot name's character.)
+cp "$BASE/src/CorsixTH/Lua/languages/english.lua" "$R/scripts/multiplayer/bot_chat_english.lua"
 chown -R root:openth "$BASE/referee" "$BASE/src" && chmod -R g+rX,o= "$BASE/referee"
 missing=$(LD_LIBRARY_PATH="$R/game/lib" ldd "$BIN" | grep "not found" || true)
 [[ -z "$missing" ]] || die "the game binary misses libraries: $missing"

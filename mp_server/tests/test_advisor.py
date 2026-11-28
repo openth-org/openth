@@ -268,3 +268,19 @@ def test_the_answer_to_a_team_mates_bot_carries_the_plot():
         answer = await bot.expect("ANSWER", id=4)
         assert answer["plot"] == "7" and "give" not in answer
     run_with_bots(body)
+
+
+def test_each_bot_answers_in_its_own_character():
+    a = fake_advisor("Ha!")
+    asyncio.run(a.chat("Bot Bertie", True, "fine", ["ann: hi"]))
+    asyncio.run(a.chat("Bot Agnes", False, "fine", ["ann: hi"]))
+    # (A stand-in plays under the person's name: no character of its own.)
+    asyncio.run(a.chat("Jan", False, "fine", ["ann: hi"]))
+    bertie, agnes, standin = (c["system"] for c in a.client.messages.calls)
+    assert "sassy" in bertie and "race against them" in bertie
+    assert "kind, gentle" in agnes and "sassy" not in agnes
+    assert not any(p in standin for p in adv.PERSONAS.values())
+    b = fake_advisor(json.dumps({"reply": "Of course!", "projects": [], "leave": []}))
+    asyncio.run(b.team_chat("Bot Gwen", "fine", ["ann: help"], ["room:gp"]))
+    assert "team player" in b.client.messages.calls[0]["system"]
+    assert adv.persona_of("Bot Zed") == "" and adv.persona_of("Bot Hector").startswith(" You are a grumpy")
