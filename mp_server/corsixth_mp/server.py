@@ -25,6 +25,7 @@ import hashlib
 import hmac
 import logging
 import os
+import pathlib
 import random
 import re
 import secrets
@@ -36,7 +37,7 @@ from . import machine, pacing, stats
 from .advisor import Advisor
 from .builds import BuildCheck, DataCheck
 from .packs import ServedPack
-from .referee import RefereeConfig, start_bot, start_referee
+from .referee import RefereeConfig, bots_workdir, start_bot, start_bot_host, start_referee
 from .protocol import (MAX_LINE_BYTES, PROTOCOL_VERSION, ProtocolError, command_peer, command_step,
                        decode, encode, is_game_line, parse_step_report)
 
@@ -310,6 +311,41 @@ class Recovery:
     referee_only: bool = False     # every player agrees: only the referee loads a player's game
 
 
+@dataclass
+class BotHost:
+    """One game for the bots of a room that has not started yet
+    (scripts/multiplayer/bot_host.lua): the server adds each bot as a line
+    of its control file, and each bot connects on its own connection."""
+    token: str
+    control: pathlib.Path
+    proc: object = None
+
+    def add(self, token: str, name: str, level: str) -> None:
+        with open(self.control, "a", encoding="utf-8") as f:
+            f.write(encode("ADD", token=token, name=name, level=level) + "\n")
+
+    def ended(self) -> bool:
+        return self.proc is not None and getattr(self.proc, "returncode", None) is not None
+
+
+class SharedBotProc:
+    """A bot's process when it plays in its room's shared game (BotHost):
+    the game goes on for the other bots, so taking one away only closes its
+    connection (Server._stop_bot); one that never joined is refused when it
+    tries and the game drops it."""
+
+    def __init__(self, host: BotHost) -> None:
+        self.host = host
+
+    @property
+    def returncode(self) -> int | None:
+        proc = self.host.proc
+        return getattr(proc, "returncode", None) if proc is not None else None
+
+    def terminate(self) -> None:
+        pass
+
+
 @dataclass(eq=False)
 class Room:
     name: str
@@ -374,6 +410,9 @@ class Room:
     # running game's place it takes (None: a new place in the lobby),
     # stand-in, level, the place of the person it assists (0: none)].
     bots_pending: dict[str, list] = field(default_factory=dict)
+    # The one game its bots play in, for the bots added before the game
+    # started (Server.shared_bots); None: none yet.
+    bot_host: BotHost | None = None
     # A running game's places: those the room's own bots play (a person who
     # takes one over makes it theirs), places waiting for the shared game
     # (taken while a repair ran, or while an empty room's bots start), the
@@ -510,8 +549,13 @@ class Server:
                  referee: RefereeConfig | None = None, max_bots: int = MAX_BOTS,
                  build_check: BuildCheck | None = None,
                  data_check: DataCheck | None = None, advisor: Advisor | None = None,
-                 packs_dir: str | None = None) -> None:
+                 packs_dir: str | None = None, shared_bots: bool = True) -> None:
         self.referee_config = referee
+        # The bots of a room added before its game starts play in one game
+        # (BotHost: one copy of the game for all of them, not one each), if
+        # the referee's scripts have it (a setup from before it: one each).
+        self.shared_bots = shared_bots and referee is not None and \
+            (pathlib.Path(referee.source) / "scripts" / "multiplayer" / "bot_host.lua").is_file()
         # Signed game packs players of other builds may download (packs.py;
         # None: none), the ones read so far, and how many are being sent.
         self.packs_dir = packs_dir
@@ -1310,6 +1354,12 @@ class Server:
     def _close_room(self, room: Room) -> None:
         self.rooms.pop(room.name, None)
         self._stop_referee(room)
+        host, room.bot_host = room.bot_host, None
+        if host is not None and host.proc is not None and not host.ended():
+            try:
+                host.proc.terminate()
+            except ProcessLookupError:
+                pass
         self._record_game(room)
         if room.referee_token:
             log.info("room %r: referee confirmed steps through %d", room.name, room.verified_step)
@@ -1590,6 +1640,9 @@ class Server:
 
     async def _spawn_bot(self, room: Room, token: str, name: str, stand_in: bool = False,
                          level: str = "normal") -> None:
+        if self.shared_bots and not stand_in and room.state == "lobby":
+            await self._spawn_shared_bot(room, token, name, level)
+            return
         try:
             proc = await start_bot(self.referee_config, self.port, room.name, token, name,
                                    room.current_mode(), stand_in=stand_in, level=level)
@@ -1609,6 +1662,41 @@ class Server:
             bot.bot_proc = proc
         elif proc is not None and getattr(proc, "returncode", 0) is None:
             proc.terminate()
+
+    async def _spawn_shared_bot(self, room: Room, token: str, name: str, level: str) -> None:
+        """A bot for a room in the lobby: into the room's shared bot game
+        (bot_host.lua), started with its first bot."""
+        assert self.referee_config is not None
+        host = room.bot_host
+        if host is not None and not host.ended():
+            host.add(token, name, level)
+        else:
+            host_token = secrets.token_hex(16)
+            work = bots_workdir(self.referee_config, room.name, host_token)
+            host = room.bot_host = BotHost(token=host_token, control=work / "bots.txt")
+            try:
+                work.mkdir(parents=True, exist_ok=True)
+                host.add(token, name, level)
+                host.proc = await start_bot_host(self.referee_config, self.port, room.name, host_token,
+                                                 str(host.control), room.current_mode())
+            except OSError as exc:
+                log.warning("room %r: cannot start the bots' game: %s", room.name, exc)
+                if room.bot_host is host:
+                    room.bot_host = None
+                for t, entry in list(room.bots_pending.items()):
+                    if t == token or isinstance(entry[1], SharedBotProc) and entry[1].host is host:
+                        self._bot_failed(room, t)
+                return
+            log.info("room %r: one game for its bots (pid %s)", room.name,
+                     getattr(host.proc, "pid", "?"))
+        proc = SharedBotProc(host)
+        entry = room.bots_pending.get(token)
+        if entry is not None:
+            entry[1] = proc
+            return
+        bot = next((p for p in room.players.values() if p.is_bot and p.name == name), None)
+        if bot is not None and bot.bot_proc is None:
+            bot.bot_proc = proc
 
     def _bot_timeout(self, room: Room, token: str) -> None:
         if token in room.bots_pending:
@@ -2501,6 +2589,9 @@ def main(argv: list[str] | None = None) -> None:
                         default=int(os.environ.get("CORSIXTH_MP_MAX_PER_ADDRESS", MAX_PER_ADDRESS)))
     parser.add_argument("--max-bots", type=int,
                         default=int(os.environ.get("CORSIXTH_MP_MAX_BOTS", MAX_BOTS)))
+    parser.add_argument("--shared-bots", type=int, choices=(0, 1),
+                        default=int(os.environ.get("CORSIXTH_MP_SHARED_BOTS", "1") or 1),
+                        help="1: a room's bots play in one game (0: one game each)")
     args = parser.parse_args(argv)
     logging.basicConfig(level=args.log_level.upper(),
                         format="%(asctime)s %(levelname)s %(message)s")
@@ -2520,7 +2611,9 @@ def main(argv: list[str] | None = None) -> None:
         server = Server(motd=args.motd, max_connections=args.max_connections,
                         max_per_address=args.max_per_address, referee=referee,
                         max_bots=args.max_bots, build_check=build_check, data_check=data_check,
-                        advisor=Advisor(), packs_dir=packs_dir)
+                        advisor=Advisor(), packs_dir=packs_dir, shared_bots=bool(args.shared_bots))
+        if server.shared_bots:
+            log.info("the bots of a room play in one shared game (bot_host.lua)")
         if build_check and server.pack(build_check.checksum):
             log.info("players of other builds can download build %s here", build_check.checksum)
         await server.start(args.host, args.port)

@@ -52,7 +52,7 @@ flowchart LR
 | The game | OpenTH: CorsixTH with the multiplayer code, all in Lua. Runs the full simulation and draws your view of it. | `CorsixTH/Lua/mp_session.lua` (lockstep, commands), `mp_lobby.lua` (server connection, lobby, start, repairs), `mp_transport.lua` (text lines over TCP, LuaSocket) |
 | The server | A small Python (asyncio) program. Rooms and passwords, the build check, ping and pacing, the start of a game, relaying lines, comparing fingerprints, organising repairs. It never runs the game. | `mp_server/corsixth_mp/server.py`, `pacing.py`, `protocol.py` |
 | The referee | One more copy of each running game, started by the server, without a screen. It checks the players and repairs their games. Optional. | `scripts/multiplayer/referee.lua`, `mp_server/corsixth_mp/referee.py` |
-| Bots | Computer players. Each one is again the game without a screen, started by the server, playing one place through commands, like a person. | `scripts/multiplayer/bot.lua`, `bot_manager.lua` |
+| Bots | Computer players, run by the server, each playing one place through commands, like a person. The bots of a room share one game without a screen (each on its own connection, with its own mind); a bot added to a running game is a game of its own. | `scripts/multiplayer/bot_host.lua`, `bot.lua`, `bot_manager.lua` |
 
 Everything multiplayer in the game is behind `TheApp.mp_session`. Without a
 session the code paths are the original single-player ones. A test run of

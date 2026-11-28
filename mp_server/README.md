@@ -117,8 +117,11 @@ The server's first lines then say `headless referee enabled`, `players must
 have build ...` (the release's) and `players must have Theme Hospital data
 ...` (your edition; players with another edition are let in and get the
 referee's level files). To add a bot, the room's host clicks an empty place
-in the room. Each game and each bot runs one more copy of the game on the
-server computer (on the Linux servers about 80 MB of memory each).
+in the room. Each game runs one more copy of the game on the server computer
+(the referee), and the bots of a room one more between them
+(`scripts/multiplayer/bot_host.lua`; a bot added to a game already running,
+for a place somebody left, runs alone). On the Linux servers a copy takes
+about 110 MB of memory, up to 400 MB on the biggest maps.
 
 On macOS and Linux the same four settings should work with that system's
 game program; this has not been tested. On a Linux server the script in
@@ -147,6 +150,7 @@ Command line options, or the same as environment variables:
 | `--max-connections` | `OPENTH_MAX_CONNECTIONS` | `256` | Connections at once |
 | `--max-per-address` | `OPENTH_MAX_PER_ADDRESS` | `8` | Connections from one IP address (on the internet, players behind one router share one) |
 | `--max-bots` | `OPENTH_MAX_BOTS` | `7` | Bots at once (only with the referee) |
+| `--shared-bots` | `OPENTH_SHARED_BOTS` | `1` | 1: the bots of a room play in one game (`bot_host.lua`); 0: one game each |
 
 Environment variables only:
 

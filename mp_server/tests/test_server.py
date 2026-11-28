@@ -1191,7 +1191,8 @@ def test_other_theme_hospital_edition_gets_the_referees_game():
 def run_with_bots(body, with_referees=False):
     """A server that can run bots (and the referee); starting either only
     records what would have been started (with_referees: the body gets the
-    referees' tokens too)."""
+    referees' tokens too). Each bot a game of its own (the shared bot game:
+    run_with_shared_bots)."""
     bots, referees = [], []
 
     async def fake_bot(config, port, room, token, name, mode, stand_in=False, level="normal"):
@@ -1206,7 +1207,7 @@ def run_with_bots(body, with_referees=False):
     async def main():
         orig = srv.start_bot, srv.start_referee
         srv.start_bot, srv.start_referee = fake_bot, fake_referee
-        server = srv.Server(referee=srv.RefereeConfig(binary="x", source="", data=""))
+        server = srv.Server(referee=srv.RefereeConfig(binary="x", source="", data=""), shared_bots=False)
         port = await server.start("127.0.0.1", 0)
         try:
             await (body(server, port, bots, referees) if with_referees else body(server, port, bots))
@@ -1214,6 +1215,139 @@ def run_with_bots(body, with_referees=False):
             srv.start_bot, srv.start_referee = orig
             await server.close()
     asyncio.run(main())
+
+
+class FakeProc:
+    def __init__(self) -> None:
+        self.returncode = None
+        self.pid = 4242
+        self.terminated = 0
+
+    def terminate(self) -> None:
+        self.terminated += 1
+        self.returncode = -15
+
+
+def run_with_shared_bots(body, workdir):
+    """A server whose rooms' bots share one game (bot_host.lua): the body
+    gets the started games ({room, control, proc}) and the bots started alone."""
+    hosts, alone = [], []
+
+    async def fake_host(config, port, room, token, control, mode):
+        proc = FakeProc()
+        hosts.append({"room": room, "control": control, "mode": mode, "proc": proc})
+        return proc
+
+    async def fake_bot(config, port, room, token, name, mode, stand_in=False, level="normal"):
+        alone.append({"room": room, "token": token, "name": name, "stand_in": stand_in})
+        return None
+
+    async def fake_referee(config, port, room, token):
+        return None
+
+    async def main():
+        orig = srv.start_bot, srv.start_bot_host, srv.start_referee
+        srv.start_bot, srv.start_bot_host, srv.start_referee = fake_bot, fake_host, fake_referee
+        # (The referee's scripts must have the shared game.)
+        source = workdir / "source"
+        (source / "scripts" / "multiplayer").mkdir(parents=True)
+        (source / "scripts" / "multiplayer" / "bot_host.lua").write_text("-- test\n")
+        server = srv.Server(referee=srv.RefereeConfig(binary="x", source=str(source), data="",
+                                                      workdir=str(workdir / "work")))
+        assert server.shared_bots
+        port = await server.start("127.0.0.1", 0)
+        try:
+            await body(server, port, hosts, alone)
+        finally:
+            srv.start_bot, srv.start_bot_host, srv.start_referee = orig
+            await server.close()
+    asyncio.run(main())
+
+
+async def shared_bot_lines(control, n):
+    """The bots the server added to a shared game: {name, token, level}."""
+    for _ in range(100):
+        try:
+            with open(control, encoding="utf-8") as f:
+                lines = [decode(line.rstrip("\n")) for line in f if line.strip()]
+        except FileNotFoundError:
+            lines = []
+        if len(lines) >= n:
+            assert all(verb == "ADD" for verb, _ in lines)
+            return [fields for _, fields in lines]
+        await asyncio.sleep(0.01)
+    raise AssertionError(f"{len(lines)} bots in {control}, expected {n}")
+
+
+def test_a_rooms_bots_share_one_game(tmp_path):
+    async def body(server, port, hosts, alone):
+        ann = await Client.connect(port, "Ann")
+        ann.send(encode("CREATE", room="solo", password="", max=4, mode="competitive", level=1))
+        await ann.expect("JOINED")
+        for _ in range(3):
+            ann.send(encode("BOT", add=1))
+        await ann.expect("LOBBY", starting=3)
+        # One game for the three, which gets every bot as a line.
+        assert len(hosts) == 1 and not alone
+        assert hosts[0]["room"] == "solo" and hosts[0]["mode"] == "competitive"
+        added = await shared_bot_lines(hosts[0]["control"], 3)
+        assert [a["name"] for a in added] == ["Bot Agnes", "Bot Bertie", "Bot Clive"]
+        assert {a["level"] for a in added} == {"normal"}
+        # Each bot joins on a connection of its own, with its token.
+        conns = []
+        for a in added:
+            c = await connect_bot(port, {"room": "solo", "token": a["token"]})
+            await c.expect("JOINED")
+            conns.append(c)
+        player = await ann.expect("PLAYER", name="Bot Bertie")
+        # Taking one away closes only its connection: the game goes on for
+        # the others.
+        ann.send(encode("BOT", remove=player["peer"]))
+        with pytest.raises(ConnectionError):
+            await conns[1].expect("NEVER")
+        assert hosts[0]["proc"].terminated == 0
+        # A bot added later goes into the same game.
+        ann.send(encode("BOT", add=1))
+        added = await shared_bot_lines(hosts[0]["control"], 4)
+        assert added[3]["name"] == "Bot Bertie" and len(hosts) == 1
+        # The room closes: the game ends with it.
+        await ann.close()
+        for _ in range(100):
+            if "solo" not in server.rooms:
+                break
+            await asyncio.sleep(0.01)
+        assert "solo" not in server.rooms
+        assert hosts[0]["proc"].terminated == 1
+    run_with_shared_bots(body, tmp_path)
+
+
+def test_bots_run_alone_without_the_shared_game_script():
+    # (A referee set up from before bot_host.lua: one game per bot.)
+    server = srv.Server(referee=srv.RefereeConfig(binary="x", source="/nowhere", data=""))
+    assert not server.shared_bots
+
+
+def test_a_new_shared_game_once_the_last_one_ended(tmp_path):
+    async def body(server, port, hosts, alone):
+        ann = await Client.connect(port, "Ann")
+        ann.send(encode("CREATE", room="solo", password="", max=4, mode="coop", level=1))
+        await ann.expect("JOINED")
+        ann.send(encode("BOT", add=1))
+        await shared_bot_lines((await started_hosts(hosts, 1))[0]["control"], 1)
+        hosts[0]["proc"].returncode = 0  # (it ended: its bots had gone)
+        ann.send(encode("BOT", add=1))
+        await started_hosts(hosts, 2)
+        added = await shared_bot_lines(hosts[1]["control"], 1)
+        assert hosts[1]["control"] != hosts[0]["control"] and added[0]["name"] == "Bot Bertie"
+    run_with_shared_bots(body, tmp_path)
+
+
+async def started_hosts(hosts, n):
+    for _ in range(100):
+        if len(hosts) >= n:
+            return hosts
+        await asyncio.sleep(0.01)
+    raise AssertionError(f"{len(hosts)} shared bot games started, expected {n}")
 
 
 async def started_bots(bots, n):

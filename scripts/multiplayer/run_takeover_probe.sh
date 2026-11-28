@@ -132,11 +132,33 @@ def log(n):
     return p.read_text() if p.exists() else ''
 def result(n):
     m = re.search(r'RESULT: (.*)', log(n)); return m.group(1) if m else 'no result'
+def bot_logs(root):
+    """(room, name, text) of each bot. A bot alone writes <room>-bot-*/bot.log;
+    the bots of a shared game (bot_host.lua) write one <room>-bots-*/bots.log,
+    each line after the bot's name: a bot's text is its own lines and the
+    game's (the session's "multiplayer:" lines, which the leader writes)."""
+    for p in sorted(root.glob('*-bot-*/bot.log')):
+        text = p.read_text(errors='replace')
+        m = re.search(r'^\[([^\]]+)\]', text, re.M)
+        if m: yield p.parent.name.split('-bot-')[0], m.group(1), text
+    for p in sorted(root.glob('*-bots-*/bots.log')):
+        lines = p.read_text(errors='replace').splitlines()
+        names = []
+        for line in lines:
+            m = re.match(r'\[([^\]]+)\] ', line)
+            if m and m.group(1) != 'host' and m.group(1) not in names: names.append(m.group(1))
+        own = {n: [] for n in names}
+        for line in lines:
+            m = re.match(r'\[([^\]]+)\] (.*)', line)
+            if m and m.group(1) in own and not m.group(2).startswith('multiplayer: '):
+                own[m.group(1)].append(line)
+            elif not m or m.group(1) in own:
+                for n in names: own[n].append(line)
+        for n in names:
+            yield p.parent.name.split('-bots-')[0], n, '\n'.join(own[n]) + '\n'
 bots = {}  # "room/name" -> [its logs]
-for p in (out / 'headless').glob('*-bot-*/bot.log'):
-    text = p.read_text()
-    m = re.search(r'^\[([^\]]+)\]', text, re.M)
-    if m: bots.setdefault(p.parent.name.split('-bot-')[0] + '/' + m.group(1), []).append(text)
+for room, name, text in bot_logs(out / 'headless'):
+    bots.setdefault(room + '/' + name, []).append(text)
 bad = []
 t, u, ub, v, vb = log('tia'), log('ugo'), log('ugo-back'), log('vic'), log('vic-back')
 

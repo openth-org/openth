@@ -83,9 +83,12 @@ function M.load(path)
     end,
   })
   local chunk
-  if setfenv then
+  -- (rawget: Lua 5.1's and LuaJIT's; the game's strict globals refuse the
+  -- name where it does not exist, as in a shared bot game, bot_host.lua.)
+  local set_env = rawget(_G, "setfenv")
+  if set_env then
     chunk = assert(loadfile(path))
-    setfenv(chunk, env)
+    set_env(chunk, env)
   else
     chunk = assert(loadfile(path, "t", env))
   end

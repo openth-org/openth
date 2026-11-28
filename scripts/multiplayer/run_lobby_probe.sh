@@ -431,6 +431,30 @@ import pathlib, re, sys
 out = pathlib.Path(sys.argv[1])
 with_referee = sys.argv[2] == '1' 
 def log(n): return (out / n / 'log.txt').read_text()
+def bot_logs(root):
+    """(room, name, text) of each bot. A bot alone writes <room>-bot-*/bot.log;
+    the bots of a shared game (bot_host.lua) write one <room>-bots-*/bots.log,
+    each line after the bot's name: a bot's text is its own lines and the
+    game's (the session's "multiplayer:" lines, which the leader writes)."""
+    for p in sorted(root.glob('*-bot-*/bot.log')):
+        text = p.read_text(errors='replace')
+        m = re.search(r'^\[([^\]]+)\]', text, re.M)
+        if m: yield p.parent.name.split('-bot-')[0], m.group(1), text
+    for p in sorted(root.glob('*-bots-*/bots.log')):
+        lines = p.read_text(errors='replace').splitlines()
+        names = []
+        for line in lines:
+            m = re.match(r'\[([^\]]+)\] ', line)
+            if m and m.group(1) != 'host' and m.group(1) not in names: names.append(m.group(1))
+        own = {n: [] for n in names}
+        for line in lines:
+            m = re.match(r'\[([^\]]+)\] (.*)', line)
+            if m and m.group(1) in own and not m.group(2).startswith('multiplayer: '):
+                own[m.group(1)].append(line)
+            elif not m or m.group(1) in own:
+                for n in names: own[n].append(line)
+        for n in names:
+            yield p.parent.name.split('-bots-')[0], n, '\n'.join(own[n]) + '\n'
 def result(n):
     m = re.search(r'RESULT: (.*)', log(n)); return m.group(1) if m else 'no result'
 def applied(n):
@@ -1171,8 +1195,9 @@ if with_referee:
     jobs37 = [re.findall(r'\[\d+ [A-Z +]+? opened=.*? assistant=([\w:,]+)\]', log(n)) for n in ('yuri', 'zoe')]
     switched37 = jobs37[0] == jobs37[1] and len(jobs37[0]) == 2 and 'build:0' in jobs37[0][0] and         'faxes:0' in jobs37[0][0] and 'build:1' in jobs37[0][1] and 'faxes:1' in jobs37[0][1]
     stopped37 = []
-    for bl in sorted((out / 'referee').glob('assist-bot*/bot.log')):
-        text = bl.read_text(errors='replace')
+    for room37, _, text in bot_logs(out / 'referee'):
+        if room37 != 'assist':
+            continue
         if 'building: off' in text:
             stopped37.append('drawing a' not in text.split('building: off', 1)[1])
     ok37 = (all(lines37) and lines37[1].group(1) == '4' and lines37[1].group(2) == '0'

@@ -114,6 +114,22 @@ async def start_referee(config: RefereeConfig, port: int, room: str, token: str,
                                  env_extra={"MP_REFEREE_ROOM": room, "MP_REFEREE_TOKEN": token})
 
 
+def bots_workdir(config: RefereeConfig, room: str, token: str) -> pathlib.Path:
+    """The folder of a room's shared bot game (start_bot_host): its log and
+    the control file the server adds the bots to."""
+    return pathlib.Path(config.workdir) / f"{_safe(room)}-bots-{token[:8]}"
+
+
+async def start_bot_host(config: RefereeConfig, port: int, room: str, token: str, control: str,
+                         mode: str) -> asyncio.subprocess.Process:
+    """Start one game for all the bots of `room` (scripts/multiplayer/
+    bot_host.lua). It reads the bots to connect from `control`, one line each
+    (BotHost.add), the first one written before it starts."""
+    extra = {"MP_BOT_ROOM": room, "MP_HOST_CONTROL": control, "MP_BOT_MODE": mode}
+    return await _start_headless(config, port, room, token, script="bot_host.lua", what="bots",
+                                 player_name="Bots", env_extra=extra)
+
+
 async def start_bot(config: RefereeConfig, port: int, room: str, token: str, name: str,
                     mode: str, stand_in: bool = False, level: str = "normal",
                     ) -> asyncio.subprocess.Process:

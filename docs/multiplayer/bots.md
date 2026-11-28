@@ -17,6 +17,46 @@ person (it reuses the scripted player's helpers in `probe_builder.lua`), so the
 other games need nothing new apart from the lobby button. A server without a
 referee build cannot run bots (the button is not shown there).
 
+**One game for a room's bots (since 2026-11-28).** Seven bots used to be
+seven whole games on the server besides the referee (eu1, two cores, ran at
+twice what it could at the highest speed). Now the bots added to a room
+before its game starts play in one shared game,
+`scripts/multiplayer/bot_host.lua` (`OPENTH_SHARED_BOTS`, default 1; 0: one
+game each as before). The server starts it with the room's first bot and
+adds each further bot as a line `ADD token= name= level=` of its control file
+(`Server._spawn_shared_bot`, `BotHost`); taking a bot away closes only its
+connection, and the shared game ends when its last bot has gone or the room
+closes.
+
+- Each bot keeps its own connection (the server takes a player's moves and
+  step reports only from that player's connection) and its own mind:
+  `bot.lua` is loaded once per bot as a library (`{env = {...}}`: its name,
+  token and level), with its own random numbers, plans, manager and builder.
+  So bots in one game play and talk as differently as before.
+- There is one game: the bot with the lowest place (the leader) starts it
+  from its START; the session reads every bot's connection, drops the bots'
+  own moves and step reports (this game made them) and takes everything else
+  once, from the leader's connection. After each step the game sends its step
+  report for every bot on that bot's connection.
+- Each bot's turn runs in its own place of the game: its hospital is the
+  game's own (`world.ui.hospital`), its place the session's, its moves go out
+  on its connection, and the room it furnishes by hand has the room editor.
+  Only the leader closes the game's pop-up windows (they are its hospital's);
+  the others open their hospital with the `open_hospital` command (the
+  opening countdown on the screen is the leader's).
+- A repair: every connection answers HOLD with HELD; only the leader's
+  connection loads the save, and the moves the server sends again after it
+  go in whole (these bots' own too).
+- A person takes the leader's place: every connection gets the same game
+  lines in the same order (bar each bot's own), so the bot with the next
+  lowest place carries on from the last line the game had, and the session
+  speaks through its connection from then on.
+- Bots added to a running game (a bot for a place somebody left, a stand-in)
+  still run alone (`bot.lua`).
+- Limits: if the shared game itself crashes, all its bots stop at once (an
+  error in one bot's thinking is caught and logged); the shared game's bots
+  agree in every desync vote, so the referee decides.
+
 - Assistants (Argus, 2026-11-15): `BOT assist=<peer>` adds a bot to that
   person's hospital (a person for their own, the host for anybody's, one
   each, new games only). It takes none of the room's places (`Room.is_full`

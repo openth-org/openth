@@ -1,6 +1,10 @@
 -- A computer player (bot) for one multiplayer room. The server (mp_server)
 -- starts it when the room's owner clicks an empty place in the lobby:
 --   corsix-th --interpreter=<this file> --config-file=<generated>
+-- or, for the bots of a room that has not started yet, bot_host.lua runs one
+-- game for all of them and loads this file once per bot with that bot's
+-- settings ({env = {MP_BOT_NAME = ..., MP_BOT_TOKEN = ..., ...}}): it then
+-- returns the bot (see the end of this file) instead of running a game.
 -- It joins the room like a player (ready at once), and once the game starts
 -- it plays its own hospital through the same game windows and commands as a
 -- person: it builds the rooms the level has one after the other, hires the
@@ -70,14 +74,22 @@
 --                        or per room
 local args = {...}
 local unpack_args = table.unpack or unpack
+-- Run by bot_host.lua (one game for all the bots of a room): this bot's own
+-- settings come with the call, the others from the environment.
+local hosted = type(args[1]) == "table" and args[1] or nil
+local function bot_env(name)
+  local own = hosted and hosted.env and hosted.env[name]
+  if own ~= nil then return own end
+  return os.getenv(name)
+end
 local source_dir = assert(os.getenv("CORSIXTH_SOURCE"), "Missing CORSIXTH_SOURCE")
 local server = assert(os.getenv("MP_SERVER"), "Missing MP_SERVER")
 local room = assert(os.getenv("MP_BOT_ROOM"), "Missing MP_BOT_ROOM")
-local token = assert(os.getenv("MP_BOT_TOKEN"), "Missing MP_BOT_TOKEN")
-local my_name = os.getenv("MP_BOT_NAME") or "Bot"
+local token = assert(bot_env("MP_BOT_TOKEN"), "Missing MP_BOT_TOKEN")
+local my_name = bot_env("MP_BOT_NAME") or "Bot"
 local pace = math.max(1, tonumber(os.getenv("MP_BOT_PACE") or "1") or 1)
 local fast = os.getenv("MP_BOT_FAST") == "1"
-local standin = os.getenv("MP_BOT_STANDIN") == "1"
+local standin = bot_env("MP_BOT_STANDIN") == "1"
 
 if os.getenv("MP_LUA_CPATH") then package.cpath = os.getenv("MP_LUA_CPATH") .. ";" .. package.cpath end
 if os.getenv("MP_LUA_PATH") then package.path = os.getenv("MP_LUA_PATH") .. ";" .. package.path end
@@ -447,7 +459,7 @@ function Bot.new(lobby)
   -- (In a person's place while they are away: it plays, and says nothing.)
   self.standin = standin
   if standin then log("plays for " .. my_name .. " while they are away (quiet)") end
-  self.level = os.getenv("MP_BOT_LEVEL") or "normal"
+  self.level = bot_env("MP_BOT_LEVEL") or "normal"
   -- What it learnt from expert players' hospitals (Jan, 2026-11-12: bots
   -- should build like Argus): room recipes, and plans for the places experts
   -- played (bot_learned.lua). Only a normal or hard bot (Jan, 2026-11-12:
@@ -3838,12 +3850,21 @@ end
 
 --! Open the hospital (the button of the opening countdown).
 function Bot:openHospital()
+  local mine = self.world.ui.hospital
   for _, win in ipairs(self.world.ui.windows) do
-    if class.is(win, UIWatch) and win.count_type == "initial_opening" and win.hospital == self.world.ui.hospital then
+    if class.is(win, UIWatch) and win.count_type == "initial_opening" and win.hospital == mine then
       log("opening the hospital")
       win:buttonEndCountdown()
       return true
     end
+  end
+  -- (In a shared game, bot_host.lua, the countdown on the screen is the
+  -- leader's: the others send what its button sends, UIWatch:buttonEndCountdown.)
+  local session = TheApp.mp_session
+  if self.closes_windows == false and session and not mine.opened then
+    log("opening the hospital")
+    session:issue({kind = "open_hospital", hospital = self:hospitalIndex()})
+    return true
   end
   return false
 end
@@ -4353,7 +4374,9 @@ function Bot:_update()
   self:expireAsks()
   if not session or not world or session.held then return end
   if world ~= self.world then self:attach(world) end
-  self:closeWindows()
+  -- (In a shared game, bot_host.lua, the windows are the leader's hospital's:
+  -- the others' messages are answered with commands.)
+  if self.closes_windows ~= false then self:closeWindows() end
   local now = self:now()
   if now < self.next_think then return end
   self.next_think = now + (fast and 0.05 or 0.5)
@@ -4365,68 +4388,75 @@ function Bot:_update()
 end
 
 --------------------------------------------------------------------------------
--- Main
+-- What the game does that a bot hears about (each of these runs where the
+-- game runs it, on every computer alike; the bot only takes note). In a game
+-- of several bots (bot_host.lua) each bot hears it as its own player would:
+-- the host makes it that bot's game for the call.
 --------------------------------------------------------------------------------
 
-local function run()
-  assert(loadfile(source_dir .. "/CorsixTH/CorsixTH.lua"))(unpack_args(args))
-  assert(TheApp.good_install_folder, "Game data was not accepted")
-  socket = require("socket")
-  corsixth.require("mp_lobby")
-  corsixth.require("mp_session")
-  builder = assert(loadfile(source_dir .. "/scripts/multiplayer/probe_builder.lua"))()
-  if os.getenv("MP_BOT_TESTS") == "1" then builder.register_handlers() end
-  sabotage = MultiplayerSession.sabotage
-  Manager = assert(loadfile(source_dir .. "/scripts/multiplayer/bot_manager.lua"))()
-  Learned = assert(loadfile(source_dir .. "/scripts/multiplayer/bot_learned.lua"))()
+--! A dirty trick was played (anybody's): Bot:trickSeen.
+function Bot:onSabotage(cmd)
+  keepRandom("trick", self.trickSeen, self, tonumber(cmd.to), cmd.trick, tonumber(cmd.hospital))
+end
 
-  local bot
-  -- Money sent to it: seen when the command runs here (the game itself
-  -- does the same on every computer).
+--! Money was sent (give_money): to this bot's hospital by somebody else?
+function Bot:onMoney(cmd)
+  local session = TheApp.mp_session
+  if session and tonumber(cmd.to) == session.hospital_index and tonumber(cmd.peer) ~= session.peer_id then
+    keepRandom("money", self.moneyReceived, self, tonumber(cmd.hospital), tonumber(cmd.amount))
+  end
+end
+
+--! A patient leaves a hospital: why its own patients leave (cured, sent
+--! away, too dear, fed up), counted here only (the game's own counts stay as
+--! they are).
+function Bot:onPatientLeft(patient, reason)
+  local manager = self.manager
+  local world = TheApp.world
+  if manager and world and world.ui and patient.hospital == world.ui.hospital and not patient.going_home then
+    local key = tostring(reason)
+    if reason == "kicked" and patient.waiting then key = "fed_up" end
+    manager.left[key] = (manager.left[key] or 0) + 1
+    if reason ~= "cured" and patient.disease then
+      local d = patient.disease.id
+      manager.lost[d] = (manager.lost[d] or 0) + 1
+    end
+  end
+end
+
+--! What the game tells a player (the adviser): dirty tricks it noticed.
+function Bot:onNotice(world, hospital, text)
+  if self.manager and world.ui and hospital == world.ui.hospital then
+    keepRandom("notice", self.manager.notice, self.manager, text)
+  end
+end
+
+--! Put the bots' ears into the game: `each(method, ...)` calls that method
+--! of every bot (the one bot, or each bot of a shared game in its own game).
+--! Once per process.
+local function install_hooks(each)
   local handlers = MultiplayerSession.default_handlers
-  -- Dirty tricks played (anybody's): Bot:trickSeen.
   local sabotage_command = handlers.sabotage
   handlers.sabotage = function(world, cmd)
     local ok, why = sabotage_command(world, cmd)
-    if ok and bot then
-      keepRandom("trick", bot.trickSeen, bot, tonumber(cmd.to), cmd.trick, tonumber(cmd.hospital))
-    end
+    if ok then each("onSabotage", cmd) end
     return ok, why
   end
   local give_money = handlers.give_money
   handlers.give_money = function(world, cmd)
     local ok, why = give_money(world, cmd)
-    local session = TheApp.mp_session
-    if ok and bot and session and tonumber(cmd.to) == session.hospital_index and
-        tonumber(cmd.peer) ~= session.peer_id then
-      keepRandom("money", bot.moneyReceived, bot, tonumber(cmd.hospital), tonumber(cmd.amount))
-    end
+    if ok then each("onMoney", cmd) end
     return ok, why
   end
-  -- Why its patients leave (cured, sent away, too dear, fed up), counted
-  -- here only (the game's own counts stay as they are).
   local go_home = Patient.goHome
   Patient.goHome = function(patient, reason, ...)
-    local manager = bot and bot.manager
-    local world = TheApp.world
-    if manager and world and world.ui and patient.hospital == world.ui.hospital and not patient.going_home then
-      local key = tostring(reason)
-      if reason == "kicked" and patient.waiting then key = "fed_up" end
-      manager.left[key] = (manager.left[key] or 0) + 1
-      if reason ~= "cured" and patient.disease then
-        local d = patient.disease.id
-        manager.lost[d] = (manager.lost[d] or 0) + 1
-      end
-    end
+    each("onPatientLeft", patient, reason)
     return go_home(patient, reason, ...)
   end
   local counting = Patient.goHome
-  -- What the game tells its player (the adviser): dirty tricks it noticed.
   local tell = MultiplayerSession.tellPlayer
   MultiplayerSession.tellPlayer = function(world, hospital, text)
-    if bot and bot.manager and world.ui and hospital == world.ui.hospital then
-      keepRandom("notice", bot.manager.notice, bot.manager, text)
-    end
+    each("onNotice", world, hospital, text)
     return tell(world, hospital, text)
   end
   -- (A saved game must not hold this function: the class gets its own back
@@ -4442,6 +4472,44 @@ local function run()
   -- (No loading picture to show: no start pause. The people wait for each
   -- other anyway.)
   MultiplayerSession.START_PAUSE_MS = 0
+end
+
+--! The modules a bot uses, once the game is loaded (each bot its own: the
+--! builder and the manager keep the bot's hospital and what it learnt).
+local function load_modules()
+  socket = require("socket")
+  corsixth.require("mp_lobby")
+  corsixth.require("mp_session")
+  builder = assert(loadfile(source_dir .. "/scripts/multiplayer/probe_builder.lua"))()
+  sabotage = MultiplayerSession.sabotage
+  Manager = assert(loadfile(source_dir .. "/scripts/multiplayer/bot_manager.lua"))()
+  Learned = assert(loadfile(source_dir .. "/scripts/multiplayer/bot_learned.lua"))()
+end
+
+--! Its ears for the chat and for the server's answers to its questions
+--! (advice; not a game message).
+local function listen(bot, lobby)
+  lobby:addListener(function(_, event, f)
+    if event == "chat" then keepRandom("chat", bot.onChat, bot, f) end
+  end)
+  lobby._onANSWER = function(_, f) keepRandom("answer", bot.onAnswer, bot, f) end
+end
+
+--------------------------------------------------------------------------------
+-- Main
+--------------------------------------------------------------------------------
+
+--! A bot in a game of its own (the server started this file for it).
+local function run()
+  assert(loadfile(source_dir .. "/CorsixTH/CorsixTH.lua"))(unpack_args(args))
+  assert(TheApp.good_install_folder, "Game data was not accepted")
+  load_modules()
+  if os.getenv("MP_BOT_TESTS") == "1" then builder.register_handlers() end
+
+  local bot
+  install_hooks(function(method, ...)
+    if bot then bot[method](bot, ...) end
+  end)
   -- The game ends for everybody (lost, or all back to the lobby): stop.
   local finished = false
   MultiplayerSession.finishGame = function(self)
@@ -4464,11 +4532,7 @@ local function run()
   end
   log("game started")
   bot = Bot.new(lobby)
-  lobby:addListener(function(_, event, f)
-    if event == "chat" then keepRandom("chat", bot.onChat, bot, f) end
-  end)
-  -- The server's answers to its questions (advice; not a game message).
-  lobby._onANSWER = function(_, f) keepRandom("answer", bot.onAnswer, bot, f) end
+  listen(bot, lobby)
   local session = TheApp.mp_session
   -- Speed votes are for the people (MultiplayerSession:voterCount).
   if session then session.abstains = true end
@@ -4493,6 +4557,28 @@ local function run()
     if fast and session.step == before then socket.sleep(0.002) end
   end
   log("game over (" .. tostring(lobby.state) .. ")")
+end
+
+-- One of the bots of a shared game (bot_host.lua): the host has loaded the
+-- game; it connects this bot (on a connection of its own: the server takes
+-- each player's moves only from that player's connection) and runs it in
+-- turn with the others, each in its own place of the game.
+if hosted then
+  load_modules()
+  return {
+    name = my_name,
+    token = token,
+    standin = standin,
+    log = log,
+    builder = builder,
+    install_hooks = install_hooks,
+    --! The bot itself, once its game has started (`lobby`: its connection).
+    new = function(lobby)
+      local bot = Bot.new(lobby)
+      listen(bot, lobby)
+      return bot
+    end,
+  }
 end
 
 local ok, err = xpcall(run, debug.traceback)
