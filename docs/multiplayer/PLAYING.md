@@ -142,7 +142,9 @@ defaults shows in the room.
 
 **Nobody to play with?** As the host, click an empty place in your room
 ("click: add a bot") and a computer player takes it; click the bot to take it
-away again. A room for four can have up to three bots. A new bot is a normal
+away again. A room for four can have up to three bots. Bots never keep a person
+out: somebody who joins a full room takes the place of the bot that joined
+last, and that bot leaves (not an assistant, nor in a continued game). A new bot is a normal
 one; a right click on a bot opens a small menu to pick how good it is:
 **Easy** (plays simply, no help from the language model), **Normal** (plays
 as the expert players do, with the language model's advice, and gets nothing

@@ -1854,8 +1854,8 @@ def test_bot_levels_easy_and_hard():
         await ann.expect("PLAYER", name="Bot Bertie", level="easy")
         # Nobody else changes a bot.
         ben = await Client.connect(port, "Ben")
-        ben.send(encode("JOIN", room="lv", password=""))
-        assert (await ben.expect("ERROR"))["code"] == "room_full"
+        ben.send(encode("BOT", peer=3, level="hard"))
+        assert (await ben.expect("ERROR"))["code"] == "not_owner"
         ann.send(encode("START"))
         st = await ann.expect("START")
         assert st["bots"] == "2,3" and st["hard"] == "2" and st["easy"] == "3"
@@ -2164,3 +2164,36 @@ def test_bots_leave_memory_free(tmp_path):
         await ann.close()
         await bob.close()
     run_with_shared_bots(body, tmp_path)
+
+
+def test_a_bot_gives_its_place_to_a_person_who_joins():
+    async def body(server, port, bots):
+        ann = await Client.connect(port, "Ann")
+        ann.send(encode("CREATE", room="full", password="", max=3, mode="coop", level=1))
+        await ann.expect("JOINED")
+        ann.send(encode("BOT", add=1))
+        ann.send(encode("BOT", add=1))
+        await started_bots(bots, 2)
+        agnes, bertie = await connect_bot(port, bots[0]), await connect_bot(port, bots[1])
+        await agnes.expect("JOINED")
+        await bertie.expect("JOINED")
+        # The room is full: a person who joins takes the place of the bot
+        # that joined last, which leaves.
+        ben = await Client.connect(port, "Ben")
+        ben.send(encode("JOIN", room="full", password=""))
+        assert (await ben.expect("JOINED"))["peer"] == "3"
+        await ann.expect("CHAT", text="Bot Bertie gives its place to Ben")
+        with pytest.raises(ConnectionError):
+            await bertie.expect("NEVER")
+        assert sorted(p.name for p in server.rooms["full"].players.values()) == ["Ann", "Ben", "Bot Agnes"]
+        # The next person gets Bot Agnes's place; then the room is full of people.
+        cid = await Client.connect(port, "Cid")
+        cid.send(encode("JOIN", room="full", password=""))
+        await cid.expect("JOINED")
+        await ann.expect("CHAT", text="Bot Agnes gives its place to Cid")
+        dan = await Client.connect(port, "Dan")
+        dan.send(encode("JOIN", room="full", password=""))
+        assert (await dan.expect("ERROR"))["code"] == "room_full"
+        for c in (ann, ben, cid, dan):
+            await c.close()
+    run_with_bots(body)

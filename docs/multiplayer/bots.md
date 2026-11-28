@@ -153,7 +153,10 @@ character, `"Bot 9=clive"` gives a bot another one.
   process (`referee.start_bot`) with a token, and keeps the place until the bot
   connects (`HELLO role=bot room token`) or `BOT_START_TIMEOUT` passes. The bot
   joins ready; `PLAYER` lines say `bot=1`, `LOBBY` says how many are still
-  `starting`. When the last person leaves a room, its bots are stopped. A new
+  `starting`. A person who joins a full room in the lobby takes the place of
+  the bot that joined last, which leaves ("Bot X gives its place to Y"; not
+  an assistant, nor in a continued game, whose bots play the saved hospitals;
+  Jan, 2026-11-28). When the last person leaves a room, its bots are stopped. A new
   bot needs room on the machine (`Server._bots_fit`, below), and there are
   never more than `OPENTH_MAX_BOTS` (default 24) on a server at once.
 - Lobby window (`dialogs/resizables/multiplayer.lua`): the player places are

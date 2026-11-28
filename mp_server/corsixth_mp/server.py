@@ -1108,9 +1108,30 @@ class Server:
             elif old is not None:
                 self._add_to_room(player, room, place=old)
             elif room.is_full():
-                self._error(player, "room_full", "The room is full")
+                # People come first (Jan, 2026-11-28): a bot gives its place
+                # to a person who joins a full room.
+                bot = self._bot_giving_place(room)
+                if bot is None:
+                    self._error(player, "room_full", "The room is full")
+                    return
+                log.info("room %r: %r gives its place to %r", room.name, bot.name, player.name)
+                self._leave_room(bot, said=f"{bot.name} gives its place to {player.name}")
+                self._stop_bot(bot)
+                self._add_to_room(player, room)
             else:
                 self._add_to_room(player, room)
+
+    @staticmethod
+    def _bot_giving_place(room: Room) -> Player | None:
+        """The bot of a full room in the lobby that makes way for a person
+        who joins: the last that joined (the highest place) of the bots that
+        play a hospital of their own; not an assistant (it belongs to its
+        person), not one still starting, and none in a continued game (its
+        bots play the saved hospitals)."""
+        if room.mode != "free":
+            return None
+        bots = [p for p in room.players.values() if p.is_bot and not p.assistant_of]
+        return max(bots, key=lambda p: p.peer, default=None)
 
     @staticmethod
     def _silent_namesake(room: Room, player: Player) -> Player | None:
@@ -2494,10 +2515,11 @@ class Server:
 
     # ------------------------------------------------------------ departures
 
-    def _leave_room(self, player: Player, lost: bool = False) -> None:
+    def _leave_room(self, player: Player, lost: bool = False, said: str | None = None) -> None:
         """`player` leaves their room; lost: a person's connection was lost
         (no QUIT or LEAVE): a running game they were the last person in
-        waits DROP_WAIT for them, not EMPTY_WAIT."""
+        waits DROP_WAIT for them, not EMPTY_WAIT. said: what the room's chat
+        says of it in the lobby (else "<name> left")."""
         room = player.room
         if room is None:
             return
@@ -2545,7 +2567,7 @@ class Server:
                 asyncio.get_running_loop().call_later(
                     STAND_IN_DELAY, self._stand_in_due, room, player.peer, player.name)
         else:
-            room.broadcast(encode("CHAT", peer=0, name="server", text=f"{player.name} left"))
+            room.broadcast(encode("CHAT", peer=0, name="server", text=said or f"{player.name} left"))
             # (Their assistant goes with them; in a game it plays on.)
             for helper in [p for p in room.players.values() if p.assistant_of == player.peer]:
                 self._stop_bot(helper)
