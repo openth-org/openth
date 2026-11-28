@@ -298,6 +298,13 @@ function UI:drawTooltip(canvas)
   end
 end
 
+--! Where the main menu picture is cut when the screen is narrower than it (a
+--! 4:3 screen, or the original aspect ratio): this much of what does not fit
+--! is cut on the left, the rest on the right, so the OpenTH sign at its top
+--! right stays whole (Jan, 2026-11-27; the 640x480 picture is cut so too,
+--! scripts/make_menu_background.py).
+UI.MENU_BG_CUT_LEFT = 0.78
+
 function UI:draw(canvas)
   if self.professor_background then
     UIProfessorMenu.drawPicture(canvas)
@@ -305,12 +312,13 @@ function UI:draw(canvas)
     local bg_w, bg_h = self.background_width, self.background_height
     local screen_w, screen_h = canvas:getRenderSize()
     local factor = math.max(screen_w / bg_w, screen_h / bg_h)
+    local cut = UI.MENU_BG_CUT_LEFT
     if canvas:scale(factor, "bitmap") or canvas:scale(factor) then
-      self.background:draw(canvas, math.floor((screen_w - bg_w * factor) / 2), math.floor((screen_h - bg_h * factor) / 2))
+      self.background:draw(canvas, math.floor((screen_w - bg_w * factor) * cut), math.floor((screen_h - bg_h * factor) / 2))
       canvas:scale(1)
     else
       canvas:fillBlack()
-      self.background:draw(canvas, math.floor((screen_w - bg_w) / 2), math.floor((screen_h - bg_h) / 2))
+      self.background:draw(canvas, math.floor((screen_w - bg_w) * cut), math.floor((screen_h - bg_h) / 2))
     end
   end
   Window.draw(self, canvas, 0, 0)

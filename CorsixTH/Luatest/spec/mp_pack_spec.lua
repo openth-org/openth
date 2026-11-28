@@ -222,6 +222,33 @@ describe("Game packs", function()
     assert.is_nil(readFile(builds .. "starting.txt"))
   end)
 
+  it("a build that switched to another one started, whatever its start left", function()
+    -- (Jan, 2026-11-27: after a download the installed game came up instead
+    -- of the new build, as if the running one had never started.)
+    local install = tempDir()
+    local start = assert(loadfile("../Lua/mp_pack_start.lua"))
+    local builds = dir .. "builds" .. sep
+    lfs.mkdir(builds:sub(1, -2))
+    local args = {"corsix-th", "--config-file=" .. dir .. "config.txt", "--hotkeys-file=" .. dir .. "hotkeys.txt"}
+    for _, build in ipairs({"0123abcd", "89abcdef"}) do
+      lfs.mkdir(builds .. build)
+      writeFile(builds .. build .. sep .. "CorsixTH.lua", "")
+    end
+    -- The first build starts; its start is cut short (no main menu).
+    writeFile(builds .. "current.txt", "0123abcd\n")
+    assert.is_not_nil((start(install, install .. "Lua" .. sep, (table.unpack or unpack)(args))))
+    assert.is_not_nil(readFile(builds .. "starting.txt"))
+    -- It runs (a player downloads the server's build in it) and switches.
+    MultiplayerPack.switchTo(app, "89abcdef", "eu2.openth.org:47800", "Jan")
+    assert.is_nil(readFile(builds .. "starting.txt"))
+    local main = start(install, install .. "Lua" .. sep, (table.unpack or unpack)(args))
+    assert.equal(builds .. "89abcdef" .. sep .. "CorsixTH.lua", main)
+    -- Loaded: it starts again next time, even if it closes before the menu.
+    MultiplayerPack.started(app)
+    assert.is_nil(readFile(builds .. "starting.txt"))
+    assert.equal(main, (start(install, install .. "Lua" .. sep, (table.unpack or unpack)(args))))
+  end)
+
   it("writes down which game was installed when a build is chosen", function()
     app.getFullPath = function() return dir end
     writeFile(dir .. "app.lua", "return 1\n") -- (the stub checksum: 0123abcd)
